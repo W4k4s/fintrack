@@ -33,14 +33,16 @@ export function ExchangeLogo({ name, logo, size = 32, className = "" }: Exchange
 
   if (logo && !imgError) {
     return (
-      <div className={`rounded-lg overflow-hidden shrink-0 flex items-center justify-center bg-[var(--hover-bg)] ${className}`}
-        style={{ width: size, height: size }}>
+      <div
+        className={`rounded-full overflow-hidden shrink-0 ${className}`}
+        style={{ width: size, height: size }}
+      >
         <img
           src={logo}
           alt={name}
-          width={size - 4}
-          height={size - 4}
-          className="object-contain"
+          width={size}
+          height={size}
+          className="w-full h-full object-cover"
           onError={() => setImgError(true)}
           referrerPolicy="no-referrer"
         />
@@ -49,8 +51,10 @@ export function ExchangeLogo({ name, logo, size = 32, className = "" }: Exchange
   }
 
   return (
-    <div className={`rounded-lg shrink-0 flex items-center justify-center font-bold ${color} ${className}`}
-      style={{ width: size, height: size, fontSize: size * 0.35 }}>
+    <div
+      className={`rounded-full shrink-0 flex items-center justify-center font-bold ${color} ${className}`}
+      style={{ width: size, height: size, fontSize: size * 0.38 }}
+    >
       {initials}
     </div>
   );
