@@ -1,4 +1,4 @@
-import pdf from "pdf-parse";
+const pdf = require("pdf-parse/lib/pdf-parse.js");
 
 const ISIN_MAP: Record<string, string> = {
   "IE00B4L5Y983": "MSCI World",
