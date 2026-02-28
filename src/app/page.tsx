@@ -19,7 +19,7 @@ export default function Dashboard() {
   const [snapshots, setSnapshots] = useState<any[]>([]);
   const [exchanges, setExchanges] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { format, convert } = useCurrency();
+  const { format, convert, currency, setCurrency } = useCurrency();
 
   const fetchData = async () => {
     setLoading(true);
@@ -44,9 +44,19 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-sm text-muted mt-1">Your portfolio at a glance</p>
         </div>
-        <button onClick={fetchData} className="flex items-center gap-2 px-4 py-2 text-sm bg-card hover:bg-[var(--hover-bg)] border border-border rounded-lg transition-colors">
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrency(currency === "USD" ? "EUR" : "USD")}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-card hover:bg-[var(--hover-bg)] border border-border rounded-lg transition-colors"
+          >
+            <span className={currency === "USD" ? "text-accent" : "text-muted"}>$</span>
+            <ArrowLeftRight className="w-3.5 h-3.5 text-muted" />
+            <span className={currency === "EUR" ? "text-accent" : "text-muted"}>€</span>
+          </button>
+          <button onClick={fetchData} className="flex items-center gap-2 px-4 py-2 text-sm bg-card hover:bg-[var(--hover-bg)] border border-border rounded-lg transition-colors">
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
