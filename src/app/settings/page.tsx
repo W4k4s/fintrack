@@ -1,22 +1,17 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Settings, Download, Moon, Sun, Monitor } from "lucide-react";
+import { Settings, Download, Moon, Sun, DollarSign } from "lucide-react";
+import { useCurrency, currencies } from "@/components/currency-provider";
 
 export default function SettingsPage() {
   const [theme, setTheme] = useState<"dark"|"light">("dark");
+  const { currency, setCurrency } = useCurrency();
 
   useEffect(() => {
     const saved = localStorage.getItem("fintrack-theme") || "dark";
     setTheme(saved as "dark"|"light");
     document.documentElement.className = saved === "light" ? "light" : "dark";
   }, []);
-
-  const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    localStorage.setItem("fintrack-theme", next);
-    document.documentElement.className = next === "light" ? "light" : "dark";
-  };
 
   const handleExport = async () => {
     const [exchanges, assets, plans, txs] = await Promise.all([
@@ -40,6 +35,26 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-4">
+        {/* Currency */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <h2 className="font-semibold mb-1 flex items-center gap-2"><DollarSign className="w-4 h-4"/> Currency</h2>
+          <p className="text-sm text-muted mb-4">Choose your display currency</p>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            {Object.entries(currencies).map(([code, { symbol, label }]) => (
+              <button key={code} onClick={() => setCurrency(code)}
+                className={`flex flex-col items-center gap-1 px-3 py-3 rounded-lg text-sm font-medium border transition-colors ${
+                  currency === code
+                    ? "bg-accent/15 border-accent text-accent"
+                    : "bg-background border-border text-muted hover:text-foreground hover:border-border/80"
+                }`}>
+                <span className="text-lg">{symbol}</span>
+                <span className="text-xs">{code}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Theme */}
         <div className="bg-card border border-border rounded-xl p-5">
           <h2 className="font-semibold mb-1">Appearance</h2>
           <p className="text-sm text-muted mb-4">Choose your preferred theme</p>
@@ -55,6 +70,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Data */}
         <div className="bg-card border border-border rounded-xl p-5">
           <h2 className="font-semibold mb-1">Data</h2>
           <p className="text-sm text-muted mb-4">Export or manage your portfolio data</p>
@@ -63,6 +79,7 @@ export default function SettingsPage() {
           </button>
         </div>
 
+        {/* About */}
         <div className="bg-card border border-border rounded-xl p-5">
           <h2 className="font-semibold mb-1">About</h2>
           <div className="text-sm text-muted space-y-1 mt-3">

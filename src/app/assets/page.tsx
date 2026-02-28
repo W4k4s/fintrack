@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Wallet, ArrowUpDown } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/components/currency-provider";
 import { ExchangeLogo } from "@/components/exchange-logo";
 
 // Known exchange logos (client-side cache)
 const exchangeLogos: Record<string, string> = {};
 
 export default function AssetsPage() {
+  const { format } = useCurrency();
   const [assets, setAssets] = useState<any[]>([]);
   const [available, setAvailable] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState<"value"|"symbol"|"total">("value");
@@ -50,7 +51,7 @@ export default function AssetsPage() {
       <div className="flex items-center justify-between gap-4">
         <input type="text" placeholder="Filter by symbol..." value={filter} onChange={e=>setFilter(e.target.value)}
           className="px-3 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 w-64 placeholder:text-muted-foreground"/>
-        <div className="text-sm text-muted">Total: <span className="text-foreground font-bold">{formatCurrency(totalValue)}</span></div>
+        <div className="text-sm text-muted">Total: <span className="text-foreground font-bold">{format(totalValue)}</span></div>
       </div>
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <table className="w-full text-sm">
@@ -76,8 +77,8 @@ export default function AssetsPage() {
                   </div>
                 </td>
                 <td className="py-3 px-5 text-right text-muted font-mono text-xs">{a.total < 0.001 ? a.total.toExponential(2) : a.total.toFixed(4)}</td>
-                <td className="py-3 px-5 text-right text-muted">{a.price ? formatCurrency(a.price) : "—"}</td>
-                <td className="py-3 px-5 text-right font-medium">{formatCurrency(a.value)}</td>
+                <td className="py-3 px-5 text-right text-muted">{a.price ? format(a.price) : "—"}</td>
+                <td className="py-3 px-5 text-right font-medium">{format(a.value)}</td>
                 <td className="py-3 px-5 text-right text-muted">{totalValue>0?((a.value/totalValue)*100).toFixed(1):0}%</td>
               </tr>
             )) : <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">No assets yet. Connect an exchange first.</td></tr>}
