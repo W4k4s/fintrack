@@ -3,10 +3,7 @@ import { db, schema } from "@/lib/db";
 import { eq, desc } from "drizzle-orm";
 
 export async function GET() {
-  const txs = await db.query.transactions.findMany({
-    orderBy: [desc(schema.transactions.date)],
-    limit: 100,
-  });
+  const txs = await db.select().from(schema.transactions).orderBy(desc(schema.transactions.date)).limit(100);
   return NextResponse.json(txs);
 }
 

@@ -1,5 +1,5 @@
 import { db, schema } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { decrypt } from "@/lib/crypto/encryption";
 import { CcxtAdapter } from "./ccxt-adapter";
 import { ManualAdapter } from "./manual-adapter";
@@ -18,18 +18,14 @@ export function getAdapter(exchange: typeof schema.exchanges.$inferSelect): Exch
 }
 
 export async function syncExchange(exchangeId: number) {
-  const exchange = await db.query.exchanges.findFirst({
-    where: eq(schema.exchanges.id, exchangeId),
-  });
+  const [exchange] = await db.select().from(schema.exchanges).where(eq(schema.exchanges.id, exchangeId)).limit(1);
   if (!exchange) throw new Error("Exchange not found");
 
   const adapter = getAdapter(exchange);
   const balances = await adapter.fetchBalances();
 
   // Get or create account
-  let account = await db.query.accounts.findFirst({
-    where: eq(schema.accounts.exchangeId, exchangeId),
-  });
+  let [account] = await db.select().from(schema.accounts).where(eq(schema.accounts.exchangeId, exchangeId)).limit(1);
   if (!account) {
     const [created] = await db.insert(schema.accounts).values({
       exchangeId,
@@ -45,9 +41,9 @@ export async function syncExchange(exchangeId: number) {
 
   // Upsert assets
   for (const balance of balances) {
-    const existing = await db.query.assets.findFirst({
-      where: (a, { and, eq: e }) => and(e(a.accountId, account!.id), e(a.symbol, balance.symbol)),
-    });
+    const [existing] = await db.select().from(schema.assets)
+      .where(and(eq(schema.assets.accountId, account.id), eq(schema.assets.symbol, balance.symbol)))
+      .limit(1);
 
     const price = prices[balance.symbol] || null;
 
@@ -57,7 +53,7 @@ export async function syncExchange(exchangeId: number) {
         .where(eq(schema.assets.id, existing.id));
     } else {
       await db.insert(schema.assets).values({
-        accountId: account!.id,
+        accountId: account.id,
         symbol: balance.symbol,
         amount: balance.total,
         currentPrice: price,
@@ -66,7 +62,6 @@ export async function syncExchange(exchangeId: number) {
     }
   }
 
-  // Update lastSync
   await db.update(schema.exchanges)
     .set({ lastSync: new Date().toISOString() })
     .where(eq(schema.exchanges.id, exchangeId));

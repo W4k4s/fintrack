@@ -1,23 +1,16 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
+import { desc } from "drizzle-orm";
 
 export async function GET() {
-  const snapshots = await db.query.portfolioSnapshots.findMany({
-    orderBy: (s, { desc }) => [desc(s.date)],
-    limit: 90,
-  });
+  const snapshots = await db.select().from(schema.portfolioSnapshots).orderBy(desc(schema.portfolioSnapshots.date)).limit(90);
   return NextResponse.json(snapshots.reverse());
 }
 
 export async function POST() {
-  // Calculate current total
-  const assets = await db.query.assets.findMany();
+  const assets = await db.select().from(schema.assets);
   const totalValue = assets.reduce((sum, a) => sum + a.amount * (a.currentPrice || 0), 0);
   const date = new Date().toISOString().split("T")[0];
-
-  const [snapshot] = await db.insert(schema.portfolioSnapshots)
-    .values({ totalValue, date })
-    .returning();
-
+  const [snapshot] = await db.insert(schema.portfolioSnapshots).values({ totalValue, date }).returning();
   return NextResponse.json(snapshot);
 }

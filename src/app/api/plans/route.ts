@@ -3,7 +3,7 @@ import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 
 export async function GET() {
-  const plans = await db.query.investmentPlans.findMany();
+  const plans = await db.select().from(schema.investmentPlans);
   return NextResponse.json(plans);
 }
 
