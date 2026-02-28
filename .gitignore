@@ -43,3 +43,10 @@ next-env.d.ts
 data/
 public/logos/
 docs/samples/*.pdf
+
+# Sensitive data - NEVER commit
+*.pdf
+data/*.db
+data/*.db-wal
+data/*.db-shm
+docs/samples/
