@@ -68,3 +68,19 @@ export type Asset = typeof assets.$inferSelect;
 export type Transaction = typeof transactions.$inferSelect;
 export type InvestmentPlan = typeof investmentPlans.$inferSelect;
 export type PortfolioSnapshot = typeof portfolioSnapshots.$inferSelect;
+
+export const bankTransactions = sqliteTable("bank_transactions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  source: text("source").notNull(), // "trade-republic", "manual"
+  date: text("date").notNull(),
+  type: text("type").notNull(), // trade, transfer_in, transfer_out, interest, dividend, card_payment, gift, other
+  description: text("description").notNull(),
+  credit: real("credit"),
+  debit: real("debit"),
+  balance: real("balance"),
+  currency: text("currency").notNull().default("EUR"),
+  category: text("category"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export type BankTransaction = typeof bankTransactions.$inferSelect;

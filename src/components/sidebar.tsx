@@ -5,15 +5,17 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, ArrowLeftRight, Wallet,
-  CalendarClock, Receipt, Settings, TrendingUp,
+  CalendarClock, Receipt, Settings, TrendingUp, Upload, CreditCard,
 } from "lucide-react";
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/exchanges", label: "Exchanges", icon: ArrowLeftRight },
+  { href: "/import", label: "Import", icon: Upload },
   { href: "/assets", label: "Assets", icon: Wallet },
   { href: "/plans", label: "DCA Plans", icon: CalendarClock },
   { href: "/transactions", label: "Transactions", icon: Receipt },
+  { href: "/expenses", label: "Expenses", icon: CreditCard },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
