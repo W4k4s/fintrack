@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
+import { ThemeInit } from "@/components/theme-init";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-geist-sans" });
 
 export const metadata: Metadata = {
   title: "FinTrack — Portfolio Tracker",
@@ -12,11 +13,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-zinc-950 text-zinc-100 min-h-screen`}>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans bg-background text-foreground min-h-screen antialiased`}>
+        <ThemeInit />
         <div className="flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 p-6 md:p-8 overflow-auto">{children}</main>
+          <main className="flex-1 overflow-auto">
+            <div className="max-w-7xl mx-auto p-6 md:p-8">{children}</div>
+          </main>
         </div>
       </body>
     </html>
