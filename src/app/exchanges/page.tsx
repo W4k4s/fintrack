@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { ArrowLeftRight, Plus, Trash2, RefreshCw, Check, X, Search, Shield } from "lucide-react";
+import { ExchangeLogo } from "@/components/exchange-logo";
 
-interface ExchangeInfo { id: string; name: string; type: "auto"|"manual"; requiresPassphrase: boolean; tags: string[]; }
+interface ExchangeInfo { id: string; name: string; logo: string; type: "auto"|"manual"; requiresPassphrase: boolean; tags: string[]; }
 interface ConnectedExchange { id: number; name: string; slug: string; type: string; enabled: boolean; lastSync: string|null; hasApiKey: boolean; }
 
 export default function ExchangesPage() {
@@ -23,6 +24,7 @@ export default function ExchangesPage() {
   useEffect(() => { fetchData(); }, []);
 
   const filtered = available.filter(e => e.name.toLowerCase().includes(search.toLowerCase()) || e.tags.some(t => t.includes(search.toLowerCase())));
+  const getInfo = (slug: string) => available.find(e => e.id === slug);
 
   const handleConnect = async () => {
     if (!selected) return; setTesting(true); setError("");
@@ -51,28 +53,33 @@ export default function ExchangesPage() {
 
       {connected.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {connected.map(ex => (
-            <div key={ex.id} className="bg-card border border-border rounded-xl p-5 hover:border-border/80 transition-colors">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-base">{ex.name}</h3>
-                <div className="flex gap-1">
-                  {ex.type==="auto" && <button onClick={()=>handleSync(ex.id)} className="p-2 hover:bg-[var(--hover-bg)] rounded-lg transition-colors" title="Sync"><RefreshCw className={`w-4 h-4 text-muted ${syncing===ex.id?"animate-spin":""}`}/></button>}
-                  <button onClick={()=>handleDelete(ex.id)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors" title="Remove"><Trash2 className="w-4 h-4 text-destructive/70 hover:text-destructive"/></button>
+          {connected.map(ex => {
+            const info = getInfo(ex.slug);
+            return (
+              <div key={ex.id} className="bg-card border border-border rounded-xl p-5 hover:border-border/80 transition-colors">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <ExchangeLogo name={ex.name} logo={info?.logo} size={40} />
+                    <div>
+                      <h3 className="font-semibold">{ex.name}</h3>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tagColors[info?.tags[0] || "manual"] || tagColors.manual}`}>{info?.tags[0] || "manual"}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    {ex.type==="auto" && <button onClick={()=>handleSync(ex.id)} className="p-2 hover:bg-[var(--hover-bg)] rounded-lg transition-colors" title="Sync"><RefreshCw className={`w-4 h-4 text-muted ${syncing===ex.id?"animate-spin":""}`}/></button>}
+                    <button onClick={()=>handleDelete(ex.id)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors" title="Remove"><Trash2 className="w-4 h-4 text-destructive/70"/></button>
+                  </div>
+                </div>
+                <div className="text-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted">API Key</span>
+                    {ex.hasApiKey ? <span className="flex items-center gap-1 text-accent"><Check className="w-3.5 h-3.5"/> Connected</span> : <span className="flex items-center gap-1 text-muted-foreground"><X className="w-3.5 h-3.5"/> None</span>}
+                  </div>
+                  {ex.lastSync && <div className="flex items-center justify-between"><span className="text-muted">Last sync</span><span className="text-xs text-muted">{new Date(ex.lastSync).toLocaleString()}</span></div>}
                 </div>
               </div>
-              <div className="text-sm space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted">Type</span>
-                  <span className="capitalize">{ex.type}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted">API Key</span>
-                  {ex.hasApiKey ? <span className="flex items-center gap-1 text-accent"><Check className="w-3.5 h-3.5"/> Connected</span> : <span className="flex items-center gap-1 text-muted-foreground"><X className="w-3.5 h-3.5"/> None</span>}
-                </div>
-                {ex.lastSync && <div className="flex items-center justify-between"><span className="text-muted">Last sync</span><span className="text-muted">{new Date(ex.lastSync).toLocaleString()}</span></div>}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="bg-card border border-border border-dashed rounded-xl p-12 text-center">
@@ -98,8 +105,9 @@ export default function ExchangesPage() {
                 <div className="space-y-0.5 max-h-[50vh] overflow-auto -mx-2 px-2">
                   {filtered.map(ex => (
                     <button key={ex.id} onClick={()=>setSelected(ex)}
-                      className="w-full flex items-center justify-between px-3 py-3 hover:bg-[var(--hover-bg)] rounded-lg text-sm text-left transition-colors group">
-                      <span className="font-medium group-hover:text-accent transition-colors">{ex.name}</span>
+                      className="w-full flex items-center gap-3 px-3 py-3 hover:bg-[var(--hover-bg)] rounded-lg text-sm text-left transition-colors group">
+                      <ExchangeLogo name={ex.name} logo={ex.logo} size={28} />
+                      <span className="font-medium flex-1 group-hover:text-accent transition-colors">{ex.name}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tagColors[ex.tags[0]] || tagColors.manual}`}>{ex.tags[0]}</span>
                     </button>
                   ))}
@@ -108,10 +116,13 @@ export default function ExchangesPage() {
               </div>
             ) : (
               <div className="p-6">
-                <h2 className="text-lg font-bold mb-1">Connect {selected.name}</h2>
-                <p className="text-sm text-muted mb-5">
-                  {selected.type==="auto" ? "Enter your read-only API credentials below." : "This account will be tracked manually — no API needed."}
-                </p>
+                <div className="flex items-center gap-3 mb-4">
+                  <ExchangeLogo name={selected.name} logo={selected.logo} size={40} />
+                  <div>
+                    <h2 className="text-lg font-bold">Connect {selected.name}</h2>
+                    <p className="text-sm text-muted">{selected.type==="auto"?"Enter your read-only API credentials":"Manual account — no API needed"}</p>
+                  </div>
+                </div>
                 {selected.type==="auto" && (
                   <>
                     <div className="flex items-start gap-2 p-3 bg-accent/10 border border-accent/20 rounded-lg mb-5">
@@ -119,21 +130,15 @@ export default function ExchangesPage() {
                       <p className="text-xs text-accent">Only enable <strong>read</strong> permissions. Never grant trading or withdrawal access.</p>
                     </div>
                     <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted mb-1.5 block">API Key</label>
+                      <div><label className="text-sm font-medium text-muted mb-1.5 block">API Key</label>
                         <input type="password" value={form.apiKey} onChange={e=>setForm({...form,apiKey:e.target.value})}
-                          className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent placeholder:text-muted-foreground" placeholder="Enter API key" />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted mb-1.5 block">API Secret</label>
+                          className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent" placeholder="Enter API key" /></div>
+                      <div><label className="text-sm font-medium text-muted mb-1.5 block">API Secret</label>
                         <input type="password" value={form.apiSecret} onChange={e=>setForm({...form,apiSecret:e.target.value})}
-                          className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent placeholder:text-muted-foreground" placeholder="Enter API secret" />
-                      </div>
-                      {selected.requiresPassphrase && <div>
-                        <label className="text-sm font-medium text-muted mb-1.5 block">Passphrase</label>
+                          className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent" placeholder="Enter API secret" /></div>
+                      {selected.requiresPassphrase && <div><label className="text-sm font-medium text-muted mb-1.5 block">Passphrase</label>
                         <input type="password" value={form.passphrase} onChange={e=>setForm({...form,passphrase:e.target.value})}
-                          className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent placeholder:text-muted-foreground" placeholder="Enter passphrase" />
-                      </div>}
+                          className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent" placeholder="Enter passphrase" /></div>}
                     </div>
                   </>
                 )}
