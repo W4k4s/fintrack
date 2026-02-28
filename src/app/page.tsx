@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [snapshots, setSnapshots] = useState<any[]>([]);
   const [exchanges, setExchanges] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hoveredSlice, setHoveredSlice] = useState<number | null>(null);
   const { format, convert, currency, setCurrency } = useCurrency();
 
   const fetchData = async () => {
@@ -106,7 +107,9 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                 <XAxis dataKey="date" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => format(v)} />
-                <Tooltip contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: 8, color: "#fafafa" }} formatter={(v: any) => format(v)} />
+                <Tooltip contentStyle={{ backgroundColor: "rgba(24, 24, 27, 0.95)", backdropFilter: "blur(8px)", border: "1px solid #3f3f46", borderRadius: 8, color: "#fafafa", padding: "8px 12px", boxShadow: "0 4px 12px rgba(0,0,0,0.5)" }} formatter={(v: any) => format(v)}
+                      itemStyle={{ color: "#fafafa" }}
+                      labelStyle={{ color: "#a1a1aa" }} />
                 <Line type="monotone" dataKey="totalValue" stroke="#10b981" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
@@ -119,15 +122,89 @@ export default function Dashboard() {
         <Card className="p-5">
           <h2 className="text-base font-semibold mb-4">Allocation</h2>
           {assets.length > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie data={assets.slice(0, 8)} dataKey="value" nameKey="symbol" cx="50%" cy="50%" outerRadius={100} innerRadius={60}
-                  label={({ name, percent }: any) => `${name} ${((percent || 0) * 100).toFixed(0)}%`} labelLine={false}>
-                  {assets.slice(0, 8).map((_, i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} />))}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: 8, color: "#fafafa" }} formatter={(v: any) => format(v)} />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="flex flex-col lg:flex-row items-center gap-6">
+              <div className="relative flex-shrink-0">
+                <ResponsiveContainer width={220} height={220}>
+                  <PieChart>
+                    <defs>
+                      {assets.slice(0, 8).map((_, i) => (
+                        <linearGradient key={i} id={`grad-${i}`} x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={1} />
+                          <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.6} />
+                        </linearGradient>
+                      ))}
+                    </defs>
+                    <Pie
+                      data={assets.slice(0, 8)}
+                      dataKey="value"
+                      nameKey="symbol"
+                      cx="50%" cy="50%"
+                      outerRadius={100}
+                      innerRadius={70}
+                      paddingAngle={2}
+                      cornerRadius={4}
+                      animationBegin={0}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
+                      stroke="none"
+                      onMouseEnter={(_: any, i: number) => setHoveredSlice(i)}
+                      onMouseLeave={() => setHoveredSlice(null)}
+                    >
+                      {assets.slice(0, 8).map((_, i) => (
+                        <Cell
+                          key={i}
+                          fill={`url(#grad-${i})`}
+                          style={{
+                            filter: hoveredSlice === i ? `drop-shadow(0 0 8px ${COLORS[i % COLORS.length]}80)` : "none",
+                            transform: hoveredSlice === i ? "scale(1.05)" : "scale(1)",
+                            transformOrigin: "center",
+                            transition: "all 0.2s ease",
+                          }}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "rgba(24, 24, 27, 0.95)", backdropFilter: "blur(8px)", border: "1px solid #3f3f46", borderRadius: 8, color: "#fafafa", padding: "8px 12px", boxShadow: "0 4px 12px rgba(0,0,0,0.5)" }}
+                      formatter={(v: any) => format(v)}
+                      itemStyle={{ color: "#fafafa" }}
+                      labelStyle={{ color: "#a1a1aa" }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-xs text-muted uppercase tracking-wider">Total</span>
+                  <span className="text-lg font-bold">{format(totalValue)}</span>
+                </div>
+              </div>
+              <div className="flex-1 w-full space-y-2.5">
+                {assets.slice(0, 8).map((a: any, i: number) => {
+                  const pct = totalValue > 0 ? (a.value / totalValue) * 100 : 0;
+                  return (
+                    <div
+                      key={a.symbol}
+                      className="flex items-center gap-3 group cursor-default"
+                      onMouseEnter={() => setHoveredSlice(i)}
+                      onMouseLeave={() => setHoveredSlice(null)}
+                    >
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length], boxShadow: hoveredSlice === i ? `0 0 8px ${COLORS[i % COLORS.length]}80` : "none" }} />
+                      <span className="text-sm font-medium w-14">{a.symbol}</span>
+                      <div className="flex-1 h-2 bg-border/50 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-700 ease-out"
+                          style={{
+                            width: `${pct}%`,
+                            background: `linear-gradient(90deg, ${COLORS[i % COLORS.length]}, ${COLORS[i % COLORS.length]}99)`,
+                            boxShadow: hoveredSlice === i ? `0 0 6px ${COLORS[i % COLORS.length]}60` : "none",
+                          }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted w-10 text-right">{pct.toFixed(1)}%</span>
+                      <span className="text-xs font-medium w-20 text-right">{format(a.value)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           ) : (
             <div className="h-[260px] flex flex-col items-center justify-center text-muted gap-2">
               <Wallet className="w-8 h-8 text-muted-foreground" /><span>No assets yet</span>
