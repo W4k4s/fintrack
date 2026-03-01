@@ -8,7 +8,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from "recharts";
 import {
-  ArrowLeft, TrendingUp, TrendingDown, BarChart3, History, Building2, LineChart as LineChartIcon,
+  ArrowLeft, TrendingUp, TrendingDown, BarChart3, History, Building2, LineChart as LineChartIcon, Copy, Check,
 } from "lucide-react";
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -23,6 +23,13 @@ export default function AssetDetailPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(label);
+    setTimeout(() => setCopied(null), 2000);
+  };
 
   useEffect(() => {
     fetch(`/api/assets/${encodeURIComponent(symbol)}`)
@@ -72,6 +79,45 @@ export default function AssetDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Identifiers */}
+      {data.identifiers && (data.identifiers.isin || data.identifiers.yahooTicker || data.identifiers.geckoId) && (
+        <div className="flex flex-wrap items-center gap-3">
+          {data.identifiers.isin && (
+            <button
+              onClick={() => copyToClipboard(data.identifiers.isin, "isin")}
+              className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg text-sm hover:bg-[var(--hover-bg)] transition-colors"
+              title="Copy ISIN"
+            >
+              <span className="text-muted">ISIN</span>
+              <span className="font-mono font-medium">{data.identifiers.isin}</span>
+              {copied === "isin" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-muted" />}
+            </button>
+          )}
+          {data.identifiers.yahooTicker && (
+            <button
+              onClick={() => copyToClipboard(data.identifiers.yahooTicker, "ticker")}
+              className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg text-sm hover:bg-[var(--hover-bg)] transition-colors"
+              title="Copy Yahoo Finance ticker"
+            >
+              <span className="text-muted">Ticker</span>
+              <span className="font-mono font-medium">{data.identifiers.yahooTicker}</span>
+              {copied === "ticker" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-muted" />}
+            </button>
+          )}
+          {data.identifiers.geckoId && (
+            <button
+              onClick={() => copyToClipboard(data.identifiers.geckoId, "gecko")}
+              className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg text-sm hover:bg-[var(--hover-bg)] transition-colors"
+              title="Copy CoinGecko ID"
+            >
+              <span className="text-muted">CoinGecko</span>
+              <span className="font-mono font-medium">{data.identifiers.geckoId}</span>
+              {copied === "gecko" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-muted" />}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Position Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -134,7 +180,7 @@ export default function AssetDetailPage() {
           </ResponsiveContainer>
         ) : (
           <div className="text-center py-10 text-muted text-sm">
-            {data.isCrypto ? "Price data temporarily unavailable" : "Price history not available for this asset"}
+            {(data.isCrypto || data.isStock) ? "Price data temporarily unavailable" : "Price history not available for this asset"}
           </div>
         )}
       </Card>

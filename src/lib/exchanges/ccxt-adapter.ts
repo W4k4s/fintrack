@@ -151,8 +151,7 @@ export class CcxtAdapter implements ExchangeAdapter {
               date: t.datetime || new Date(t.timestamp || Date.now()).toISOString(),
             });
           }
-        } catch {
-          // Pair might not have trades or be unsupported
+        } catch (e) {
         }
       }
     }

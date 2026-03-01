@@ -30,6 +30,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     // Fetch trades from exchange
     const trades = await adapter.fetchTrades();
+    if (trades.length > 0) {
+    }
 
     let inserted = 0;
     let skipped = 0;

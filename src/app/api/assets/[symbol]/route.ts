@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
-import { SYMBOL_ISINS, SYMBOL_NAMES, COINGECKO_IDS, transactionMatchesSymbol } from "@/lib/isin-map";
+import { SYMBOL_ISINS, SYMBOL_NAMES, COINGECKO_IDS, YAHOO_TICKERS, getSymbolIdentifiers, transactionMatchesSymbol } from "@/lib/isin-map";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ symbol: string }> }) {
   const { symbol } = await params;
@@ -89,11 +89,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ symb
   // Price chart data (crypto only via CoinGecko)
   let priceHistory: { date: string; price: number }[] = [];
   const geckoId = COINGECKO_IDS[decodedSymbol];
+  const yahooTicker = YAHOO_TICKERS[decodedSymbol];
+
   if (geckoId) {
+    // Crypto: CoinGecko
     try {
       const res = await fetch(
         `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart?vs_currency=usd&days=30`,
-        { next: { revalidate: 3600 } } // cache 1h
+        { next: { revalidate: 3600 } }
       );
       if (res.ok) {
         const data = await res.json();
@@ -101,12 +104,33 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ symb
           date: new Date(ts).toISOString().split("T")[0],
           price: Math.round(price * 100) / 100,
         }));
-        // Deduplicate by date (take last entry per day)
         const byDate = new Map<string, number>();
         for (const p of priceHistory) byDate.set(p.date, p.price);
         priceHistory = Array.from(byDate.entries()).map(([date, price]) => ({ date, price }));
       }
-    } catch { /* CoinGecko rate limit or error — no chart */ }
+    } catch { /* CoinGecko rate limit or error */ }
+  } else if (yahooTicker) {
+    // Stocks/ETFs: Yahoo Finance
+    try {
+      const res = await fetch(
+        `https://query2.finance.yahoo.com/v8/finance/chart/${yahooTicker}?interval=1d&range=1mo`,
+        { headers: { "User-Agent": "Mozilla/5.0" }, next: { revalidate: 3600 } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const result = data?.chart?.result?.[0];
+        if (result) {
+          const timestamps: number[] = result.timestamp || [];
+          const closes: (number | null)[] = result.indicators?.quote?.[0]?.close || [];
+          priceHistory = timestamps
+            .map((ts: number, i: number) => ({
+              date: new Date(ts * 1000).toISOString().split("T")[0],
+              price: closes[i] != null ? Math.round(closes[i]! * 100) / 100 : 0,
+            }))
+            .filter((p: { price: number }) => p.price > 0);
+        }
+      }
+    } catch { /* Yahoo Finance error */ }
   }
 
   return NextResponse.json({
@@ -119,6 +143,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ symb
     pl,
     plPct,
     exchangeBreakdown,
+    identifiers: getSymbolIdentifiers(decodedSymbol),
     exchangeTrades: exchangeTradesWithNames,
     trades: relatedTxs.map(tx => ({
       id: tx.id,
@@ -132,5 +157,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ symb
     })),
     priceHistory,
     isCrypto: !!geckoId,
+    isStock: !!yahooTicker,
   });
 }

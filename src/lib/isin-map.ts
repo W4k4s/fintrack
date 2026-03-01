@@ -38,6 +38,27 @@ export const COINGECKO_IDS: Record<string, string> = {
   S: "sonic-3",
 };
 
+/** Yahoo Finance tickers for stocks/ETFs */
+export const YAHOO_TICKERS: Record<string, string> = {
+  "MSFT": "MSFT",
+  "NVDA": "NVDA",
+  "SAN": "SAN.MC",
+  "MSCI World": "IWDA.AS",
+  "EU Infl Bond": "IBCI.AS",
+  "Gold ETC": "SGLD.L",
+  "MSCI Momentum": "IWMO.L",
+};
+
+/** Get all identifiers for a symbol (ISIN, ticker, CoinGecko ID) */
+export function getSymbolIdentifiers(symbol: string): { isin?: string; yahooTicker?: string; geckoId?: string } {
+  const isins = SYMBOL_ISINS[symbol];
+  return {
+    isin: isins?.[0],
+    yahooTicker: YAHOO_TICKERS[symbol],
+    geckoId: COINGECKO_IDS[symbol],
+  };
+}
+
 /** Friendly names for symbols */
 export const SYMBOL_NAMES: Record<string, string> = {
   BTC: "Bitcoin",
