@@ -21,6 +21,8 @@ export default function Dashboard() {
   const [exchanges, setExchanges] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hoveredSlice, setHoveredSlice] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastPriceUpdate, setLastPriceUpdate] = useState<string | null>(null);
   const { format, convert, currency, setCurrency } = useCurrency();
 
   const fetchData = async () => {
@@ -33,7 +35,25 @@ export default function Dashboard() {
     setAssets(a.assets || []); setSnapshots(s || []); setExchanges(e || []);
     setLoading(false);
   };
-  useEffect(() => { fetchData(); }, []);
+  const refreshPrices = async () => {
+    setRefreshing(true);
+    try {
+      const res = await fetch("/api/prices", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setLastPriceUpdate(data.timestamp);
+        await fetchData(); // reload with new prices
+      }
+    } catch {} finally { setRefreshing(false); }
+  };
+
+  useEffect(() => {
+    // Initial load + price refresh
+    fetchData().then(() => refreshPrices());
+    // Auto-refresh every 5 minutes
+    const interval = setInterval(refreshPrices, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const totalValue = assets.reduce((sum: number, a: any) => sum + (a.value || 0), 0);
   const prevValue = snapshots.length > 1 ? snapshots[snapshots.length - 2]?.totalValue : totalValue;
