@@ -48,9 +48,15 @@ export async function POST(req: NextRequest) {
       acctMap[at.name] = acct.id;
     }
 
-    // Clear existing TR assets
-    for (const acctId of Object.values(acctMap)) {
-      await db.delete(assets).where(eq(assets.accountId, acctId));
+    // Clear existing TR assets only for accounts that have new data
+    if (securities?.length) {
+      await db.delete(assets).where(eq(assets.accountId, acctMap.Securities));
+    }
+    if (crypto?.length) {
+      await db.delete(assets).where(eq(assets.accountId, acctMap.Crypto));
+    }
+    if (cashBalance != null) {
+      await db.delete(assets).where(eq(assets.accountId, acctMap.Cash));
     }
 
     // Insert securities
