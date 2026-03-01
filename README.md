@@ -6,14 +6,15 @@ Personal portfolio tracker that aggregates crypto exchanges, bank accounts, and 
 
 ## Features
 
-- **Multi-exchange support** — Connect Binance, KuCoin, MEXC (via API keys) and Trade Republic (via PDF import)
+- **Multi-exchange support** — Connect Binance, KuCoin, MEXC (via API keys), Trade Republic (PDF import), and ING Direct (XLS import)
 - **Live price updates** — Auto-refresh prices from CoinGecko (crypto) and Yahoo Finance (stocks/ETFs)
 - **Asset detail pages** — Price charts (30d), trade history, exchange breakdown, ISIN/ticker identifiers
 - **Trade history sync** — Fetch trade history from exchanges via CCXT
 - **PDF import** — Parse Trade Republic bank statements, securities, and crypto statements
 - **CSV import** — Import trade history from exchange CSV exports (for exchanges with limited API history)
 - **DCA plans** — Track dollar-cost averaging plans
-- **Expense tracking** — Categorize bank transactions
+- **Expense tracking** — Categorize bank transactions with smart internal transfer detection
+- **Net Worth breakdown** — See where your money is across all accounts
 - **Portfolio snapshots** — Track total portfolio value over time
 - **Currency toggle** — View values in USD or EUR with live exchange rates
 - **Dark theme** — Clean, minimal dark UI
@@ -32,13 +33,14 @@ Personal portfolio tracker that aggregates crypto exchanges, bank accounts, and 
 | Route | Description |
 |-------|-------------|
 | `/` | Dashboard — portfolio overview, pie chart, top holdings |
-| `/exchanges` | Connected exchanges — manage connections |
+| `/exchanges` | Accounts — manage exchanges, brokers, banks & wallets (grouped by category) |
 | `/exchanges/[id]` | Exchange detail — holdings, trade history, import, API limits |
 | `/assets` | All assets — grouped list with values |
 | `/assets/[symbol]` | Asset detail — price chart, trades, identifiers |
 | `/plans` | DCA plans — recurring investment tracking |
 | `/transactions` | Transaction history — all trades across exchanges |
-| `/expenses` | Expense tracking — categorized bank transactions |
+| `/expenses` | Expense tracking — categorized bank transactions (internal transfers excluded) |
+| `/net-worth` | Net Worth breakdown — where your money is across all accounts |
 | `/settings` | Settings — configuration |
 
 ## Getting Started
@@ -87,6 +89,7 @@ npx next dev -H 0.0.0.0 -p 3000
 | **KuCoin** | API key | ✅ Auto-sync | ⚠️ Limited | Recent trades only; CSV recommended |
 | **MEXC** | API key | ✅ Auto-sync | ⚠️ Very limited | 7-day query windows; Convert trades not in API |
 | **Trade Republic** | PDF import | ✅ Via PDF | ✅ Full via bank statement | Securities, crypto, bank transactions |
+| **ING Direct** | XLS import | ✅ Via XLS | ✅ Full history | Spanish bank accounts (Nómina, Naranja, Ahorro) |
 
 > **Tip**: For complete trade history on KuCoin/MEXC, export a CSV from the exchange website and import it via the exchange detail page.
 
@@ -107,7 +110,27 @@ npx next dev -H 0.0.0.0 -p 3000
 | `/api/currency` | GET | EUR/USD exchange rate |
 | `/api/plans` | GET/POST | DCA plans |
 | `/api/transactions` | GET | All transactions |
-| `/api/expenses` | GET | Bank transaction expenses |
+| `/api/import/ing` | POST | Parse & import ING XLS files (preview/import) |
+| `/api/bank-accounts` | GET/PATCH | Bank sub-accounts (list, rename) |
+| `/api/bank-accounts/transactions` | GET | Transactions per bank account |
+| `/api/dashboard/summary` | GET | Portfolio vs Banking breakdown |
+| `/api/net-worth` | GET | Full net worth breakdown by account |
+| `/api/expenses` | GET | Bank transaction expenses (with internal transfer detection) |
+
+## Account Categories
+
+FinTrack organizes accounts into four categories:
+
+| Category | Examples | Connection | Dashboard |
+|----------|----------|------------|-----------|
+| **Exchange** | Binance, KuCoin, MEXC | API auto-sync | Portfolio |
+| **Broker** | Trade Republic, DEGIRO | PDF/CSV import | Portfolio |
+| **Bank** | ING, Revolut, N26 | XLS/CSV import | Banking |
+| **Wallet** | Ledger, MetaMask | Manual | Portfolio |
+
+- **Portfolio** = Exchanges + Brokers + Wallets (investments earning returns)
+- **Banking** = Bank accounts (daily expenses cash)
+- **Net Worth** = Portfolio + Banking
 
 ## Security
 
