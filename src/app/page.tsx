@@ -8,6 +8,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { TrendingUp, TrendingDown, Wallet, ArrowLeftRight, RefreshCw, Coins } from "lucide-react";
+import { AssetIcon } from "@/components/asset-icon";
 
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316"];
 
@@ -222,6 +223,7 @@ export default function Dashboard() {
                       onMouseLeave={() => setHoveredSlice(null)}
                     >
                       <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length], boxShadow: hoveredSlice === i ? `0 0 8px ${COLORS[i % COLORS.length]}80` : "none" }} />
+                      <AssetIcon symbol={a.symbol} size={18} />
                       <span className="text-sm font-medium w-14">{a.symbol}</span>
                       <div className="flex-1 h-2 bg-border/50 rounded-full overflow-hidden">
                         <div
@@ -264,6 +266,7 @@ export default function Dashboard() {
                   <tr key={a.symbol} className="border-t border-border/50 hover:bg-[var(--hover-bg)] transition-colors cursor-pointer" onClick={() => window.location.href = `/assets/${encodeURIComponent(a.symbol)}`}>
                     <td className="py-3 px-5"><div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                      <AssetIcon symbol={a.symbol} size={20} />
                       <span className="font-medium">{a.symbol}</span>
                     </div></td>
                     <td className="py-3 px-5 text-right text-muted">{a.total.toFixed(4)}</td>
