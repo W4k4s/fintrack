@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Wallet, ArrowUpDown } from "lucide-react";
 import { useCurrency } from "@/components/currency-provider";
 import { ExchangeLogo } from "@/components/exchange-logo";
+import { AssetIcon } from "@/components/asset-icon";
 
 // Known exchange logos (client-side cache)
 const exchangeLogos: Record<string, string> = {};
@@ -67,7 +68,19 @@ export default function AssetsPage() {
           <tbody>
             {sorted.length > 0 ? sorted.map(a => (
               <tr key={a.symbol} className="border-t border-border/50 hover:bg-[var(--hover-bg)] transition-colors cursor-pointer" onClick={() => window.location.href = `/assets/${encodeURIComponent(a.symbol)}`}>
-                <td className="py-3 px-3 md:px-5 font-semibold">{a.symbol}</td>
+                <td className="py-3 px-3 md:px-5">
+                  <div className="flex items-center gap-2">
+                    <AssetIcon symbol={a.symbol} size={20} />
+                    <div>
+                      <span className="font-semibold">{a.symbol}</span>
+                      <div className="flex items-center gap-1 mt-0.5 sm:hidden">
+                        {(a.exchanges || []).map((ex: any, i: number) => (
+                          <ExchangeLogo key={i} name={ex.name} logo={exchangeLogos[ex.slug]} size={14} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td className="py-3 px-3 md:px-5 hidden sm:table-cell">
                   <div className="flex items-center gap-1.5">
                     {(a.exchanges || []).map((ex: any, i: number) => (
