@@ -2,15 +2,27 @@
 import { useEffect, useState } from "react";
 import { Receipt, Plus, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { AssetIcon } from "@/components/asset-icon";
+import { ExchangeLogo } from "@/components/exchange-logo";
 
-interface Tx { id: number; type: string; symbol: string; amount: number; price: number|null; total: number|null; date: string; notes: string|null; }
+const exchangeLogos: Record<string, string> = {};
+
+interface Tx { id: number; type: string; symbol: string; amount: number; price: number|null; total: number|null; date: string; notes: string|null; exchangeName: string|null; exchangeSlug: string|null; }
 
 export default function TransactionsPage() {
   const [txs, setTxs] = useState<Tx[]>([]);
+  const [available, setAvailable] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ type: "buy", symbol: "", amount: "", price: "", date: new Date().toISOString().split("T")[0], notes: "" });
 
-  const fetchTxs = () => fetch("/api/transactions").then(r=>r.json()).then(setTxs);
+  const fetchTxs = () => Promise.all([
+    fetch("/api/transactions").then(r=>r.json()),
+    fetch("/api/exchanges/available").then(r=>r.json()),
+  ]).then(([t, av]) => {
+    setTxs(t);
+    for (const ex of av) exchangeLogos[ex.id] = ex.logo;
+    setAvailable(av);
+  });
   useEffect(() => { fetchTxs(); }, []);
 
   const handleCreate = async () => {
@@ -65,7 +77,20 @@ export default function TransactionsPage() {
               <tr key={tx.id} className="border-b border-border/50 hover:bg-[var(--hover-bg)] transition-colors">
                 <td className="py-2.5 px-3 md:px-4 text-muted whitespace-nowrap text-xs">{tx.date}</td>
                 <td className={`py-2.5 px-3 md:px-4 capitalize font-medium text-xs ${typeColors[tx.type]||""}`}>{tx.type}</td>
-                <td className="py-2.5 px-3 md:px-4 font-medium">{tx.symbol}</td>
+                <td className="py-2.5 px-3 md:px-4">
+                  <div className="flex items-center gap-2">
+                    <AssetIcon symbol={tx.symbol} size={20} />
+                    <div>
+                      <span className="font-medium">{tx.symbol}</span>
+                      {tx.exchangeName && (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <ExchangeLogo name={tx.exchangeName} logo={exchangeLogos[tx.exchangeSlug || ""] || ""} size={14} />
+                          <span className="text-[10px] text-muted hidden sm:inline">{tx.exchangeName}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </td>
                 <td className="py-2.5 px-3 md:px-4 text-right font-mono text-xs">{tx.amount < 0.01 ? tx.amount.toFixed(8) : tx.amount.toLocaleString(undefined, {maximumFractionDigits: 6})}</td>
                 <td className="py-2.5 px-3 md:px-4 text-right text-muted hidden sm:table-cell">{tx.price ? formatCurrency(tx.price) : "—"}</td>
                 <td className="py-2.5 px-3 md:px-4 text-right hidden sm:table-cell">{tx.total ? formatCurrency(tx.total) : "—"}</td>
