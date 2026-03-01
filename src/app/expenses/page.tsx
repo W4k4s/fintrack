@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCurrency } from "@/components/currency-provider";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell,
@@ -31,11 +32,12 @@ const TYPE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={`bg-card border border-border rounded-xl ${className}`}>{children}</div>;
+function Card({ children, className = "", onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
+  return <div className={`bg-card border border-border rounded-xl ${className}`} onClick={onClick}>{children}</div>;
 }
 
 export default function ExpensesPage() {
+  const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>("all");
@@ -99,12 +101,14 @@ export default function ExpensesPage() {
           </div>
           <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2 text-destructive">{fmtEur(summary.totalExpenses)}</div>
         </Card>
-        <Card className="p-3 md:p-5">
+        <Card className="p-3 md:p-5 cursor-pointer hover:border-accent/30 transition-colors" onClick={() => router.push("/net-worth")}>
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted">Net</span>
             <div className="w-9 h-9 rounded-lg bg-blue-500/15 flex items-center justify-center"><ArrowUpDown className="w-5 h-5 text-blue-500" /></div>
           </div>
           <div className={`text-lg md:text-2xl font-bold mt-1 md:mt-2 ${summary.net >= 0 ? "text-accent" : "text-destructive"}`}>{fmtEur(summary.net)}</div>
+          <div className="text-xs text-accent mt-1">View breakdown →</div>
+          <div className="text-[10px] text-muted mt-0.5">Cashflow total (income - expenses)</div>
         </Card>
         <Card className="p-3 md:p-5">
           <div className="flex items-center justify-between">

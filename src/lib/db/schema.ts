@@ -84,3 +84,14 @@ export const bankTransactions = sqliteTable("bank_transactions", {
 });
 
 export type BankTransaction = typeof bankTransactions.$inferSelect;
+
+export const bankAccounts = sqliteTable("bank_accounts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  exchangeId: integer("exchange_id").notNull().references(() => exchanges.id, { onDelete: "cascade" }),
+  source: text("source").notNull().unique(), // "ing-2439"
+  accountNumber: text("account_number"), // "1465 0100 9117 28712439"
+  name: text("name").notNull(), // "Cuenta Nómina"
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export type BankAccount = typeof bankAccounts.$inferSelect;

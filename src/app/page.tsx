@@ -7,7 +7,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer,
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
-import { TrendingUp, TrendingDown, Wallet, ArrowLeftRight, RefreshCw, Coins } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, ArrowLeftRight, RefreshCw, Coins, Landmark, DollarSign } from "lucide-react";
 import { AssetIcon } from "@/components/asset-icon";
 
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316"];
@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [assets, setAssets] = useState<any[]>([]);
   const [snapshots, setSnapshots] = useState<any[]>([]);
   const [exchanges, setExchanges] = useState<any[]>([]);
+  const [summary, setSummary] = useState<{ portfolio: number; banking: number; netWorth: number; portfolioAssets?: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [hoveredSlice, setHoveredSlice] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -29,12 +30,13 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [a, s, e] = await Promise.all([
+    const [a, s, e, sum] = await Promise.all([
       fetch("/api/assets").then(r => r.json()),
       fetch("/api/portfolio/snapshot").then(r => r.json()),
       fetch("/api/exchanges").then(r => r.json()),
+      fetch("/api/dashboard/summary").then(r => r.json()),
     ]);
-    setAssets(a.assets || []); setSnapshots(s || []); setExchanges(e || []);
+    setAssets(a.assets || []); setSnapshots(s || []); setExchanges(e || []); setSummary(sum);
     setLoading(false);
   };
   const syncAllExchanges = async () => {
@@ -60,9 +62,7 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    // Initial load -> auto-sync exchanges (15min cooldown) -> refresh prices
     fetchData().then(() => syncAllExchanges()).then(() => refreshPrices());
-    // Auto-refresh prices every 5 minutes
     const interval = setInterval(refreshPrices, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -71,13 +71,15 @@ export default function Dashboard() {
   const prevValue = snapshots.length > 1 ? snapshots[snapshots.length - 2]?.totalValue : totalValue;
   const change = prevValue ? ((totalValue - prevValue) / prevValue) * 100 : 0;
 
+  // Use portfolio assets from summary (excludes bank assets)
+  const portfolioAssets = summary?.portfolioAssets || [];
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-sm text-muted mt-1">
-            Your portfolio at a glance
+            Your finances at a glance
             {syncStatus && <span className="ml-2 text-xs text-emerald-400">✓ {syncStatus}</span>}
           </p>
         </div>
@@ -97,40 +99,47 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        {/* Net Worth — everything combined */}
+        <Card className="p-3 md:p-5 col-span-2 lg:col-span-1">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted">Net Worth</span>
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/15 flex items-center justify-center"><DollarSign className="w-5 h-5 text-emerald-500" /></div>
+          </div>
+          <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{format(summary?.netWorth || totalValue)}</div>
+          <div className="text-xs text-muted mt-1">All accounts combined</div>
+        </Card>
+
+        {/* Portfolio — investments only */}
         <Card className="p-3 md:p-5">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted">Total Portfolio</span>
-            <div className="w-9 h-9 rounded-lg bg-accent/15 flex items-center justify-center"><Wallet className="w-5 h-5 text-accent" /></div>
+            <span className="text-sm text-muted">Portfolio</span>
+            <div className="w-9 h-9 rounded-lg bg-accent/15 flex items-center justify-center"><TrendingUp className="w-5 h-5 text-accent" /></div>
           </div>
-          <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{format(totalValue)}</div>
-          <div className={`flex items-center gap-1 text-sm mt-1 ${change >= 0 ? "text-accent" : "text-destructive"}`}>
-            {change >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+          <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{format(summary?.portfolio || 0)}</div>
+          <div className={`flex items-center gap-1 text-xs mt-1 ${change >= 0 ? "text-accent" : "text-destructive"}`}>
+            {change >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
             {change >= 0 ? "+" : ""}{change.toFixed(2)}%
           </div>
         </Card>
+
+        {/* Banking — cash in bank accounts */}
+        <Card className="p-3 md:p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted">Banking</span>
+            <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center"><Landmark className="w-5 h-5 text-orange-500" /></div>
+          </div>
+          <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{format(summary?.banking || 0)}</div>
+          <div className="text-xs text-muted mt-1">Bank accounts</div>
+        </Card>
+
+        {/* Assets count */}
         <Card className="p-3 md:p-5">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted">Assets</span>
             <div className="w-9 h-9 rounded-lg bg-blue-500/15 flex items-center justify-center"><Coins className="w-5 h-5 text-blue-500" /></div>
           </div>
           <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{assets.length}</div>
-          <div className="text-sm text-muted mt-1">unique tokens</div>
-        </Card>
-        <Card className="p-3 md:p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted">Exchanges</span>
-            <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center"><ArrowLeftRight className="w-5 h-5 text-purple-500" /></div>
-          </div>
-          <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{exchanges.length}</div>
-          <div className="text-sm text-muted mt-1">connected</div>
-        </Card>
-        <Card className="p-3 md:p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted">Top Holding</span>
-            <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center"><TrendingUp className="w-5 h-5 text-amber-500" /></div>
-          </div>
-          <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{assets[0]?.symbol || "—"}</div>
-          <div className="text-sm text-muted mt-1">{assets[0] ? format(assets[0].value) : "no data"}</div>
+          <div className="text-xs text-muted mt-1">{exchanges.length} accounts connected</div>
         </Card>
       </div>
 
@@ -156,14 +165,14 @@ export default function Dashboard() {
           )}
         </Card>
         <Card className="p-5">
-          <h2 className="text-base font-semibold mb-4">Allocation</h2>
-          {assets.length > 0 ? (
+          <h2 className="text-base font-semibold mb-4">Portfolio Allocation</h2>
+          {portfolioAssets.length > 0 ? (
             <div className="flex flex-col lg:flex-row items-center gap-6">
               <div className="relative flex-shrink-0">
                 <ResponsiveContainer width={220} height={220}>
                   <PieChart>
                     <defs>
-                      {assets.slice(0, 8).map((_, i) => (
+                      {portfolioAssets.slice(0, 8).map((_, i) => (
                         <linearGradient key={i} id={`grad-${i}`} x1="0" y1="0" x2="1" y2="1">
                           <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={1} />
                           <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.6} />
@@ -171,7 +180,7 @@ export default function Dashboard() {
                       ))}
                     </defs>
                     <Pie
-                      data={assets.slice(0, 8)}
+                      data={portfolioAssets.slice(0, 8)}
                       dataKey="value"
                       nameKey="symbol"
                       cx="50%" cy="50%"
@@ -186,7 +195,7 @@ export default function Dashboard() {
                       onMouseEnter={(_: any, i: number) => setHoveredSlice(i)}
                       onMouseLeave={() => setHoveredSlice(null)}
                     >
-                      {assets.slice(0, 8).map((_, i) => (
+                      {portfolioAssets.slice(0, 8).map((_, i) => (
                         <Cell
                           key={i}
                           fill={`url(#grad-${i})`}
@@ -208,18 +217,20 @@ export default function Dashboard() {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-xs text-muted uppercase tracking-wider">Total</span>
-                  <span className="text-lg font-bold">{format(totalValue)}</span>
+                  <span className="text-xs text-muted uppercase tracking-wider">Portfolio</span>
+                  <span className="text-lg font-bold">{format(summary?.portfolio || 0)}</span>
                 </div>
               </div>
               <div className="flex-1 w-full space-y-2.5">
-                {assets.slice(0, 8).map((a: any, i: number) => {
-                  const pct = totalValue > 0 ? (a.value / totalValue) * 100 : 0;
+                {portfolioAssets.slice(0, 8).map((a: any, i: number) => {
+                  const portfolioTotal = summary?.portfolio || totalValue;
+                  const pct = portfolioTotal > 0 ? (a.value / portfolioTotal) * 100 : 0;
                   return (
                     <div
                       key={a.symbol}
                       className="flex items-center gap-3 group cursor-pointer"
-                      onClick={() => window.location.href = `/assets/${encodeURIComponent(a.symbol)}`} onMouseEnter={() => setHoveredSlice(i)}
+                      onClick={() => window.location.href = `/assets/${encodeURIComponent(a.symbol)}`}
+                      onMouseEnter={() => setHoveredSlice(i)}
                       onMouseLeave={() => setHoveredSlice(null)}
                     >
                       <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length], boxShadow: hoveredSlice === i ? `0 0 8px ${COLORS[i % COLORS.length]}80` : "none" }} />
@@ -252,7 +263,7 @@ export default function Dashboard() {
 
       <Card>
         <div className="p-5 pb-3"><h2 className="text-base font-semibold">Top Holdings</h2></div>
-        {assets.length > 0 ? (
+        {portfolioAssets.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="text-muted text-xs uppercase tracking-wider border-t border-border">
@@ -262,18 +273,21 @@ export default function Dashboard() {
                 <th className="text-right py-3 px-5 font-medium">Portfolio %</th>
               </tr></thead>
               <tbody>
-                {assets.slice(0, 10).map((a: any, i: number) => (
+                {portfolioAssets.slice(0, 10).map((a: any, i: number) => {
+                  const portfolioTotal = summary?.portfolio || totalValue;
+                  return (
                   <tr key={a.symbol} className="border-t border-border/50 hover:bg-[var(--hover-bg)] transition-colors cursor-pointer" onClick={() => window.location.href = `/assets/${encodeURIComponent(a.symbol)}`}>
                     <td className="py-3 px-5"><div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                       <AssetIcon symbol={a.symbol} size={20} />
                       <span className="font-medium">{a.symbol}</span>
                     </div></td>
-                    <td className="py-3 px-5 text-right text-muted">{a.total.toFixed(4)}</td>
+                    <td className="py-3 px-5 text-right text-muted">{a.amount.toFixed(4)}</td>
                     <td className="py-3 px-5 text-right font-medium">{format(a.value)}</td>
-                    <td className="py-3 px-5 text-right text-muted">{totalValue > 0 ? ((a.value / totalValue) * 100).toFixed(1) : 0}%</td>
+                    <td className="py-3 px-5 text-right text-muted">{portfolioTotal > 0 ? ((a.value / portfolioTotal) * 100).toFixed(1) : 0}%</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
