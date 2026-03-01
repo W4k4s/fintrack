@@ -31,11 +31,38 @@ export async function POST() {
     const synced = results.filter(r => r.status === "synced").length;
     const skipped = results.filter(r => r.status.startsWith("skipped")).length;
 
+    // Save daily portfolio snapshot after sync
+    let snapshotStatus = "skipped";
+    if (synced > 0) {
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const [existing] = await db.select().from(schema.portfolioSnapshots)
+          .where(eq(schema.portfolioSnapshots.date, today)).limit(1);
+
+        const assets = await db.select().from(schema.assets);
+        const totalValue = assets.reduce((sum, a) => sum + a.amount * (a.currentPrice || 0), 0);
+
+        if (totalValue > 0) {
+          if (existing) {
+            await db.update(schema.portfolioSnapshots)
+              .set({ totalValue })
+              .where(eq(schema.portfolioSnapshots.id, existing.id));
+            snapshotStatus = "updated";
+          } else {
+            await db.insert(schema.portfolioSnapshots)
+              .values({ totalValue, date: today });
+            snapshotStatus = "created";
+          }
+        }
+      } catch {}
+    }
+
     return NextResponse.json({
       success: true,
       synced,
       skipped,
       total: exchanges.length,
+      snapshot: snapshotStatus,
       results,
     });
   } catch (error: any) {
