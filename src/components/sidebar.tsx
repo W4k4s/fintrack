@@ -74,8 +74,7 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Mobile spacer */}
-      <div className="md:hidden h-[53px]" />
+
 
       {/* Desktop sidebar */}
       <aside className="hidden md:flex w-60 flex-col bg-card border-r border-border p-4 sticky top-0 h-screen">

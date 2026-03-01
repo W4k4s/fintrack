@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <CurrencyProvider>
           <div className="flex min-h-screen">
             <Sidebar />
-            <main className="flex-1 overflow-auto">
+            <main className="flex-1 overflow-auto pt-[53px] md:pt-0">
               <div className="max-w-7xl mx-auto px-4 py-4 md:p-8">{children}</div>
             </main>
           </div>
