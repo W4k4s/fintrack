@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
+import { getExchangeInfo } from "@/lib/exchanges/registry";
 import { eq } from "drizzle-orm";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -22,6 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       id: exchange.id,
       name: exchange.name,
       slug: exchange.slug,
+      logo: getExchangeInfo(exchange.slug)?.logo || "",
       type: exchange.type,
       lastSync: exchange.lastSync,
     },

@@ -19,7 +19,7 @@ interface Trade {
   amount: number; price: number; total: number; notes: string | null;
 }
 interface ExchangeData {
-  exchange: { id: number; name: string; slug: string; type: string; lastSync: string | null; };
+  exchange: { id: number; name: string; slug: string; type: string; lastSync: string | null; logo: string; };
   assets: Asset[];
   trades: Trade[];
 }
@@ -146,7 +146,7 @@ export default function ExchangeDetailPage() {
         <button onClick={() => router.push("/exchanges")} className="p-2 hover:bg-[var(--hover-bg)] rounded-lg transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <ExchangeLogo name={exchange.name} logo="" size={48} />
+        <ExchangeLogo name={exchange.name} logo={exchange.logo} size={48} />
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{exchange.name}</h1>
           <div className="flex items-center gap-3 text-sm text-muted">
