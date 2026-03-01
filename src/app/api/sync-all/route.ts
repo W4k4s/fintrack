@@ -31,9 +31,9 @@ export async function POST() {
     const synced = results.filter(r => r.status === "synced").length;
     const skipped = results.filter(r => r.status.startsWith("skipped")).length;
 
-    // Save daily portfolio snapshot after sync
+    // Save daily portfolio snapshot (always — prices change even without sync)
     let snapshotStatus = "skipped";
-    if (synced > 0) {
+    {
       try {
         const today = new Date().toISOString().split("T")[0];
         const [existing] = await db.select().from(schema.portfolioSnapshots)
