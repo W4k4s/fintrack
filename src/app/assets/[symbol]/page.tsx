@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useCurrency } from "@/components/currency-provider";
 import { ExchangeLogo } from "@/components/exchange-logo";
+import { AssetIcon } from "@/components/asset-icon";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from "recharts";
@@ -79,7 +80,7 @@ export default function AssetDetailPage() {
         </button>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold">{data.symbol}</h1>
+            <h1 className="text-2xl font-bold flex items-center gap-2"><AssetIcon symbol={data.symbol} size={28} />{data.symbol}</h1>
             <p className="text-sm text-muted mt-0.5">{data.name}</p>
           </div>
           <div className="text-right">
@@ -270,7 +271,12 @@ export default function AssetDetailPage() {
                         {tx.type}
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 text-muted">{tx.exchange}</td>
+                    <td className="py-2.5 px-3">
+                    <div className="flex items-center gap-1.5">
+                      <ExchangeLogo name={tx.exchange} logo={undefined} size={18} />
+                      <span className="text-muted hidden sm:inline">{tx.exchange}</span>
+                    </div>
+                  </td>
                     <td className="py-2.5 px-3 text-right font-mono text-xs">{tx.amount?.toFixed(6)}</td>
                     <td className="py-2.5 px-3 text-right">${tx.price?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     <td className="py-2.5 px-3 text-right font-medium">${tx.total?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
