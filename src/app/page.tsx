@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [hoveredSlice, setHoveredSlice] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [lastPriceUpdate, setLastPriceUpdate] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const { format, convert, currency, setCurrency } = useCurrency();
 
   const fetchData = async () => {
@@ -35,6 +36,16 @@ export default function Dashboard() {
     setAssets(a.assets || []); setSnapshots(s || []); setExchanges(e || []);
     setLoading(false);
   };
+  const syncAllExchanges = async () => {
+    try {
+      const res = await fetch("/api/sync-all", { method: "POST" });
+      const data = await res.json();
+      if (data.success && data.synced > 0) {
+        setSyncStatus(`Synced ${data.synced} exchange${data.synced > 1 ? "s" : ""}`);
+        setTimeout(() => setSyncStatus(null), 4000);
+      }
+    } catch {}
+  };
   const refreshPrices = async () => {
     setRefreshing(true);
     try {
@@ -42,15 +53,15 @@ export default function Dashboard() {
       const data = await res.json();
       if (data.success) {
         setLastPriceUpdate(data.timestamp);
-        await fetchData(); // reload with new prices
+        await fetchData();
       }
     } catch {} finally { setRefreshing(false); }
   };
 
   useEffect(() => {
-    // Initial load + price refresh
-    fetchData().then(() => refreshPrices());
-    // Auto-refresh every 5 minutes
+    // Initial load -> auto-sync exchanges (15min cooldown) -> refresh prices
+    fetchData().then(() => syncAllExchanges()).then(() => refreshPrices());
+    // Auto-refresh prices every 5 minutes
     const interval = setInterval(refreshPrices, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -64,7 +75,10 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-muted mt-1">Your portfolio at a glance</p>
+          <p className="text-sm text-muted mt-1">
+            Your portfolio at a glance
+            {syncStatus && <span className="ml-2 text-xs text-emerald-400">✓ {syncStatus}</span>}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
