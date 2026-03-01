@@ -95,40 +95,40 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <Card className="p-3 md:p-5">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted">Total Portfolio</span>
             <div className="w-9 h-9 rounded-lg bg-accent/15 flex items-center justify-center"><Wallet className="w-5 h-5 text-accent" /></div>
           </div>
-          <div className="text-2xl font-bold mt-2">{format(totalValue)}</div>
+          <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{format(totalValue)}</div>
           <div className={`flex items-center gap-1 text-sm mt-1 ${change >= 0 ? "text-accent" : "text-destructive"}`}>
             {change >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
             {change >= 0 ? "+" : ""}{change.toFixed(2)}%
           </div>
         </Card>
-        <Card className="p-5">
+        <Card className="p-3 md:p-5">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted">Assets</span>
             <div className="w-9 h-9 rounded-lg bg-blue-500/15 flex items-center justify-center"><Coins className="w-5 h-5 text-blue-500" /></div>
           </div>
-          <div className="text-2xl font-bold mt-2">{assets.length}</div>
+          <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{assets.length}</div>
           <div className="text-sm text-muted mt-1">unique tokens</div>
         </Card>
-        <Card className="p-5">
+        <Card className="p-3 md:p-5">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted">Exchanges</span>
             <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center"><ArrowLeftRight className="w-5 h-5 text-purple-500" /></div>
           </div>
-          <div className="text-2xl font-bold mt-2">{exchanges.length}</div>
+          <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{exchanges.length}</div>
           <div className="text-sm text-muted mt-1">connected</div>
         </Card>
-        <Card className="p-5">
+        <Card className="p-3 md:p-5">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted">Top Holding</span>
             <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center"><TrendingUp className="w-5 h-5 text-amber-500" /></div>
           </div>
-          <div className="text-2xl font-bold mt-2">{assets[0]?.symbol || "—"}</div>
+          <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{assets[0]?.symbol || "—"}</div>
           <div className="text-sm text-muted mt-1">{assets[0] ? format(assets[0].value) : "no data"}</div>
         </Card>
       </div>
