@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useCurrency } from "@/components/currency-provider";
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
@@ -182,8 +183,8 @@ export default function Dashboard() {
                   return (
                     <div
                       key={a.symbol}
-                      className="flex items-center gap-3 group cursor-default"
-                      onMouseEnter={() => setHoveredSlice(i)}
+                      className="flex items-center gap-3 group cursor-pointer"
+                      onClick={() => window.location.href = `/assets/${encodeURIComponent(a.symbol)}`} onMouseEnter={() => setHoveredSlice(i)}
                       onMouseLeave={() => setHoveredSlice(null)}
                     >
                       <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length], boxShadow: hoveredSlice === i ? `0 0 8px ${COLORS[i % COLORS.length]}80` : "none" }} />
@@ -226,7 +227,7 @@ export default function Dashboard() {
               </tr></thead>
               <tbody>
                 {assets.slice(0, 10).map((a: any, i: number) => (
-                  <tr key={a.symbol} className="border-t border-border/50 hover:bg-[var(--hover-bg)] transition-colors">
+                  <tr key={a.symbol} className="border-t border-border/50 hover:bg-[var(--hover-bg)] transition-colors cursor-pointer" onClick={() => window.location.href = `/assets/${encodeURIComponent(a.symbol)}`}>
                     <td className="py-3 px-5"><div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                       <span className="font-medium">{a.symbol}</span>

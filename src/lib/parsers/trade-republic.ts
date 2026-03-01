@@ -1,16 +1,5 @@
 const pdf = require("pdf-parse/lib/pdf-parse.js");
-
-const ISIN_MAP: Record<string, string> = {
-  "IE00B4L5Y983": "MSCI World",
-  "IE00B0M62X26": "EU Infl Bond",
-  "IE00B579F325": "Gold ETC",
-  "IE00BP3QZ825": "MSCI Momentum",
-  "US5949181045": "MSFT",
-  "US67066G1040": "NVDA",
-  "ES0113900J37": "SAN",
-  "XF000BTC0017": "BTC",
-};
-
+import { ISIN_MAP } from "@/lib/isin-map";
 export interface SecurityPosition {
   symbol: string; name: string; isin: string;
   quantity: number; priceEur: number; valueEur: number;

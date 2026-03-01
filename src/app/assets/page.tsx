@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Wallet, ArrowUpDown } from "lucide-react";
 import { useCurrency } from "@/components/currency-provider";
 import { ExchangeLogo } from "@/components/exchange-logo";
@@ -65,7 +66,7 @@ export default function AssetsPage() {
           </tr></thead>
           <tbody>
             {sorted.length > 0 ? sorted.map(a => (
-              <tr key={a.symbol} className="border-t border-border/50 hover:bg-[var(--hover-bg)] transition-colors">
+              <tr key={a.symbol} className="border-t border-border/50 hover:bg-[var(--hover-bg)] transition-colors cursor-pointer" onClick={() => window.location.href = `/assets/${encodeURIComponent(a.symbol)}`}>
                 <td className="py-3 px-5 font-semibold">{a.symbol}</td>
                 <td className="py-3 px-5">
                   <div className="flex items-center gap-1.5">
