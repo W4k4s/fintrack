@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowLeftRight, Plus, Trash2, RefreshCw, Check, X, Search, Shield } from "lucide-react";
 import { ExchangeLogo } from "@/components/exchange-logo";
 
@@ -7,6 +8,7 @@ interface ExchangeInfo { id: string; name: string; logo: string; type: "auto"|"m
 interface ConnectedExchange { id: number; name: string; slug: string; type: string; enabled: boolean; lastSync: string|null; hasApiKey: boolean; }
 
 export default function ExchangesPage() {
+  const router = useRouter();
   const [connected, setConnected] = useState<ConnectedExchange[]>([]);
   const [available, setAvailable] = useState<ExchangeInfo[]>([]);
   const [showWizard, setShowWizard] = useState(false);
@@ -56,7 +58,7 @@ export default function ExchangesPage() {
           {connected.map(ex => {
             const info = getInfo(ex.slug);
             return (
-              <div key={ex.id} className="bg-card border border-border rounded-xl p-5 hover:border-border/80 transition-colors">
+              <div key={ex.id} onClick={() => router.push(`/exchanges/${ex.id}`)} className="bg-card border border-border rounded-xl p-5 hover:border-accent/30 transition-colors cursor-pointer">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <ExchangeLogo name={ex.name} logo={info?.logo} size={40} />
@@ -66,8 +68,8 @@ export default function ExchangesPage() {
                     </div>
                   </div>
                   <div className="flex gap-1">
-                    {ex.type==="auto" && <button onClick={()=>handleSync(ex.id)} className="p-2 hover:bg-[var(--hover-bg)] rounded-lg transition-colors" title="Sync"><RefreshCw className={`w-4 h-4 text-muted ${syncing===ex.id?"animate-spin":""}`}/></button>}
-                    <button onClick={()=>handleDelete(ex.id)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors" title="Remove"><Trash2 className="w-4 h-4 text-destructive/70"/></button>
+                    {ex.type==="auto" && <button onClick={(e)=>{e.stopPropagation();handleSync(ex.id);}} className="p-2 hover:bg-[var(--hover-bg)] rounded-lg transition-colors" title="Sync"><RefreshCw className={`w-4 h-4 text-muted ${syncing===ex.id?"animate-spin":""}`}/></button>}
+                    <button onClick={(e)=>{e.stopPropagation();handleDelete(ex.id);}} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors" title="Remove"><Trash2 className="w-4 h-4 text-destructive/70"/></button>
                   </div>
                 </div>
                 <div className="text-sm space-y-2">
