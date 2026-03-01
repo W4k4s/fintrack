@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft, RefreshCw, Upload, AlertTriangle, Info,
   Check, X, History, Wallet, ChevronDown, ChevronUp,
-  FileDown, ExternalLink,
+  FileDown, ExternalLink, FileText, CheckCircle,
 } from "lucide-react";
 import { ExchangeLogo } from "@/components/exchange-logo";
 import { EXCHANGE_LIMITS } from "@/lib/exchange-info";
@@ -40,6 +40,9 @@ export default function ExchangeDetailPage() {
   const [tradeResult, setTradeResult] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
   const [showCsvUpload, setShowCsvUpload] = useState(false);
+  const [trParsing, setTrParsing] = useState(false);
+  const [trPreview, setTrPreview] = useState<any>(null);
+  const [trImported, setTrImported] = useState<any>(null);
 
   const fetchData = async () => {
     try {
@@ -94,6 +97,39 @@ export default function ExchangeDetailPage() {
       }
     } catch { setTradeResult("CSV import failed"); }
     e.target.value = "";
+  };
+
+  const handleTrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    setTrParsing(true); setTradeResult(null); setTrPreview(null); setTrImported(null);
+    const formData = new FormData();
+    Array.from(files).forEach(f => formData.append("files", f));
+    try {
+      const res = await fetch("/api/import/trade-republic", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setTrPreview(data);
+    } catch (err: any) { setTradeResult(`Error: ${err.message}`); }
+    finally { setTrParsing(false); }
+    e.target.value = "";
+  };
+
+  const handleTrConfirm = async () => {
+    setTrParsing(true);
+    try {
+      const res = await fetch("/api/import/trade-republic/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(trPreview),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setTrImported(data.imported);
+      setTrPreview(null);
+      await fetchData();
+    } catch (err: any) { setTradeResult(`Error: ${err.message}`); }
+    finally { setTrParsing(false); }
   };
 
   if (loading) return <div className="flex items-center justify-center h-64 text-muted">Loading...</div>;
@@ -197,11 +233,88 @@ export default function ExchangeDetailPage() {
             {syncingTrades ? "Syncing trades..." : "Sync Trades via API"}
           </button>
         )}
-        <label className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg text-sm font-medium transition-colors cursor-pointer">
-          <Upload className="w-4 h-4" /> Import CSV
-          <input type="file" accept=".csv" onChange={handleCsvUpload} className="hidden" />
-        </label>
+        {exchange.slug === "trade-republic" ? (
+          <label className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg text-sm font-medium transition-colors cursor-pointer">
+            <Upload className="w-4 h-4" /> {trParsing ? "Parsing PDFs..." : "Import PDFs"}
+            <input type="file" accept=".pdf" multiple onChange={handleTrUpload} className="hidden" disabled={trParsing} />
+          </label>
+        ) : exchange.type === "auto" ? (
+          <label className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg text-sm font-medium transition-colors cursor-pointer">
+            <Upload className="w-4 h-4" /> Import CSV
+            <input type="file" accept=".csv" onChange={handleCsvUpload} className="hidden" />
+          </label>
+        ) : null}
       </div>
+
+      {/* TR PDF Preview */}
+      {trPreview && (
+        <Card className="p-5 space-y-4">
+          <h2 className="text-base font-semibold">Preview — Data found in PDFs</h2>
+          {trPreview.securities?.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-muted mb-2">Securities ({trPreview.securities.length})</h3>
+              <table className="w-full text-sm"><thead><tr className="text-xs text-muted uppercase border-b border-border">
+                <th className="text-left py-2 px-3">Symbol</th><th className="text-left py-2 px-3">Name</th>
+                <th className="text-right py-2 px-3">Qty</th><th className="text-right py-2 px-3">Value (€)</th>
+              </tr></thead><tbody>{trPreview.securities.map((s: any, i: number) => (
+                <tr key={i} className="border-b border-border/50">
+                  <td className="py-2 px-3 font-medium">{s.symbol}</td>
+                  <td className="py-2 px-3 text-muted">{s.name?.substring(0, 35)}</td>
+                  <td className="py-2 px-3 text-right">{s.quantity?.toFixed(4)}</td>
+                  <td className="py-2 px-3 text-right font-medium">€{s.valueEur?.toLocaleString()}</td>
+                </tr>
+              ))}</tbody></table>
+            </div>
+          )}
+          {trPreview.crypto?.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-muted mb-2">Crypto ({trPreview.crypto.length})</h3>
+              <table className="w-full text-sm"><thead><tr className="text-xs text-muted uppercase border-b border-border">
+                <th className="text-left py-2 px-3">Symbol</th><th className="text-right py-2 px-3">Qty</th>
+                <th className="text-right py-2 px-3">Value (€)</th><th className="text-right py-2 px-3">P/L</th>
+              </tr></thead><tbody>{trPreview.crypto.map((c: any, i: number) => (
+                <tr key={i} className="border-b border-border/50">
+                  <td className="py-2 px-3 font-medium">{c.symbol}</td>
+                  <td className="py-2 px-3 text-right">{c.quantity?.toFixed(6)}</td>
+                  <td className="py-2 px-3 text-right font-medium">€{c.valueEur?.toLocaleString()}</td>
+                  <td className={`py-2 px-3 text-right ${c.gainPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>{c.gainPct?.toFixed(1)}%</td>
+                </tr>
+              ))}</tbody></table>
+            </div>
+          )}
+          {trPreview.cashBalance != null && (
+            <div className="flex items-center justify-between p-3 bg-accent/5 rounded-lg">
+              <span className="text-sm font-medium">Cash Balance</span>
+              <span className="text-lg font-bold">€{trPreview.cashBalance?.toLocaleString()}</span>
+            </div>
+          )}
+          {trPreview.transactionCount > 0 && (
+            <div className="flex items-center justify-between p-3 bg-blue-500/5 rounded-lg">
+              <span className="text-sm font-medium">Bank Transactions</span>
+              <span className="text-sm text-muted">{trPreview.transactionCount} transactions</span>
+            </div>
+          )}
+          <div className="flex gap-3">
+            <button onClick={() => setTrPreview(null)} className="px-4 py-2.5 text-sm bg-card hover:bg-[var(--hover-bg)] border border-border rounded-lg transition-colors">Cancel</button>
+            <button onClick={handleTrConfirm} disabled={trParsing} className="px-6 py-2.5 text-sm font-medium bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50">
+              {trParsing ? "Importing..." : "Confirm Import"}
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {/* TR Import Success */}
+      {trImported && (
+        <Card className="p-5">
+          <div className="flex items-center gap-3 text-emerald-400">
+            <CheckCircle className="w-5 h-5" />
+            <div className="text-sm">
+              Imported: {trImported.securities} securities, {trImported.crypto} crypto, {trImported.transactions} transactions
+              {trImported.cash > 0 && " + cash balance"}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {tradeResult && (
         <div className={`p-3 rounded-lg text-sm ${tradeResult.includes("Error") || tradeResult.includes("failed") ? "bg-destructive/10 text-destructive border border-destructive/20" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"}`}>

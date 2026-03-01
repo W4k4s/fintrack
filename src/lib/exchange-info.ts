@@ -53,4 +53,21 @@ export const EXCHANGE_LIMITS: Record<string, ExchangeLimits> = {
     ],
     csvNote: "If you used 'Quick Buy/Convert', export from Transaction History instead of Trade History.",
   },
+  "trade-republic": {
+    tradeHistory: "Full history via bank statement PDF",
+    apiLimitations: [
+      "Trade Republic doesn't offer a public API",
+      "All data is imported via PDF documents from the app",
+      "Bank statement covers all transactions (deposits, withdrawals, card payments, savings plan executions)",
+    ],
+    csvInstructions: [
+      "Open the Trade Republic app",
+      "Go to Profile → Documents",
+      "Download: Extracto de Cuenta de Valores (securities)",
+      "Download: Extracto de Criptomonedas (crypto holdings)",
+      "Download: Estado de Cuenta (bank statement with all transactions)",
+      "Upload all 3 PDFs here",
+    ],
+    csvNote: "Export one month at a time. Upload only new months going forward — duplicates are automatically skipped.",
+  },
 };

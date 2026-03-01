@@ -6,14 +6,13 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, ArrowLeftRight, Wallet,
-  CalendarClock, Receipt, Settings, TrendingUp, Upload, CreditCard,
+  CalendarClock, Receipt, Settings, TrendingUp, CreditCard,
   Menu, X,
 } from "lucide-react";
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/exchanges", label: "Exchanges", icon: ArrowLeftRight },
-  { href: "/import", label: "Import", icon: Upload },
   { href: "/assets", label: "Assets", icon: Wallet },
   { href: "/plans", label: "DCA Plans", icon: CalendarClock },
   { href: "/transactions", label: "Transactions", icon: Receipt },

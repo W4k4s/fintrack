@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeftRight, Plus, Trash2, RefreshCw, Check, X, Search, Shield } from "lucide-react";
+import { ArrowLeftRight, Plus, Trash2, RefreshCw, Check, X, Search, Shield, ChevronRight } from "lucide-react";
 import { ExchangeLogo } from "@/components/exchange-logo";
 
 interface ExchangeInfo { id: string; name: string; logo: string; type: "auto"|"manual"; requiresPassphrase: boolean; tags: string[]; }
@@ -78,6 +78,10 @@ export default function ExchangesPage() {
                     {ex.hasApiKey ? <span className="flex items-center gap-1 text-accent"><Check className="w-3.5 h-3.5"/> Connected</span> : <span className="flex items-center gap-1 text-muted-foreground"><X className="w-3.5 h-3.5"/> None</span>}
                   </div>
                   {ex.lastSync && <div className="flex items-center justify-between"><span className="text-muted">Last sync</span><span className="text-xs text-muted">{new Date(ex.lastSync).toLocaleString()}</span></div>}
+                </div>
+                <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs text-accent font-medium">
+                  <span>View details, trades & import</span>
+                  <ChevronRight className="w-4 h-4" />
                 </div>
               </div>
             );
