@@ -184,10 +184,51 @@ export default function AssetDetailPage() {
         </Card>
       )}
 
-      {/* Trade History */}
+      {/* Exchange Trades */}
+      {data.exchangeTrades && data.exchangeTrades.length > 0 && (
+        <Card className="p-5">
+          <h2 className="text-sm font-semibold flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-accent" /> Exchange Trades
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-muted uppercase border-b border-border">
+                  <th className="text-left py-2 px-3">Date</th>
+                  <th className="text-left py-2 px-3">Side</th>
+                  <th className="text-left py-2 px-3">Exchange</th>
+                  <th className="text-right py-2 px-3">Amount</th>
+                  <th className="text-right py-2 px-3">Price</th>
+                  <th className="text-right py-2 px-3">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.exchangeTrades.map((tx: any) => (
+                  <tr key={tx.id} className="border-t border-border/50 hover:bg-[var(--hover-bg)] transition-colors">
+                    <td className="py-2.5 px-3 text-muted whitespace-nowrap">{tx.date}</td>
+                    <td className="py-2.5 px-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        tx.type === "buy" ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                      }`}>
+                        {tx.type}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-muted">{tx.exchange}</td>
+                    <td className="py-2.5 px-3 text-right font-mono text-xs">{tx.amount?.toFixed(6)}</td>
+                    <td className="py-2.5 px-3 text-right">${tx.price?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="py-2.5 px-3 text-right font-medium">${tx.total?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* Bank Statement Trades (Trade Republic) */}
       <Card className="p-5">
         <h2 className="text-sm font-semibold flex items-center gap-2 mb-4">
-          <History className="w-4 h-4 text-accent" /> Trade History
+          <History className="w-4 h-4 text-accent" /> Bank Statement Trades
         </h2>
         {data.trades.length > 0 ? (
           <div className="overflow-x-auto">

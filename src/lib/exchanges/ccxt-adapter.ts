@@ -119,4 +119,44 @@ export class CcxtAdapter implements ExchangeAdapter {
     }
     return prices;
   }
+
+  async fetchTrades(since?: number): Promise<import("./adapter").ExchangeTrade[]> {
+    const results: import("./adapter").ExchangeTrade[] = [];
+    
+    await this.exchange.loadMarkets();
+    
+    const balances = await this.fetchBalances();
+    const symbols = balances.map(b => b.symbol).filter(s => !["USDT", "USDC", "BUSD", "FDUSD"].includes(s));
+    
+    for (const symbol of symbols) {
+      for (const quote of ["USDT", "USDC", "USD", "BTC"]) {
+        const pair = `${symbol}/${quote}`;
+        if (!this.exchange.markets[pair]) continue;
+        
+        try {
+          const trades = await this.exchange.fetchMyTrades(pair, since, 100);
+          for (const t of trades) {
+            const baseSymbol = resolveBaseSymbol(t.symbol?.split("/")[0] || symbol);
+            results.push({
+              id: t.id || `${t.timestamp}`,
+              symbol: baseSymbol,
+              pair: t.symbol || pair,
+              side: t.side as "buy" | "sell",
+              amount: t.amount || 0,
+              price: t.price || 0,
+              cost: t.cost || (t.amount || 0) * (t.price || 0),
+              fee: t.fee?.cost || 0,
+              feeCurrency: t.fee?.currency || quote,
+              timestamp: t.timestamp || Date.now(),
+              date: t.datetime || new Date(t.timestamp || Date.now()).toISOString(),
+            });
+          }
+        } catch {
+          // Pair might not have trades or be unsupported
+        }
+      }
+    }
+    
+    return results.sort((a, b) => b.timestamp - a.timestamp);
+  }
 }

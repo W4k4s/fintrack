@@ -62,6 +62,30 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ symb
     .filter(tx => transactionMatchesSymbol(tx.description, decodedSymbol))
     .sort((a, b) => b.date.localeCompare(a.date));
 
+  // Get exchange trades from transactions table
+  const allExchangeTrades = await db.select().from(schema.transactions);
+  const exchangeTrades = allExchangeTrades
+    .filter(tx => tx.symbol === decodedSymbol)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  // Map exchange trades with exchange names
+  const exchangeTradesWithNames = exchangeTrades.map(tx => {
+    const account = accountMap.get(tx.accountId || 0);
+    const exchange = account ? exchangeMap.get(account.exchangeId) : null;
+    return {
+      id: tx.id,
+      date: tx.date,
+      type: tx.type,  // buy or sell
+      symbol: tx.symbol,
+      amount: tx.amount,
+      price: tx.price,
+      total: tx.total,
+      exchange: exchange?.name || "Unknown",
+      notes: tx.notes,
+      source: "exchange",
+    };
+  });
+
   // Price chart data (crypto only via CoinGecko)
   let priceHistory: { date: string; price: number }[] = [];
   const geckoId = COINGECKO_IDS[decodedSymbol];
@@ -95,6 +119,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ symb
     pl,
     plPct,
     exchangeBreakdown,
+    exchangeTrades: exchangeTradesWithNames,
     trades: relatedTxs.map(tx => ({
       id: tx.id,
       date: tx.date,
