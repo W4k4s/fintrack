@@ -57,10 +57,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ symb
 
   // Get related bank transactions
   const allBankTxs = await db.select().from(schema.bankTransactions);
-  const relatedTxs = allBankTxs
-    .filter(tx => tx.type === "trade" || tx.type === "dividend" || tx.type === "gift")
-    .filter(tx => transactionMatchesSymbol(tx.description, decodedSymbol))
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const isCashAsset = ["EUR", "USD", "GBP", "CHF"].includes(decodedSymbol);
+  const relatedTxs = isCashAsset
+    ? allBankTxs
+        .filter(tx => tx.currency === decodedSymbol || (decodedSymbol === "EUR" && !tx.currency))
+        .sort((a, b) => b.date.localeCompare(a.date))
+    : allBankTxs
+        .filter(tx => tx.type === "trade" || tx.type === "dividend" || tx.type === "gift")
+        .filter(tx => transactionMatchesSymbol(tx.description, decodedSymbol))
+        .sort((a, b) => b.date.localeCompare(a.date));
 
   // Get exchange trades from transactions table
   const allExchangeTrades = await db.select().from(schema.transactions);
