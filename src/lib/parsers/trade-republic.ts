@@ -111,7 +111,7 @@ function classifyTransaction(type: string, description: string): string {
   if (t === "operar") return "trade";
   if (t === "interés" || t === "intereses") return "interest";
   if (t === "rentabilidad" || d.includes("dividend")) return "dividend";
-  if (t === "transacción con tarjeta") return "card_payment";
+  if (t.includes("transacción") && t.includes("tarjeta")) return "card_payment";
   if (t === "regalo") return "gift";
   if (t === "transferencia") {
     if (d.includes("incoming") || d.includes("ingreso")) return "transfer_in";
@@ -119,6 +119,33 @@ function classifyTransaction(type: string, description: string): string {
     return "transfer_in";
   }
   return "other";
+}
+
+/**
+ * Extract the balance (last EUR amount) from the end of a transaction line.
+ * Balance is the very last "X,DD €" in the text.
+ */
+function extractBalance(line: string): number | null {
+  // Find the last occurrence of ",DD €" pattern
+  const matches = [...line.matchAll(/([\d.]+,\d{2})\s*€/g)];
+  if (matches.length === 0) return null;
+  const last = matches[matches.length - 1];
+  return parseEurNum(last[1]);
+}
+
+/**
+ * Clean description by removing glued quantity/ISIN fragments and trailing EUR amounts.
+ */
+function cleanDescription(desc: string): string {
+  // Remove any EUR amount patterns at the end (leftover from multi-line joins)
+  desc = desc.replace(/([\d.]+,\d{2}\s*€\s*)+$/, "");
+  // Remove trailing quantity fragments
+  desc = desc.replace(/,?\s*quantity:\s*[\d.]*\s*$/, "");
+  // Trim extra digits after a full ISIN (2 letters + 10 alphanumeric = 12 chars)
+  desc = desc.replace(/(ISIN:?\s*[A-Z]{2}[A-Z0-9]{10})\d*\s*$/, "$1");
+  // Remove any trailing standalone numbers/dots
+  desc = desc.replace(/[\s\d.]+$/, "");
+  return desc.replace(/\s+/g, " ").trim();
 }
 
 function parseBankStatement(text: string): BankStatementResult {
@@ -131,8 +158,11 @@ function parseBankStatement(text: string): BankStatementResult {
   const dateRange = dateRangeMatch ? dateRangeMatch[1].trim() : "";
 
   let txSection = text.split("TRANSACCIONES DE CUENTA")[1]?.split("RESUMEN DEL BALANCE")[0] || "";
+  // Remove page headers/footers
   txSection = txSection.replace(/TRADE REPUBLIC BANK[\s\S]*?Página\s+\d+de\d+/g, "");
   txSection = txSection.replace(/FECHA\s*TIPO\s*DESCRIPCIÓN[\s\S]*?BALANCE/g, "");
+  // Normalize multi-line transaction type "Transacción \ncon tarjeta"
+  txSection = txSection.replace(/Transacción\s*\ncon tarjeta/g, "Transacción con tarjeta");
 
   const txTypes = ["Transferencia", "Operar", "Interés", "Intereses", "Rentabilidad", "Transacción con tarjeta", "Regalo"];
   const txTypePattern = txTypes.join("|");
@@ -142,62 +172,39 @@ function parseBankStatement(text: string): BankStatementResult {
     "g"
   );
 
+  interface RawTx { date: string; type: string; description: string; balance: number; }
+  const rawTxs: RawTx[] = [];
+
   let match;
   while ((match = dateTypeRegex.exec(txSection)) !== null) {
     const rawDate = match[1].replace(/\n/g, " ").replace(/\s+/g, " ").trim();
     const type = match[2].trim();
-    let rest = match[3].trim();
+    const rest = match[3].replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 
-    // For trades: "quantity: 0.760332" gets concatenated with the EUR amount
-    // Strip the quantity number that's glued to the amount
-    // Pattern: "quantity: X.XXXXXX" followed immediately by EUR amount
-    // In the PDF text: "quantity: 0.76033275,98 €" — the "75,98 €" is the amount
-    // We need to detect this: after "quantity:" there's a number that may run into the EUR amount
-    const qtyGlueMatch = rest.match(/quantity:\s*([\d.]+?)(\d{1,3},\d{2}\s*€)/);
-    if (qtyGlueMatch) {
-      // Fix: insert a space/separator so amounts parse correctly
-      rest = rest.replace(qtyGlueMatch[0], `quantity: ${qtyGlueMatch[1]} ${qtyGlueMatch[2]}`);
-    }
+    const balance = extractBalance(rest);
+    if (balance === null) continue;
 
-    // Also handle "quantity: 165998,77 €" where 165 is the quantity and 998,77 is the amount
-    // Detect: last EUR amount is always the balance line amount
-    // Simpler approach: find all proper EUR amounts (X.XXX,XX € or XXX,XX €)
-    // by working backwards from the end
-    
-    const amountStrs: { val: number; idx: number; len: number }[] = [];
-    const amtRegex = /(?<!\d)([\d.]+,\d{2})\s*€/g;
-    let am;
-    while ((am = amtRegex.exec(rest)) !== null) {
-      amountStrs.push({ val: parseEurNum(am[1]), idx: am.index, len: am[0].length });
-    }
-
-    const firstIdx = amountStrs.length > 0 ? amountStrs[0].idx : rest.length;
-    let description = rest.substring(0, firstIdx).replace(/\n/g, " ").replace(/\s+/g, " ").trim();
-    
-    // Clean up description: remove trailing partial numbers from quantity glue
-    description = description.replace(/\s*[\d.]+\s*$/, "").trim();
-
-    const balance = amountStrs.length > 0 ? amountStrs[amountStrs.length - 1].val : 0;
+    const description = cleanDescription(rest);
     const txType = classifyTransaction(type, description);
+
+    rawTxs.push({ date: parseDate(rawDate), type: txType, description: description.substring(0, 500), balance });
+  }
+
+  // Compute amounts from balance differences (100% reliable)
+  for (let i = 0; i < rawTxs.length; i++) {
+    const tx = rawTxs[i];
+    const prevBalance = i === 0 ? 0 : rawTxs[i - 1].balance;
+    const diff = Math.round((tx.balance - prevBalance) * 100) / 100;
+    const amount = Math.abs(diff);
 
     let credit: number | null = null;
     let debit: number | null = null;
-
-    if (amountStrs.length >= 2) {
-      const amount = amountStrs[amountStrs.length - 2].val;
-      if (["transfer_in", "interest", "dividend", "gift"].includes(txType) ||
-          (txType === "trade" && description.toLowerCase().includes("sell"))) {
-        credit = amount;
-      } else {
-        debit = amount;
-      }
-    }
+    if (diff > 0) credit = amount;
+    else if (diff < 0) debit = amount;
 
     transactions.push({
-      date: parseDate(rawDate),
-      type: txType,
-      description: description.substring(0, 500),
-      credit, debit, balance,
+      date: tx.date, type: tx.type, description: tx.description,
+      credit, debit, balance: tx.balance,
     });
   }
 
