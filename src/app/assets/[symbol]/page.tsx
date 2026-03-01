@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCurrency } from "@/components/currency-provider";
 import { ExchangeLogo } from "@/components/exchange-logo";
 import { AssetIcon } from "@/components/asset-icon";
+import { exchangeRegistry } from "@/lib/exchanges/registry";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from "recharts";
@@ -15,6 +16,9 @@ import {
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <div className={`bg-card border border-border rounded-xl ${className}`}>{children}</div>;
 }
+
+const logoMap = Object.fromEntries(exchangeRegistry.map(e => [e.name, e.logo]));
+function getExchangeLogo(name: string) { return logoMap[name] || ""; }
 
 export default function AssetDetailPage() {
   const params = useParams();
@@ -208,7 +212,7 @@ export default function AssetDetailPage() {
               const pct = data.totalAmount > 0 ? (ex.amount / data.totalAmount) * 100 : 0;
               return (
                 <div key={i} className="flex items-center gap-3">
-                  <ExchangeLogo name={ex.name} logo={undefined} size={28} />
+                  <ExchangeLogo name={ex.name} logo={getExchangeLogo(ex.name)} size={28} />
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{ex.name}</span>
@@ -236,7 +240,7 @@ export default function AssetDetailPage() {
             <Building2 className="w-4 h-4 text-accent" /> Source
           </h2>
           <div className="flex items-center gap-3">
-            <ExchangeLogo name={data.exchangeBreakdown[0].name} logo={undefined} size={28} />
+            <ExchangeLogo name={data.exchangeBreakdown[0].name} logo={getExchangeLogo(data.exchangeBreakdown[0].name)} size={28} />
             <span className="text-sm font-medium">{data.exchangeBreakdown[0].name}</span>
           </div>
         </Card>
@@ -273,7 +277,7 @@ export default function AssetDetailPage() {
                     </td>
                     <td className="py-2.5 px-3">
                     <div className="flex items-center gap-1.5">
-                      <ExchangeLogo name={tx.exchange} logo={undefined} size={18} />
+                      <ExchangeLogo name={tx.exchange} logo={getExchangeLogo(tx.exchange)} size={18} />
                       <span className="text-muted hidden sm:inline">{tx.exchange}</span>
                     </div>
                   </td>
