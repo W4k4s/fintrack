@@ -84,34 +84,34 @@ export default function ExpensesPage() {
         <p className="text-sm text-muted mt-1">Your spending and income overview</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <Card className="p-3 md:p-5">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted">Total Income</span>
             <div className="w-9 h-9 rounded-lg bg-accent/15 flex items-center justify-center"><TrendingUp className="w-5 h-5 text-accent" /></div>
           </div>
-          <div className="text-2xl font-bold mt-2 text-accent">{fmtEur(summary.totalIncome)}</div>
+          <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2 text-accent">{fmtEur(summary.totalIncome)}</div>
         </Card>
-        <Card className="p-5">
+        <Card className="p-3 md:p-5">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted">Total Expenses</span>
             <div className="w-9 h-9 rounded-lg bg-destructive/15 flex items-center justify-center"><TrendingDown className="w-5 h-5 text-destructive" /></div>
           </div>
-          <div className="text-2xl font-bold mt-2 text-destructive">{fmtEur(summary.totalExpenses)}</div>
+          <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2 text-destructive">{fmtEur(summary.totalExpenses)}</div>
         </Card>
-        <Card className="p-5">
+        <Card className="p-3 md:p-5">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted">Net</span>
             <div className="w-9 h-9 rounded-lg bg-blue-500/15 flex items-center justify-center"><ArrowUpDown className="w-5 h-5 text-blue-500" /></div>
           </div>
-          <div className={`text-2xl font-bold mt-2 ${summary.net >= 0 ? "text-accent" : "text-destructive"}`}>{fmtEur(summary.net)}</div>
+          <div className={`text-lg md:text-2xl font-bold mt-1 md:mt-2 ${summary.net >= 0 ? "text-accent" : "text-destructive"}`}>{fmtEur(summary.net)}</div>
         </Card>
-        <Card className="p-5">
+        <Card className="p-3 md:p-5">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted">Savings Rate</span>
             <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center"><PiggyBank className="w-5 h-5 text-purple-500" /></div>
           </div>
-          <div className="text-2xl font-bold mt-2">{summary.savingsRate.toFixed(1)}%</div>
+          <div className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{summary.savingsRate.toFixed(1)}%</div>
         </Card>
       </div>
 
