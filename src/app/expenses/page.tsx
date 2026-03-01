@@ -175,27 +175,27 @@ export default function ExpensesPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="text-muted text-xs uppercase tracking-wider border-t border-border">
-              <th className="text-left py-3 px-5 font-medium">Date</th>
-              <th className="text-left py-3 px-5 font-medium">Type</th>
-              <th className="text-left py-3 px-5 font-medium">Description</th>
-              <th className="text-right py-3 px-5 font-medium">Credit</th>
-              <th className="text-right py-3 px-5 font-medium">Debit</th>
-              <th className="text-right py-3 px-5 font-medium">Balance</th>
+              <th className="text-left py-2.5 px-3 md:px-5 font-medium">Date</th>
+              <th className="text-left py-2.5 px-3 md:px-5 font-medium">Type</th>
+              <th className="text-left py-2.5 px-3 md:px-5 font-medium">Description</th>
+              <th className="text-right py-2.5 px-3 md:px-5 font-medium">Credit</th>
+              <th className="text-right py-2.5 px-3 md:px-5 font-medium">Debit</th>
+              <th className="text-right py-2.5 px-3 md:px-5 font-medium">Balance</th>
             </tr></thead>
             <tbody>
               {filteredTxs.slice(0, 100).map((tx: any, i: number) => (
                 <tr key={i} className="border-t border-border/50 hover:bg-[var(--hover-bg)] transition-colors">
-                  <td className="py-3 px-5 whitespace-nowrap">{tx.date}</td>
-                  <td className="py-3 px-5">
+                  <td className="py-2.5 px-3 md:px-5 whitespace-nowrap">{tx.date}</td>
+                  <td className="py-2.5 px-3 md:px-5">
                     <span className="inline-flex items-center gap-1.5">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: TYPE_COLORS[tx.type] || "#6b7280" }} />
                       <span className="text-xs">{TYPE_LABELS[tx.type] || tx.type}</span>
                     </span>
                   </td>
-                  <td className="py-3 px-5 text-muted max-w-xs truncate">{tx.description}</td>
-                  <td className="py-3 px-5 text-right text-accent">{tx.credit ? fmtEur(tx.credit) : ""}</td>
-                  <td className="py-3 px-5 text-right text-destructive">{tx.debit ? fmtEur(tx.debit) : ""}</td>
-                  <td className="py-3 px-5 text-right font-medium">{fmtEur(tx.balance)}</td>
+                  <td className="py-2.5 px-3 md:px-5 text-muted max-w-xs truncate">{tx.description}</td>
+                  <td className="py-2.5 px-3 md:px-5 text-right text-accent">{tx.credit ? fmtEur(tx.credit) : ""}</td>
+                  <td className="py-2.5 px-3 md:px-5 text-right text-destructive">{tx.debit ? fmtEur(tx.debit) : ""}</td>
+                  <td className="py-2.5 px-3 md:px-5 text-right font-medium">{fmtEur(tx.balance)}</td>
                 </tr>
               ))}
             </tbody>
