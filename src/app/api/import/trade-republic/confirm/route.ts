@@ -97,12 +97,26 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Insert bank transactions
+    // Merge bank transactions (skip duplicates by date + balance + description)
+    let txInserted = 0;
+    let txSkipped = 0;
     if (transactions?.length) {
-      // Clear existing TR transactions
-      await db.delete(bankTransactions).where(eq(bankTransactions.source, "trade-republic"));
+      const existing = await db.select({
+        date: bankTransactions.date,
+        balance: bankTransactions.balance,
+        description: bankTransactions.description,
+      }).from(bankTransactions).where(eq(bankTransactions.source, "trade-republic"));
+
+      const existingSet = new Set(
+        existing.map(e => `${e.date}|${e.balance}|${e.description?.substring(0, 50)}`)
+      );
 
       for (const tx of transactions) {
+        const key = `${tx.date}|${tx.balance}|${tx.description?.substring(0, 50)}`;
+        if (existingSet.has(key)) {
+          txSkipped++;
+          continue;
+        }
         await db.insert(bankTransactions).values({
           source: "trade-republic",
           date: tx.date,
@@ -113,6 +127,7 @@ export async function POST(req: NextRequest) {
           balance: tx.balance,
           currency: "EUR",
         });
+        txInserted++;
       }
     }
 
@@ -126,6 +141,8 @@ export async function POST(req: NextRequest) {
         crypto: crypto?.length || 0,
         cash: cashBalance != null ? 1 : 0,
         transactions: transactions?.length || 0,
+        transactionsInserted: txInserted,
+        transactionsSkipped: txSkipped,
       },
     });
   } catch (e: any) {
