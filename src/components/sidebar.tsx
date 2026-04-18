@@ -7,13 +7,14 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Wallet, Landmark,
   CalendarClock, Receipt, Settings, TrendingUp, CreditCard,
-  Menu, X,
+  Menu, X, Target,
 } from "lucide-react";
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/exchanges", label: "Accounts", icon: Landmark },
   { href: "/assets", label: "Assets", icon: Wallet },
+  { href: "/strategy", label: "Strategy", icon: Target },
   { href: "/plans", label: "DCA Plans", icon: CalendarClock },
   { href: "/transactions", label: "Transactions", icon: Receipt },
   { href: "/expenses", label: "Expenses", icon: CreditCard },

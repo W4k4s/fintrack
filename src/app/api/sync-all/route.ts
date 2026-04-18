@@ -1,28 +1,42 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { syncExchange } from "@/lib/exchanges";
+import { matchTradesToDCA } from "@/lib/dca-matcher";
 
-const COOLDOWN_MS = 15 * 60 * 1000; // 15 minutes
+// Short cooldown: avoids accidental double-clicks but doesn't block real user actions.
+// User-triggered calls can pass { force: true } to bypass entirely.
+const COOLDOWN_MS = 30 * 1000; // 30 seconds
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
+    let force = false;
+    try {
+      const body = await req.json();
+      force = !!body?.force;
+    } catch {}
+
     const exchanges = await db.select().from(schema.exchanges)
       .where(eq(schema.exchanges.type, "auto"));
 
     const now = Date.now();
-    const results: { name: string; status: string; synced?: number }[] = [];
+    const results: { name: string; status: string; synced?: number; tradesInserted?: number }[] = [];
 
     for (const ex of exchanges) {
       const lastSync = ex.lastSync ? new Date(ex.lastSync).getTime() : 0;
-      if (now - lastSync < COOLDOWN_MS) {
+      if (!force && now - lastSync < COOLDOWN_MS) {
         results.push({ name: ex.name, status: "skipped (recent)" });
         continue;
       }
 
       try {
         const result = await syncExchange(ex.id);
-        results.push({ name: ex.name, status: "synced", synced: result.synced });
+        results.push({
+          name: ex.name,
+          status: "synced",
+          synced: result.synced,
+          tradesInserted: result.tradesInserted,
+        });
       } catch (err: any) {
         results.push({ name: ex.name, status: `error: ${err.message}` });
       }
@@ -57,12 +71,19 @@ export async function POST() {
       } catch {}
     }
 
+    // Auto-match trades to DCA plans
+    let dcaMatched = { matched: 0, skipped: 0 };
+    try {
+      dcaMatched = await matchTradesToDCA();
+    } catch {}
+
     return NextResponse.json({
       success: true,
       synced,
       skipped,
       total: exchanges.length,
       snapshot: snapshotStatus,
+      dcaMatched,
       results,
     });
   } catch (error: any) {

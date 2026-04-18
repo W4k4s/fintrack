@@ -62,9 +62,47 @@ export async function syncExchange(exchangeId: number) {
     }
   }
 
+  // Also sync trades (if the adapter supports it).
+  // Previously this was a separate "Sync trades" button and the main Sync
+  // only refreshed balances — which meant new buys didn't flow into DCA matching
+  // until the user clicked the second button. Unify here.
+  let tradesInserted = 0;
+  let tradesSkipped = 0;
+  if (adapter.fetchTrades) {
+    try {
+      const existingTxs = await db.select().from(schema.transactions)
+        .where(eq(schema.transactions.accountId, account.id));
+      const existingIds = new Set(
+        existingTxs.map(t => `${t.date}|${t.symbol}|${t.amount}|${t.price}`),
+      );
+
+      const trades = await adapter.fetchTrades();
+      for (const trade of trades) {
+        const key = `${trade.date.split("T")[0]}|${trade.symbol}|${trade.amount}|${trade.price}`;
+        if (existingIds.has(key)) {
+          tradesSkipped++;
+          continue;
+        }
+        await db.insert(schema.transactions).values({
+          accountId: account.id,
+          type: trade.side,
+          symbol: trade.symbol,
+          amount: trade.amount,
+          price: trade.price,
+          total: trade.cost,
+          date: trade.date.split("T")[0],
+          notes: `${trade.pair} on ${exchange.name} (fee: ${trade.fee} ${trade.feeCurrency})`,
+        });
+        tradesInserted++;
+      }
+    } catch (e) {
+      console.error(`Trade sync failed for ${exchange.name}:`, e);
+    }
+  }
+
   await db.update(schema.exchanges)
     .set({ lastSync: new Date().toISOString() })
     .where(eq(schema.exchanges.id, exchangeId));
 
-  return { synced: balances.length };
+  return { synced: balances.length, tradesInserted, tradesSkipped };
 }
