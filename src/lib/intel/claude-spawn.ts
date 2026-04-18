@@ -18,6 +18,17 @@ import { sendIntelNotification } from "./telegram";
 const CLAUDE_BIN = process.env.CLAUDE_BIN || "claude";
 const TIMEOUT_MS = 90_000;
 
+const VALID_SEVERITY = ["low", "med", "high", "critical"] as const;
+const VALID_ACTIONS = [
+  "buy_accelerate",
+  "hold",
+  "pause_dca",
+  "rebalance",
+  "sell_partial",
+  "review",
+  "ignore",
+] as const;
+
 let consecutiveFailures = 0;
 let circuitOpenUntil = 0;
 
@@ -168,12 +179,17 @@ export async function spawnClaudeForSignal(signalId: number): Promise<void> {
     // Guardamos el JSON completo como analysisText. El UI lo parsea por secciones.
     // Mantener compatibilidad con analyses viejos: si no hay whats_happening, el UI cae a plain text.
     const analysisJson = JSON.stringify(parsed);
-    const severityAdj =
-      (["low", "med", "high", "critical"].includes(String(parsed.severity_adj))
-        ? String(parsed.severity_adj)
-        : row.severity) as typeof row.severity;
+    const rawSeverity = String(parsed.severity_adj ?? "");
+    const severityAdj = (
+      (VALID_SEVERITY as readonly string[]).includes(rawSeverity)
+        ? rawSeverity
+        : row.severity
+    ) as typeof row.severity;
     const tgText = String(parsed.tg_text ?? "").trim();
-    const suggestedAction = String(parsed.suggested_action ?? row.suggestedAction ?? "review");
+    const rawAction = String(parsed.suggested_action ?? "");
+    const suggestedAction = (VALID_ACTIONS as readonly string[]).includes(rawAction)
+      ? rawAction
+      : (row.suggestedAction ?? "review");
 
     await db
       .update(schema.intelSignals)
