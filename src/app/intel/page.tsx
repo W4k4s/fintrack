@@ -84,6 +84,14 @@ export default async function IntelPage() {
             </div>
           </div>
         </div>
+        <div className="mt-3">
+          <Link
+            href="/intel/news"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            📰 Ver todas las noticias procesadas →
+          </Link>
+        </div>
       </header>
 
       {signals.length === 0 && (

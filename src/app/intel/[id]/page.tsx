@@ -81,6 +81,10 @@ export default async function SignalDetailPage({
         )}
       </div>
 
+      {row.scope === "news" && (
+        <NewsSource payload={payload} />
+      )}
+
       <section className="border border-border rounded-xl p-4 bg-card mb-4">
         <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
           Datos crudos detectados
@@ -127,4 +131,53 @@ function safeParse(s: string): unknown {
   } catch {
     return {};
   }
+}
+
+function NewsSource({ payload }: { payload: unknown }) {
+  const p = (payload ?? {}) as Record<string, unknown>;
+  const source = String(p.source ?? "");
+  const tier = Number(p.publisherTier ?? 0);
+  const url = typeof p.url === "string" ? p.url : "";
+  const pub = typeof p.publishedAt === "string" ? p.publishedAt : "";
+  const title = typeof p.title === "string" ? p.title : "";
+  const keywords = Array.isArray(p.keywordsMatched) ? (p.keywordsMatched as string[]) : [];
+  const score = Number(p.rawScore ?? 0);
+  if (!source && !url) return null;
+  const tierLabel = tier === 1 ? "tier 1" : tier === 2 ? "tier 2" : tier === 3 ? "tier 3" : "";
+  return (
+    <section className="border border-border rounded-xl p-4 bg-card mb-4">
+      <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+        Noticia original
+      </div>
+      <div className="text-sm font-medium mb-2">{title}</div>
+      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+        <span className="font-mono">{source}</span>
+        {tierLabel && <span>• {tierLabel}</span>}
+        {pub && <span>• {new Date(pub).toLocaleString("es-ES", { timeZone: "Europe/Madrid" })}</span>}
+        {Number.isFinite(score) && score > 0 && <span>• score {score}</span>}
+        {url && (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent hover:underline ml-auto"
+          >
+            Abrir fuente ↗
+          </a>
+        )}
+      </div>
+      {keywords.length > 0 && (
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          {keywords.slice(0, 6).map((k) => (
+            <span
+              key={k}
+              className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--hover-bg)] text-muted-foreground"
+            >
+              {k}
+            </span>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
