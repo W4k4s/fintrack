@@ -17,6 +17,7 @@ import { sendIntelNotification } from "./telegram";
 
 const CLAUDE_BIN = process.env.CLAUDE_BIN || "claude";
 const TIMEOUT_MS = 90_000;
+const MAX_CONCURRENT_SPAWNS = 2;
 
 const VALID_SEVERITY = ["low", "med", "high", "critical"] as const;
 const VALID_ACTIONS = [
@@ -32,13 +33,31 @@ const VALID_ACTIONS = [
 let consecutiveFailures = 0;
 let circuitOpenUntil = 0;
 
+let activeSpawns = 0;
+const spawnWaiters: Array<() => void> = [];
+
+async function acquireSpawnSlot(): Promise<void> {
+  if (activeSpawns < MAX_CONCURRENT_SPAWNS) {
+    activeSpawns++;
+    return;
+  }
+  await new Promise<void>((resolve) => spawnWaiters.push(resolve));
+  activeSpawns++;
+}
+
+function releaseSpawnSlot(): void {
+  activeSpawns--;
+  const next = spawnWaiters.shift();
+  if (next) next();
+}
+
 function severityRank(s: string): number {
   return { low: 0, med: 1, high: 2, critical: 3 }[s] ?? 0;
 }
 
 function buildPrompt(sig: typeof schema.intelSignals.$inferSelect): string {
-  const payload = safeJson(sig.payload);
-  return [
+  const payload = safeJson(sig.payload) as Record<string, unknown>;
+  const lines = [
     "Eres el analista de inversiones de Isma. Él NO es trader profesional, es ingeniero. Explica en español llano, frases cortas, sin jerga.",
     "Si tienes que usar un término técnico (RSI, funding, volatilidad), añade una traducción breve en paréntesis la primera vez.",
     "Contexto del usuario: estrategia Reset 2026 (perfil balanced, cash del 67% bajando a 25% en 6 meses, multiplicador ×2 automático en crypto cuando F&G ≤ 24). EUR es la moneda base.",
@@ -53,8 +72,44 @@ function buildPrompt(sig: typeof schema.intelSignals.$inferSelect): string {
     `- acción propuesta por la regla: ${sig.suggestedAction ?? "-"}`,
     `- cantidad sugerida EUR: ${sig.actionAmountEur ?? "-"}`,
     `- datos crudos: ${JSON.stringify(payload)}`,
+  ];
+
+  if (sig.scope === "news") {
+    const excerpt = String(payload.bodyExcerpt ?? "").slice(0, 500);
+    const keywords = Array.isArray(payload.keywordsMatched) ? payload.keywordsMatched : [];
+    const assets = Array.isArray(payload.assetsMentioned) ? payload.assetsMentioned : [];
+    lines.push(
+      "",
+      "CONTEXTO NOTICIA:",
+      `- fuente: ${payload.source ?? "-"} (tier ${payload.publisherTier ?? "?"})`,
+      `- url: ${payload.url ?? "-"}`,
+      `- publicada: ${payload.publishedAt ?? "-"}`,
+      `- keywords matched: ${keywords.join(", ") || "-"}`,
+      `- assets del portfolio mencionados: ${assets.join(", ") || "ninguno"}`,
+      `- score filtro: ${payload.rawScore ?? "-"}`,
+      `- extracto: ${excerpt || "(sin cuerpo)"}`,
+      "",
+      "INSTRUCCIONES ESPECÍFICAS NEWS:",
+      "- El filtro es tonto (keywords+tier). Tú decides si esta noticia es RELEVANTE de verdad para la tesis de Isma, o si es ruido (FOMO, AI hype, crypto twitter drama).",
+      "- whats_happening: resumen EN 2 FRASES de lo que dice la noticia. NO copies el titular; extrae el hecho.",
+      "- what_it_means: impacto concreto en la tesis Reset 2026. Menciona si cambia o refuerza cash %, multiplicador F&G, o alguna asignación. Si la noticia es ruido, dilo ('no cambia tesis') y pon severity_adj=low.",
+      "- action.headline: decisivo. Ej: 'Pausar DCA USDC 48h', 'Acelerar compra BTC semanal', 'Mantener rumbo, ignorar'.",
+      "- suggested_action OBLIGATORIO entre pause_dca | buy_accelerate | hold | review | ignore.",
+      "- Si es FOMO (ATH/rally sin catalizador fundamental): severity_adj=low, suggested_action=hold.",
+      "- Si detectas riesgo existencial en asset del portfolio (hack confirmado, depeg, insolvencia): severity_adj=critical, suggested_action=pause_dca.",
+      "- No sobre-reacciones: macro de cada día NO es critical. Critical es cuando hay riesgo de pérdida permanente >5% en algún asset.",
+    );
+  }
+
+  lines.push(
     "",
     "Tu trabajo: convertir esta señal en un análisis accionable, que Isma lea y sepa qué hacer en 30 segundos.",
+  );
+  return lines.concat(formatOutputSection()).join("\n");
+}
+
+function formatOutputSection(): string[] {
+  return [
     "",
     "FORMATO DE SALIDA (OBLIGATORIO — solo este JSON, sin fences ni texto alrededor):",
     "{",
@@ -83,7 +138,7 @@ function buildPrompt(sig: typeof schema.intelSignals.$inferSelect): string {
     "- Si la acción es \"no hacer nada\", dilo claro: headline \"Observar, no actuar\" y steps vacío.",
     "- NO inventes datos que no estén en el payload.",
     "- Responde ÚNICAMENTE el JSON. Nada antes, nada después.",
-  ].join("\n");
+  ];
 }
 
 function safeJson(s: string | null): unknown {
@@ -170,6 +225,7 @@ export async function spawnClaudeForSignal(signalId: number): Promise<void> {
     .set({ analysisStatus: "claude_requested" })
     .where(eq(schema.intelSignals.id, signalId));
 
+  await acquireSpawnSlot();
   try {
     const prompt = buildPrompt(row);
     const raw = await runClaude(prompt);
@@ -219,5 +275,7 @@ export async function spawnClaudeForSignal(signalId: number): Promise<void> {
       .set({ analysisStatus: "claude_failed" })
       .where(eq(schema.intelSignals.id, signalId));
     console.error(`[intel] claude spawn failed for signal=${signalId}`, err);
+  } finally {
+    releaseSpawnSlot();
   }
 }

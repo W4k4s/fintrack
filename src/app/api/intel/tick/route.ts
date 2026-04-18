@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { detectorsForScope } from "@/lib/intel/detectors";
+import { linkNewsItemsToSignals } from "@/lib/intel/detectors/news-filter";
 import { persistSignals } from "@/lib/intel/persist";
 import { spawnClaudeForSignal } from "@/lib/intel/claude-spawn";
 import type { IntelScope } from "@/lib/intel/types";
@@ -41,6 +42,25 @@ export async function POST(req: NextRequest) {
       const { created, skipped } = await persistSignals(candidates);
       totalCreated += created.length;
       results.push({ scope: detector.scope, created, skipped });
+
+      if (detector.scope === "news" && created.length > 0) {
+        const dedupToNewsId = new Map<string, number>();
+        for (const c of candidates) {
+          const newsItemId = Number((c.payload as { newsItemId?: number }).newsItemId);
+          if (Number.isFinite(newsItemId)) dedupToNewsId.set(c.dedupKey, newsItemId);
+        }
+        const createdRows = await db
+          .select({
+            id: schema.intelSignals.id,
+            dedupKey: schema.intelSignals.dedupKey,
+          })
+          .from(schema.intelSignals)
+          .where(eq(schema.intelSignals.scope, "news"));
+        const links = createdRows
+          .filter((r) => created.includes(r.id) && dedupToNewsId.has(r.dedupKey))
+          .map((r) => ({ signalId: r.id, newsItemId: dedupToNewsId.get(r.dedupKey)! }));
+        if (links.length > 0) await linkNewsItemsToSignals(links);
+      }
 
       // Spawn Claude para las signals nuevas severity>=med
       for (const sigId of created) {
