@@ -13,7 +13,8 @@ export interface CsvTrade {
   pair: string;       // original pair (e.g. "BTCUSDT")
   amount: number;     // quantity of base asset
   price: number;      // price per unit in quote currency
-  total: number;      // amount * price (cost)
+  total: number;      // amount * price (cost, in quote currency)
+  quoteCurrency: string; // quote asset of the pair (USDT, USDC, EUR, BTC, ...)
   fee: number;
   feeCurrency: string;
 }
@@ -130,6 +131,7 @@ function parseBinance(text: string): CsvTrade[] {
       amount,
       price: price || (total / amount),
       total: total || (price * amount),
+      quoteCurrency: quote,
       fee,
       feeCurrency,
     });
@@ -186,6 +188,7 @@ function parseKucoin(text: string): CsvTrade[] {
       amount,
       price: price || (total / amount),
       total: total || (price * amount),
+      quoteCurrency: quote,
       fee,
       feeCurrency,
     });
@@ -244,6 +247,7 @@ function parseMexc(text: string): CsvTrade[] {
       amount,
       price: price || (total / amount),
       total: total || (price * amount),
+      quoteCurrency: quote,
       fee,
       feeCurrency,
     });

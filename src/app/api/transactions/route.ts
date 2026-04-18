@@ -10,6 +10,7 @@ export async function GET() {
     amount: schema.transactions.amount,
     price: schema.transactions.price,
     total: schema.transactions.total,
+    quoteCurrency: schema.transactions.quoteCurrency,
     date: schema.transactions.date,
     notes: schema.transactions.notes,
     accountId: schema.transactions.accountId,

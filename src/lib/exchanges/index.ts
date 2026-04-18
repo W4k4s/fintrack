@@ -83,6 +83,9 @@ export async function syncExchange(exchangeId: number) {
           tradesSkipped++;
           continue;
         }
+        const quoteCurrency = trade.pair.includes("/")
+          ? trade.pair.split("/")[1]
+          : trade.feeCurrency || "USD";
         await db.insert(schema.transactions).values({
           accountId: account.id,
           type: trade.side,
@@ -90,6 +93,7 @@ export async function syncExchange(exchangeId: number) {
           amount: trade.amount,
           price: trade.price,
           total: trade.cost,
+          quoteCurrency,
           date: trade.date.split("T")[0],
           notes: `${trade.pair} on ${exchange.name} (fee: ${trade.fee} ${trade.feeCurrency})`,
         });

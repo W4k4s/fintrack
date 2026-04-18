@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useCurrency } from "@/components/currency-provider";
 import {
   Target, Shield, AlertTriangle, CheckCircle2,
   Plus, ChevronDown, ChevronUp, PiggyBank,
@@ -402,6 +403,7 @@ function GoalsGrid({
 
 // ========== ALLOCATION COMPACT ==========
 function AllocationCompact({ allocation }: { allocation: Allocation[] }) {
+  const { convert } = useCurrency();
   const sorted = [...allocation].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift));
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
@@ -419,7 +421,7 @@ function AllocationCompact({ allocation }: { allocation: Allocation[] }) {
           const max = Math.max(item.current, item.target, 1);
           const barW = (item.current / max) * 100;
           const targetX = (item.target / max) * 100;
-          const eur = Math.round(item.currentValue * 0.867);
+          const eur = Math.round(convert(item.currentValue));
           return (
             <div key={item.class} className="flex items-center gap-3">
               <div className="w-20 shrink-0 flex items-center gap-1.5">
@@ -990,7 +992,7 @@ export default function StrategyPage() {
   };
 
   const handleExecuteDCA = async (data: { planId: number; amount: number; price?: number; units?: number; notes?: string }) => {
-    await fetch("/api/strategy/executions", {
+    await fetch("/api/strategy/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),

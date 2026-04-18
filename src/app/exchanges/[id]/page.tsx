@@ -9,6 +9,7 @@ import {
   Pencil, CreditCard, ArrowUpRight, ArrowDownLeft,
 } from "lucide-react";
 import { ExchangeLogo } from "@/components/exchange-logo";
+import { useCurrency } from "@/components/currency-provider";
 import { EXCHANGE_LIMITS } from "@/lib/exchange-info";
 
 interface Asset {
@@ -17,7 +18,7 @@ interface Asset {
 }
 interface Trade {
   id: number; date: string; type: string; symbol: string;
-  amount: number; price: number; total: number; notes: string | null;
+  amount: number; price: number; total: number; quoteCurrency: string; notes: string | null;
 }
 interface ExchangeData {
   exchange: { id: number; name: string; slug: string; type: string; lastSync: string | null; logo: string; };
@@ -201,6 +202,7 @@ export default function ExchangeDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { formatFrom } = useCurrency();
 
   const [data, setData] = useState<ExchangeData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -613,8 +615,8 @@ export default function ExchangeDetailPage() {
                   <td className="py-2.5 px-3"><span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tx.type === "buy" ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>{tx.type}</span></td>
                   <td className="py-2.5 px-3 font-medium"><Link href={`/assets/${encodeURIComponent(tx.symbol)}`} className="hover:text-accent transition-colors">{tx.symbol}</Link></td>
                   <td className="py-2.5 px-3 text-right font-mono text-xs">{tx.amount < 0.01 ? tx.amount.toFixed(8) : tx.amount.toFixed(6)}</td>
-                  <td className="py-2.5 px-3 text-right">${tx.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  <td className="py-2.5 px-3 text-right font-medium">${tx.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td className="py-2.5 px-3 text-right">{tx.price != null ? formatFrom(tx.price, tx.quoteCurrency || "USD") : "—"}</td>
+                  <td className="py-2.5 px-3 text-right font-medium">{tx.total != null ? formatFrom(tx.total, tx.quoteCurrency || "USD") : "—"}</td>
                 </tr>
               ))}
             </tbody></table></div>

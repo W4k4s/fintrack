@@ -142,6 +142,11 @@ npx next dev -H 0.0.0.0 -p 3000
 - **[Trade Republic](docs/TRADE-REPUBLIC-IMPORT.md)** — PDF import for securities, crypto, and bank statements
 - **[ING Direct Spain](docs/ING-IMPORT.md)** — XLS import with deduplication and internal transfer detection
 
+## Architecture notes
+
+- **[Currency normalization](docs/CURRENCY-NORMALIZATION.md)** — Values are stored in USD; transactions carry their quote currency and are converted at display time
+- **[DCA execution](docs/DCA-EXECUTION.md)** — Optimistic dashboard updates when you click "Comprar" on `/strategy`, reconciled on the next Trade Republic import
+
 ## Security
 
 - API keys encrypted at rest (AES-256-GCM)

@@ -1,15 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Receipt, Plus, Trash2 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/components/currency-provider";
 import { AssetIcon } from "@/components/asset-icon";
 import { ExchangeLogo } from "@/components/exchange-logo";
 
 const exchangeLogos: Record<string, string> = {};
 
-interface Tx { id: number; type: string; symbol: string; amount: number; price: number|null; total: number|null; date: string; notes: string|null; exchangeName: string|null; exchangeSlug: string|null; }
+interface Tx { id: number; type: string; symbol: string; amount: number; price: number|null; total: number|null; quoteCurrency: string; date: string; notes: string|null; exchangeName: string|null; exchangeSlug: string|null; }
 
 export default function TransactionsPage() {
+  const { formatFrom } = useCurrency();
   const [txs, setTxs] = useState<Tx[]>([]);
   const [available, setAvailable] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -92,8 +93,8 @@ export default function TransactionsPage() {
                   </div>
                 </td>
                 <td className="py-2.5 px-3 md:px-4 text-right font-mono text-xs">{tx.amount < 0.01 ? tx.amount.toFixed(8) : tx.amount.toLocaleString(undefined, {maximumFractionDigits: 6})}</td>
-                <td className="py-2.5 px-3 md:px-4 text-right text-muted hidden sm:table-cell">{tx.price ? formatCurrency(tx.price) : "—"}</td>
-                <td className="py-2.5 px-3 md:px-4 text-right hidden sm:table-cell">{tx.total ? formatCurrency(tx.total) : "—"}</td>
+                <td className="py-2.5 px-3 md:px-4 text-right text-muted hidden sm:table-cell">{tx.price ? formatFrom(tx.price, tx.quoteCurrency || "USD") : "—"}</td>
+                <td className="py-2.5 px-3 md:px-4 text-right hidden sm:table-cell">{tx.total ? formatFrom(tx.total, tx.quoteCurrency || "USD") : "—"}</td>
                 <td className="py-2.5 px-2 text-right"><button onClick={()=>handleDelete(tx.id)} className="p-1 hover:bg-destructive/20 text-destructive rounded"><Trash2 className="w-3 h-3"/></button></td>
               </tr>
             )) : <tr><td colSpan={7} className="py-8 text-center text-muted">No transactions yet.</td></tr>}

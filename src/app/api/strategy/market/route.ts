@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getEurPerUsd } from "@/lib/currency-rates";
 
 // Fetches live market context:
 // - Crypto Fear & Greed Index (alternative.me)
@@ -67,7 +68,8 @@ export async function GET() {
       cache: "no-store",
     });
     const dash = await dashRes.json();
-    netWorth = Math.round((dash.netWorth || 0) * 0.867);
+    const eurRate = await getEurPerUsd();
+    netWorth = Math.round((dash.netWorth || 0) * eurRate);
   } catch (e) {
     console.error("Expenses/dashboard fetch failed:", e);
   }

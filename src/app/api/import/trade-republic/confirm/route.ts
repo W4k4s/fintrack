@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { exchanges, accounts, assets, bankTransactions } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, lte } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
   try {
@@ -97,6 +97,25 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Reconcile pending entries: any TR pending bank_transaction whose date falls
+    // within the imported range is assumed to be covered by the incoming real data.
+    // Delete them before the merge so they aren't double-counted.
+    let pendingReconciled = 0;
+    if (transactions?.length) {
+      const maxImportDate = transactions.reduce(
+        (max: string, tx: { date: string }) => (tx.date > max ? tx.date : max),
+        "",
+      );
+      if (maxImportDate) {
+        const deleted = await db.delete(bankTransactions).where(and(
+          eq(bankTransactions.source, "trade-republic"),
+          eq(bankTransactions.status, "pending"),
+          lte(bankTransactions.date, maxImportDate),
+        )).returning();
+        pendingReconciled = deleted.length;
+      }
+    }
+
     // Merge bank transactions (skip duplicates by date + balance + description)
     let txInserted = 0;
     let txSkipped = 0;
@@ -143,6 +162,7 @@ export async function POST(req: NextRequest) {
         transactions: transactions?.length || 0,
         transactionsInserted: txInserted,
         transactionsSkipped: txSkipped,
+        pendingReconciled,
       },
     });
   } catch (e: any) {

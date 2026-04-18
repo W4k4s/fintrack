@@ -85,6 +85,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ symb
       amount: tx.amount,
       price: tx.price,
       total: tx.total,
+      quoteCurrency: tx.quoteCurrency,
       exchange: exchange?.name || "Unknown",
       notes: tx.notes,
       source: "exchange",

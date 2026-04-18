@@ -9,7 +9,34 @@ import { eq, and, gte, isNull } from "drizzle-orm";
  * - For each active DCA plan, find recent BUY transactions for that asset
  * - Only match trades not already linked to an execution
  * - Group trades by week and create one execution per week
+ *
+ * Amounts in dca_executions are stored in EUR. Trades come in quote currency
+ * (USDC, USDT, USD, EUR, ...) — convert to EUR using current rates.
  */
+
+const USD_STABLECOINS = new Set(["USDT", "USDC", "BUSD", "FDUSD", "TUSD", "DAI", "USD"]);
+
+async function fetchRates(): Promise<Record<string, number>> {
+  try {
+    const res = await fetch("https://api.exchangerate-api.com/v4/latest/USD");
+    const data = await res.json();
+    return data.rates || { USD: 1, EUR: 0.85 };
+  } catch {
+    return { USD: 1, EUR: 0.85 };
+  }
+}
+
+// Convert an amount from its quote currency to EUR.
+// rates[X] = how many X per 1 USD. So USD→EUR = rates.EUR; X→USD = amount/rates[X]; then × rates.EUR.
+export function toEur(amount: number, quoteCurrency: string, rates: Record<string, number>): number {
+  const q = (quoteCurrency || "USD").toUpperCase();
+  const eurPerUsd = rates.EUR || 0.85;
+  if (q === "EUR") return amount;
+  if (USD_STABLECOINS.has(q)) return amount * eurPerUsd;
+  const srcRate = rates[q];
+  if (!srcRate) return amount * eurPerUsd; // unknown — best effort
+  return (amount / srcRate) * eurPerUsd;
+}
 
 export async function matchTradesToDCA() {
   const plans = await db.select().from(schema.investmentPlans);
@@ -25,6 +52,8 @@ export async function matchTradesToDCA() {
   // Get all buy transactions (from synced exchanges)
   const allTx = await db.select().from(schema.transactions);
   const buys = allTx.filter(t => t.type === "buy");
+
+  const rates = await fetchRates();
 
   let matched = 0;
   let skipped = 0;
@@ -51,17 +80,21 @@ export async function matchTradesToDCA() {
         continue;
       }
 
-      // Aggregate trades for this day
-      const totalAmount = trades.reduce((s, t) => s + (t.total || 0), 0);
+      // Aggregate trades for this day — convert each trade's total to EUR
+      // using its own quote currency so mixed-quote days (USDC + EUR) sum correctly.
+      const totalAmountEur = trades.reduce(
+        (s, t) => s + toEur(t.total || 0, t.quoteCurrency || "USD", rates),
+        0,
+      );
       const totalUnits = trades.reduce((s, t) => s + t.amount, 0);
-      const avgPrice = totalUnits > 0 ? totalAmount / totalUnits : null;
+      const avgPriceEur = totalUnits > 0 ? totalAmountEur / totalUnits : null;
       const sources = [...new Set(trades.map(t => t.notes).filter(Boolean))];
 
-      // Create execution
+      // Create execution (amount + price stored in EUR)
       await db.insert(schema.dcaExecutions).values({
         planId: plan.id,
-        amount: Math.round(totalAmount * 100) / 100,
-        price: avgPrice ? Math.round(avgPrice * 100) / 100 : null,
+        amount: Math.round(totalAmountEur * 100) / 100,
+        price: avgPriceEur ? Math.round(avgPriceEur * 100) / 100 : null,
         units: Math.round(totalUnits * 1e8) / 1e8,
         date,
         notes: `Auto-sync: ${sources[0] || "exchange trade"}`,

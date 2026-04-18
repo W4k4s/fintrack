@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { getEurPerUsd } from "@/lib/currency-rates";
 
 // Asset class mapping
 const ASSET_CLASS_MAP: Record<string, string> = {
@@ -26,6 +27,7 @@ export async function GET() {
     const dash = await dashRes.json();
     const portfolioAssets = dash.portfolioAssets || [];
     const netWorth = dash.netWorth || 0;
+    const eurRate = await getEurPerUsd();
 
     // Calculate current allocation by class
     const totalPortfolio = dash.portfolio || 0;
@@ -69,7 +71,7 @@ export async function GET() {
         warnings.push(`${cls.toUpperCase()} drift crítico: ${drift > 0 ? "+" : ""}${drift.toFixed(1)}%`);
       }
       if (drift < -5) {
-        const neededEur = Math.round(((targets[cls] - current[cls]) / 100 * totalPortfolio) * 0.867);
+        const neededEur = Math.round(((targets[cls] - current[cls]) / 100 * totalPortfolio) * eurRate);
         const classLabelMap: Record<string, string> = {
           cash: "Cash", etfs: "ETFs", crypto: "Crypto",
           gold: "Oro", bonds: "Bonos", stocks: "Acciones",
@@ -94,8 +96,8 @@ export async function GET() {
       actions.push({
         priority: 1,
         icon: "🟢",
-        text: `Desplegar €${Math.round(deployCash * 0.867)} de cash excedente (sobre fondo de emergencia)`,
-        amount: Math.round(deployCash * 0.867),
+        text: `Desplegar €${Math.round(deployCash * eurRate)} de cash excedente (sobre fondo de emergencia)`,
+        amount: Math.round(deployCash * eurRate),
       });
     }
 
@@ -134,13 +136,13 @@ export async function GET() {
     const goalsProgress = goals.map(g => {
       let currentValue = 0;
       if (g.type === "net_worth") {
-        currentValue = netWorth * 0.867; // USD to EUR approx
+        currentValue = netWorth * eurRate;
       } else if (g.type === "emergency_fund") {
-        currentValue = cashValue * 0.867;
+        currentValue = cashValue * eurRate;
       } else if (g.type === "asset_target" && g.targetAsset) {
         const asset = portfolioAssets.find((a: { symbol: string }) => a.symbol === g.targetAsset);
         if (asset) {
-          currentValue = g.targetUnit === "units" ? asset.amount : asset.value * 0.867;
+          currentValue = g.targetUnit === "units" ? asset.amount : asset.value * eurRate;
         }
       }
       const progress = g.targetValue > 0 ? Math.min((currentValue / g.targetValue) * 100, 100) : 0;
@@ -162,10 +164,10 @@ export async function GET() {
         totalExecutions: executions.length,
       },
       emergency: {
-        target: Math.round(emergencyTarget * 0.867),
-        current: Math.round(cashValue * 0.867),
+        target: Math.round(emergencyTarget * eurRate),
+        current: Math.round(cashValue * eurRate),
         ok: emergencyOk,
-        surplus: Math.round(deployCash * 0.867),
+        surplus: Math.round(deployCash * eurRate),
       },
     });
   } catch (err) {

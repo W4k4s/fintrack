@@ -111,6 +111,7 @@ export const transactions = sqliteTable("transactions", {
   amount: real("amount").notNull(),
   price: real("price"),
   total: real("total"),
+  quoteCurrency: text("quote_currency").notNull().default("USD"),
   date: text("date").notNull(),
   notes: text("notes"),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
@@ -138,6 +139,10 @@ export const bankTransactions = sqliteTable("bank_transactions", {
   balance: real("balance"),
   currency: text("currency").notNull().default("EUR"),
   category: text("category"),
+  // 'pending' = optimistic entry from /strategy execute, awaiting real import reconciliation.
+  // 'confirmed' = authoritative data from an import.
+  status: text("status", { enum: ["confirmed", "pending"] }).notNull().default("confirmed"),
+  planId: integer("plan_id").references(() => investmentPlans.id, { onDelete: "set null" }),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 

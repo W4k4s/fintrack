@@ -24,7 +24,7 @@ export default function AssetDetailPage() {
   const params = useParams();
   const router = useRouter();
   const symbol = decodeURIComponent(params.symbol as string);
-  const { format, convert } = useCurrency();
+  const { format, convert, formatFrom } = useCurrency();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -282,8 +282,8 @@ export default function AssetDetailPage() {
                     </div>
                   </td>
                     <td className="py-2.5 px-3 text-right font-mono text-xs">{tx.amount?.toFixed(6)}</td>
-                    <td className="py-2.5 px-3 text-right">${tx.price?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td className="py-2.5 px-3 text-right font-medium">${tx.total?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="py-2.5 px-3 text-right">{tx.price != null ? formatFrom(tx.price, tx.quoteCurrency || "USD") : "—"}</td>
+                    <td className="py-2.5 px-3 text-right font-medium">{tx.total != null ? formatFrom(tx.total, tx.quoteCurrency || "USD") : "—"}</td>
                   </tr>
                 ))}
               </tbody>

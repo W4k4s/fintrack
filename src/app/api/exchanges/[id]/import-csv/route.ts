@@ -66,6 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         amount: trade.amount,
         price: trade.price,
         total: trade.total,
+        quoteCurrency: trade.quoteCurrency,
         date: trade.date,
         notes: `${trade.pair} on ${exchange.name} (fee: ${trade.fee} ${trade.feeCurrency}) [CSV import]`,
       });
