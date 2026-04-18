@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Wallet, Landmark,
   CalendarClock, Receipt, Settings, TrendingUp, CreditCard,
-  Menu, X, Target,
+  Menu, X, Target, Radar,
 } from "lucide-react";
 
 const nav = [
@@ -15,6 +15,7 @@ const nav = [
   { href: "/exchanges", label: "Accounts", icon: Landmark },
   { href: "/assets", label: "Assets", icon: Wallet },
   { href: "/strategy", label: "Strategy", icon: Target },
+  { href: "/intel", label: "Intel", icon: Radar, badgeKey: "intel" },
   { href: "/plans", label: "DCA Plans", icon: CalendarClock },
   { href: "/transactions", label: "Transactions", icon: Receipt },
   { href: "/expenses", label: "Expenses", icon: CreditCard },
@@ -22,10 +23,28 @@ const nav = [
 ];
 
 function NavLinks({ pathname, onClick }: { pathname: string; onClick?: () => void }) {
+  const [intelUnread, setIntelUnread] = useState<number>(0);
+  useEffect(() => {
+    let alive = true;
+    async function load() {
+      try {
+        const res = await fetch("/api/intel?status=unread&limit=1", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (alive) setIntelUnread(Number(data.unreadCount || 0));
+      } catch { /* ignore */ }
+    }
+    load();
+    const id = setInterval(load, 60_000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+
   return (
     <nav className="flex flex-col gap-0.5">
-      {nav.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href;
+      {nav.map((item) => {
+        const { href, label, icon: Icon } = item;
+        const active = pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
+        const badge = "badgeKey" in item && item.badgeKey === "intel" && intelUnread > 0 ? intelUnread : 0;
         return (
           <Link
             key={href}
@@ -39,7 +58,12 @@ function NavLinks({ pathname, onClick }: { pathname: string; onClick?: () => voi
             )}
           >
             <Icon className="w-[18px] h-[18px]" />
-            {label}
+            <span className="flex-1">{label}</span>
+            {badge > 0 && (
+              <span className="ml-auto text-[10px] font-semibold bg-accent text-accent-foreground rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                {badge > 99 ? "99+" : badge}
+              </span>
+            )}
           </Link>
         );
       })}

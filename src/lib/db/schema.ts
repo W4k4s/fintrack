@@ -158,3 +158,80 @@ export const bankAccounts = sqliteTable("bank_accounts", {
 });
 
 export type BankAccount = typeof bankAccounts.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Intel subsystem — signals, notifications, runs, news items
+// ---------------------------------------------------------------------------
+
+export const intelSignals = sqliteTable("intel_signals", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  // sha1(scope:asset:windowKey) — evita duplicados en ventanas temporales
+  dedupKey: text("dedup_key").notNull().unique(),
+  scope: text("scope", {
+    enum: [
+      "price_dip", "price_surge", "fg_regime", "funding_anomaly",
+      "news", "macro_event", "drift", "tax_harvest", "rebalance",
+      "dca_pending", "custom",
+    ],
+  }).notNull(),
+  asset: text("asset"), // BTC, ETH, "MSCI World"... null si macro
+  assetClass: text("asset_class"), // crypto | etfs | gold | bonds | stocks | macro
+  severity: text("severity", { enum: ["low", "med", "high", "critical"] }).notNull(),
+  title: text("title").notNull(),
+  summary: text("summary").notNull(),
+  payload: text("payload").notNull(), // JSON con métricas crudas
+  suggestedAction: text("suggested_action"), // buy_accelerate | hold | pause_dca | rebalance | sell_partial | review | ignore
+  actionAmountEur: real("action_amount_eur"),
+  analysisStatus: text("analysis_status", {
+    enum: ["pending", "claude_requested", "claude_done", "claude_failed", "pending_manual"],
+  }).notNull().default("pending"),
+  analysisText: text("analysis_text"),
+  userStatus: text("user_status", {
+    enum: ["unread", "read", "acted", "dismissed", "snoozed"],
+  }).notNull().default("unread"),
+  snoozeUntil: text("snooze_until"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+  resolvedAt: text("resolved_at"),
+});
+
+export const intelNotifications = sqliteTable("intel_notifications", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  signalId: integer("signal_id").references(() => intelSignals.id, { onDelete: "cascade" }),
+  channel: text("channel", { enum: ["telegram", "panel", "both"] }).notNull().default("both"),
+  status: text("status", { enum: ["queued", "sent", "failed", "suppressed"] }).notNull().default("queued"),
+  suppressionReason: text("suppression_reason"), // quiet_hours | digest | dedup | rate_limit | bot_down
+  telegramMessageId: text("telegram_message_id"),
+  payload: text("payload").notNull(), // texto final enviado
+  sentAt: text("sent_at"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const intelRuns = sqliteTable("intel_runs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  scope: text("scope").notNull(),
+  startedAt: text("started_at").notNull().$defaultFn(() => new Date().toISOString()),
+  finishedAt: text("finished_at"),
+  signalsCreated: integer("signals_created").notNull().default(0),
+  spawnsLaunched: integer("spawns_launched").notNull().default(0),
+  errors: text("errors"),
+});
+
+export const intelNewsItems = sqliteTable("intel_news_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  source: text("source").notNull(), // "coindesk" | "the-block" | "reuters" | "ecb" | "fed" | "cryptopanic"
+  externalId: text("external_id").notNull().unique(), // hash(url)
+  url: text("url").notNull(),
+  title: text("title").notNull(),
+  publishedAt: text("published_at").notNull(),
+  body: text("body"),
+  assetsMentioned: text("assets_mentioned"), // JSON array ["BTC","ETH"]
+  rawScore: real("raw_score"),
+  signalId: integer("signal_id").references(() => intelSignals.id),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export type IntelSignal = typeof intelSignals.$inferSelect;
+export type NewIntelSignal = typeof intelSignals.$inferInsert;
+export type IntelNotification = typeof intelNotifications.$inferSelect;
+export type IntelRun = typeof intelRuns.$inferSelect;
+export type IntelNewsItem = typeof intelNewsItems.$inferSelect;
