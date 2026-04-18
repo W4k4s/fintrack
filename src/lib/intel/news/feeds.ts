@@ -15,7 +15,10 @@ export const FEEDS: readonly NewsFeed[] = [
   // Tier 2 — crypto-native de calidad
   { source: "coindesk", url: "https://www.coindesk.com/arc/outboundfeeds/rss/?outputType=xml", tier: 2 },
   { source: "theblock", url: "https://www.theblock.co/rss.xml", tier: 2 },
+  // Tier 2 — equity/markets
+  { source: "marketwatch", url: "https://feeds.content.dowjones.io/public/rss/mw_topstories", tier: 2 },
   // Tier 3 — agregadores rápidos
   { source: "cointelegraph", url: "https://cointelegraph.com/rss", tier: 3 },
   { source: "decrypt", url: "https://decrypt.co/feed", tier: 3 },
+  { source: "seekingalpha", url: "https://seekingalpha.com/market_currents.xml", tier: 3 },
 ];

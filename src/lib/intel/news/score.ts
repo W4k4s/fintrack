@@ -50,9 +50,17 @@ const ASSET_SYNONYMS: Record<string, string[]> = {
   SOL: ["solana"],
   USDC: ["usd coin", "circle"],
   USDT: ["tether"],
-  "MSCI WORLD": ["msci world", "iwda"],
-  "MSCI MOMENTUM": ["msci momentum", "iwmo"],
-  "GOLD ETC": ["gold"],
+  "MSCI WORLD": ["msci world", "iwda", "world index"],
+  "MSCI MOMENTUM": ["msci momentum", "iwmo", "momentum factor"],
+  "GOLD ETC": ["gold", "xau", "gold price", "gold bullion"],
+  "EU INFL BOND": [
+    "inflation-linked bond",
+    "inflation linked bond",
+    "tips",
+    "linker",
+    "inflation-protected",
+  ],
+  MSFT: ["microsoft"],
 };
 
 function recencyPenalty(publishedAtIso: string, now: Date): number {
