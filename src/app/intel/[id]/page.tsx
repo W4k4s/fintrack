@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { SignalActions } from "./actions";
+import { AnalysisRenderer, parseHeadlineShort } from "./analysis";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export default async function SignalDetailPage({
     .where(eq(schema.intelNotifications.signalId, id));
 
   const payload = safeParse(row.payload);
+  const headlineShort = parseHeadlineShort(row.analysisText);
 
   return (
     <div className="px-6 py-6 max-w-3xl mx-auto">
@@ -40,54 +42,50 @@ export default async function SignalDetailPage({
           <span className="uppercase tracking-wide">{row.scope}</span>
           {row.asset && <><span>•</span><span>{row.asset}</span></>}
           <span>•</span>
-          <span>{row.severity}</span>
+          <span className="uppercase">{row.severity}</span>
         </div>
-        <h1 className="mt-1 text-2xl font-bold">{row.title}</h1>
+        <h1 className="mt-1 text-2xl font-bold">
+          {headlineShort ?? row.title}
+        </h1>
+        {headlineShort && (
+          <div className="text-xs text-muted-foreground mt-1 font-mono">
+            {row.title}
+          </div>
+        )}
         <p className="mt-2 text-muted-foreground">{row.summary}</p>
       </header>
 
-      <section className="border border-border rounded-xl p-4 bg-card mb-4">
-        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
-          Análisis
-        </div>
+      <div className="mb-6">
         {row.analysisStatus === "claude_done" && row.analysisText ? (
-          <div className="whitespace-pre-wrap text-sm leading-relaxed">
-            {row.analysisText}
-          </div>
+          <AnalysisRenderer analysisText={row.analysisText} />
         ) : row.analysisStatus === "claude_requested" ? (
-          <div className="text-sm text-muted-foreground italic">
-            Claude procesando… (recarga en unos segundos)
+          <div className="border border-border rounded-xl p-4 bg-card">
+            <div className="text-sm text-muted-foreground italic animate-pulse">
+              Claude está analizando la señal… recarga en unos segundos.
+            </div>
           </div>
         ) : row.analysisStatus === "claude_failed" ? (
-          <div className="text-sm text-red-400">
-            Claude falló al analizar. Revisa logs.
+          <div className="border border-red-500/30 bg-red-500/5 rounded-xl p-4">
+            <div className="text-sm text-red-400">
+              El análisis falló. Puedes re-intentar con el botón Re-analizar o revisar logs.
+            </div>
           </div>
         ) : (
-          <div className="text-sm text-muted-foreground">
-            {row.analysisStatus === "pending_manual"
-              ? "Sin análisis automático (circuit breaker abierto)."
-              : "Sin análisis (severity bajo)."}
+          <div className="border border-border rounded-xl p-4 bg-card">
+            <div className="text-sm text-muted-foreground">
+              {row.analysisStatus === "pending_manual"
+                ? "Sin análisis automático (hubo fallos recientes, circuit breaker abierto 30 min)."
+                : "Sin análisis automático (severity baja — no merece llamar a Claude)."}
+            </div>
           </div>
         )}
-      </section>
+      </div>
 
       <section className="border border-border rounded-xl p-4 bg-card mb-4">
         <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
-          Acción sugerida
+          Datos crudos detectados
         </div>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="font-medium">{row.suggestedAction || "—"}</span>
-          {row.actionAmountEur != null && (
-            <span className="text-muted-foreground">{row.actionAmountEur.toFixed(2)}€</span>
-          )}
-        </div>
-      </section>
-
-      <section className="border border-border rounded-xl p-4 bg-card mb-4">
-        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
-          Payload
-        </div>
-        <pre className="text-xs overflow-auto bg-[var(--hover-bg)] p-3 rounded">
+        <pre className="text-xs overflow-auto bg-[var(--hover-bg)] p-3 rounded max-h-64">
           {JSON.stringify(payload, null, 2)}
         </pre>
       </section>

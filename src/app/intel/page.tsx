@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db, schema } from "@/lib/db";
 import { desc } from "drizzle-orm";
+import { parseHeadlineShort } from "./[id]/analysis";
 
 export const dynamic = "force-dynamic";
 
@@ -106,6 +107,7 @@ export default async function IntelPage() {
 
       <div className="flex flex-col gap-3">
         {signals.map((s) => {
+          const headline = parseHeadlineShort(s.analysisText) ?? s.title;
           return (
             <Link
               key={s.id}
@@ -133,7 +135,7 @@ export default async function IntelPage() {
                       {relativeTime(s.createdAt)}
                     </span>
                   </div>
-                  <div className="mt-1 font-medium text-sm">{s.title}</div>
+                  <div className="mt-1 font-medium text-sm">{headline}</div>
                   <div className="text-sm text-muted-foreground line-clamp-2">
                     {s.summary}
                   </div>

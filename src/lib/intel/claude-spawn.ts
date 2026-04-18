@@ -28,31 +28,50 @@ function severityRank(s: string): number {
 function buildPrompt(sig: typeof schema.intelSignals.$inferSelect): string {
   const payload = safeJson(sig.payload);
   return [
-    "Eres un analista de inversiones integrado en FinTrack. Recibes una señal intel detectada por reglas deterministas y debes producir un juicio breve.",
+    "Eres el analista de inversiones de Isma. Él NO es trader profesional, es ingeniero. Explica en español llano, frases cortas, sin jerga.",
+    "Si tienes que usar un término técnico (RSI, funding, volatilidad), añade una traducción breve en paréntesis la primera vez.",
+    "Contexto del usuario: estrategia Reset 2026 (perfil balanced, cash del 67% bajando a 25% en 6 meses, multiplicador ×2 automático en crypto cuando F&G ≤ 24). EUR es la moneda base.",
     "",
-    `SIGNAL id=${sig.id} scope=${sig.scope} severity=${sig.severity}`,
-    `ASSET: ${sig.asset ?? "-"}`,
-    `TITLE: ${sig.title}`,
-    `SUMMARY: ${sig.summary}`,
-    `SUGGESTED ACTION (from detector): ${sig.suggestedAction ?? "-"}`,
-    `ACTION AMOUNT EUR: ${sig.actionAmountEur ?? "-"}`,
-    `PAYLOAD: ${JSON.stringify(payload)}`,
+    "SEÑAL DETECTADA:",
+    `- id: ${sig.id}`,
+    `- tipo (scope): ${sig.scope}`,
+    `- severidad inicial (por regla): ${sig.severity}`,
+    `- asset: ${sig.asset ?? "-"}`,
+    `- título: ${sig.title}`,
+    `- resumen regla: ${sig.summary}`,
+    `- acción propuesta por la regla: ${sig.suggestedAction ?? "-"}`,
+    `- cantidad sugerida EUR: ${sig.actionAmountEur ?? "-"}`,
+    `- datos crudos: ${JSON.stringify(payload)}`,
     "",
-    "INSTRUCCIONES:",
-    "1. Analiza el contexto en <=120 palabras: qué significa esta señal en la estrategia Reset 2026 del usuario (balanced, cash 67%→25% en 6m, mult F&G activo).",
-    "2. Confirma o revisa la acción sugerida. Sé decisivo.",
-    "3. Produce un texto Telegram compacto (<=500 chars, sin markdown complejo, emojis moderados).",
+    "Tu trabajo: convertir esta señal en un análisis accionable, que Isma lea y sepa qué hacer en 30 segundos.",
     "",
-    "FORMATO DE SALIDA (OBLIGATORIO, solo este JSON, sin texto alrededor):",
+    "FORMATO DE SALIDA (OBLIGATORIO — solo este JSON, sin fences ni texto alrededor):",
     "{",
-    '  "analysis": "...texto markdown <=120 palabras...",',
+    '  "whats_happening": "2-3 frases cortas explicando qué ha detectado el sistema, en lenguaje plano. Si usas un tecnicismo, tradúcelo en paréntesis.",',
+    '  "what_it_means": "Qué implica para la cartera de Isma. Referencia cash alto, multiplicador, Reset 2026 cuando venga al caso.",',
+    '  "pros": ["punto positivo 1 en <=15 palabras", "punto 2"],',
+    '  "cons": ["riesgo 1 en <=15 palabras", "riesgo 2"],',
+    '  "action": {',
+    '    "headline": "Una sola frase con la acción recomendada (ej. \\"Doblar la compra semanal de BTC\\")",',
+    '    "steps": ["paso concreto 1 (dónde, qué, cuánto)", "paso 2 si aplica"],',
+    '    "amount_eur": number | null,',
+    '    "where": "Binance / Trade Republic / Ninguno (solo informativo)"',
+    "  },",
+    '  "avoid": ["qué NO hacer específico para esta situación 1", "qué NO hacer 2"],',
+    '  "confidence": "alta" | "media" | "baja",',
+    '  "confidence_why": "Una frase explicando por qué esa confianza.",',
     '  "severity_adj": "low" | "med" | "high" | "critical",',
     '  "suggested_action": "buy_accelerate" | "hold" | "pause_dca" | "rebalance" | "sell_partial" | "review" | "ignore",',
-    '  "tg_text": "...<=500 chars...",',
-    '  "confidence": 0.0-1.0',
+    '  "tg_text": "Mensaje Telegram compacto <=400 chars, emojis moderados, con la decisión clara y el link /intel/<id>.",',
+    '  "headline_short": "Título de 4-8 palabras para el panel, en lugar del título técnico de la regla."',
     "}",
     "",
-    "Responde SOLO el JSON. Nada más.",
+    "Reglas adicionales:",
+    "- Sé DECISIVO: una sola acción recomendada, no un menú.",
+    "- pros y cons: máximo 3 items cada uno.",
+    "- Si la acción es \"no hacer nada\", dilo claro: headline \"Observar, no actuar\" y steps vacío.",
+    "- NO inventes datos que no estén en el payload.",
+    "- Responde ÚNICAMENTE el JSON. Nada antes, nada después.",
   ].join("\n");
 }
 
@@ -146,7 +165,9 @@ export async function spawnClaudeForSignal(signalId: number): Promise<void> {
     const parsed = extractJson(raw);
     if (!parsed) throw new Error(`unparseable claude output: ${raw.slice(0, 200)}`);
 
-    const analysis = String(parsed.analysis ?? "").trim();
+    // Guardamos el JSON completo como analysisText. El UI lo parsea por secciones.
+    // Mantener compatibilidad con analyses viejos: si no hay whats_happening, el UI cae a plain text.
+    const analysisJson = JSON.stringify(parsed);
     const severityAdj =
       (["low", "med", "high", "critical"].includes(String(parsed.severity_adj))
         ? String(parsed.severity_adj)
@@ -157,7 +178,7 @@ export async function spawnClaudeForSignal(signalId: number): Promise<void> {
     await db
       .update(schema.intelSignals)
       .set({
-        analysisText: analysis,
+        analysisText: analysisJson,
         analysisStatus: "claude_done",
         severity: severityAdj,
         suggestedAction,

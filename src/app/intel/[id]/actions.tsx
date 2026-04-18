@@ -32,6 +32,17 @@ export function SignalActions({
     }
   }
 
+  async function reanalyze() {
+    setPending(true);
+    try {
+      await fetch(`/api/intel/${id}/reanalyze`, { method: "POST" });
+      // Damos tiempo a Claude (30-60s) pero refrescamos rápido para mostrar el estado "procesando"
+      setTimeout(() => router.refresh(), 1500);
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
     <div className="flex gap-2 flex-wrap">
       {currentStatus !== "read" && (
@@ -63,6 +74,14 @@ export function SignalActions({
         className="px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-[var(--hover-bg)] text-sm disabled:opacity-50"
       >
         Ignorar
+      </button>
+      <button
+        onClick={reanalyze}
+        disabled={pending}
+        className="ml-auto px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 text-sm disabled:opacity-50"
+        title="Vuelve a lanzar Claude para re-generar el análisis"
+      >
+        ↻ Re-analizar
       </button>
     </div>
   );
