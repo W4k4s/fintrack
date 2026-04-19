@@ -36,6 +36,12 @@ export default async function SignalDetailPage({
   const headlineShort = parseHeadlineShort(row.analysisText);
   const plan = extractPlan(payload);
   const staleInfo = plan ? await computeStaleness(plan) : null;
+  const orders = plan
+    ? await db
+        .select()
+        .from(schema.intelRebalanceOrders)
+        .where(eq(schema.intelRebalanceOrders.signalId, id))
+    : [];
 
   return (
     <div className="px-6 py-6 max-w-3xl mx-auto">
@@ -87,7 +93,7 @@ export default async function SignalDetailPage({
         )}
       </div>
 
-      {plan && <RebalancePlanCard plan={plan} stale={staleInfo} />}
+      {plan && <RebalancePlanCard plan={plan} stale={staleInfo} orders={orders} />}
 
       {row.scope === "news" && (
         <NewsSource payload={payload} />
