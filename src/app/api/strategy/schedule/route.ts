@@ -1,27 +1,13 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
+import { classifyAsset } from "@/lib/intel/allocation/classify";
+import { loadMultiplierContext, multiplierFor } from "@/lib/intel/multipliers";
 
 // Generate weekly schedule from monthly DCA plans.
-// For crypto plans we apply the Fear & Greed multiplier automatically
-// (F&G is a crypto sentiment index — doesn't make sense to boost equities with it).
-
-const CRYPTO_ASSETS = new Set([
-  "BTC", "ETH", "SOL", "PEPE", "XCH", "SHIB", "BNB", "ROSE", "MANA", "S", "GPU",
-  "USDC", "USDT",
-]);
-
-function isCryptoPlan(plan: { asset: string; assetClass: string | null }): boolean {
-  if (plan.assetClass === "crypto") return true;
-  return CRYPTO_ASSETS.has(plan.asset);
-}
-
-function getFgMultiplier(fg: number): number {
-  if (fg <= 24) return 2.0;
-  if (fg <= 44) return 1.5;
-  if (fg <= 55) return 1.0;
-  if (fg <= 74) return 0.75;
-  return 0.5;
-}
+// Multiplicador adaptativo por clase (Phase 3.4):
+// - Crypto → F&G base + funding boost (Binance perps BTC/ETH)
+// - ETFs / Stocks → VIX (stress equity)
+// - Gold / Bonds / Cash → 1.0x (DCA mecánico, sin señal que lo justifique)
 
 function getWeekBounds(date: Date) {
   const d = new Date(date);
@@ -71,29 +57,30 @@ async function getFgValue(): Promise<number> {
 export async function GET() {
   try {
     const plans = await db.select().from(schema.investmentPlans);
-    const activePlans = plans.filter(p => p.enabled);
+    const activePlans = plans.filter((p) => p.enabled);
     const executions = await db.select().from(schema.dcaExecutions);
 
     const fgValue = await getFgValue();
-    const fgMultiplier = getFgMultiplier(fgValue);
+    const mctx = await loadMultiplierContext(fgValue);
 
     const now = new Date();
     const { monday: thisMonday, sunday: thisSunday } = getWeekBounds(now);
     const weeks = getMonthWeeks(now.getFullYear(), now.getMonth());
-    const currentWeekIdx = weeks.findIndex(w => now >= w.start && now <= w.end);
+    const currentWeekIdx = weeks.findIndex((w) => now >= w.start && now <= w.end);
 
-    // Day of week 1=Mon..7=Sun (matching autoDayOfWeek convention)
     const todayDow = ((now.getDay() + 6) % 7) + 1;
 
-    const schedule = activePlans.map(plan => {
-      const isCrypto = isCryptoPlan(plan);
-      const effectiveMonthly = isCrypto ? plan.amount * fgMultiplier : plan.amount;
+    const schedule = activePlans.map((plan) => {
+      const cls = (plan.assetClass as ReturnType<typeof classifyAsset>) || classifyAsset(plan.asset);
+      const applied = multiplierFor(cls, plan.asset, mctx);
+
+      const effectiveMonthly = plan.amount * applied.value;
       const weeklyAmount = Math.round((effectiveMonthly / 4) * 100) / 100;
 
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
       const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
-      const monthExecs = executions.filter(e =>
-        e.planId === plan.id && e.date >= monthStart && e.date <= monthEnd,
+      const monthExecs = executions.filter(
+        (e) => e.planId === plan.id && e.date >= monthStart && e.date <= monthEnd,
       );
       const totalExecuted = monthExecs.reduce((s, e) => s + e.amount, 0);
       const remaining = Math.max(0, effectiveMonthly - totalExecuted);
@@ -104,18 +91,14 @@ export async function GET() {
       const weeklySchedule = weeks.map((week, i) => {
         const weekStart = week.start.toISOString().split("T")[0];
         const weekEnd = week.end.toISOString().split("T")[0];
-        const weekExecs = monthExecs.filter(e => e.date >= weekStart && e.date <= weekEnd);
+        const weekExecs = monthExecs.filter((e) => e.date >= weekStart && e.date <= weekEnd);
         const weekExecuted = weekExecs.reduce((s, e) => s + e.amount, 0);
         const realDone = weekExecuted >= weeklyAmount * 0.9;
         const isCurrent = i === currentWeekIdx;
         const isPast = week.end < now;
 
-        // Auto-done: the broker plan fires on autoDayOfWeek. If the day has passed
-        // (or it's past week), assume the plan executed even without a recorded execution yet.
-        // BUT only if we're at/after the autoStartDate (plan futuro).
         let autoDone = false;
-        const autoActiveThisWeek = autoEnabled
-          && (!autoStartDate || weekStart >= autoStartDate);
+        const autoActiveThisWeek = autoEnabled && (!autoStartDate || weekStart >= autoStartDate);
         if (autoActiveThisWeek && !realDone) {
           if (isPast) autoDone = true;
           else if (isCurrent && plan.autoDayOfWeek! <= todayDow) autoDone = true;
@@ -138,12 +121,15 @@ export async function GET() {
       return {
         planId: plan.id,
         asset: plan.asset,
+        assetClass: cls,
         name: plan.name,
-        isCrypto,
+        isCrypto: applied.rule === "crypto",
         baseMonthly: plan.amount,
         monthlyTarget: Math.round(effectiveMonthly * 100) / 100,
         weeklyTarget: weeklyAmount,
-        appliedMultiplier: isCrypto ? fgMultiplier : 1.0,
+        appliedMultiplier: Math.round(applied.value * 100) / 100,
+        multiplierRule: applied.rule,
+        multiplierComponents: applied.components,
         autoExecute: autoEnabled,
         autoDayOfWeek: plan.autoDayOfWeek || null,
         autoStartDate,
@@ -156,10 +142,18 @@ export async function GET() {
     });
 
     const totalWeekly = schedule.reduce((s, p) => s + p.weeklyTarget, 0);
-    const thisWeekExecuted = executions.filter(e =>
-      e.date >= thisMonday.toISOString().split("T")[0]
-      && e.date <= thisSunday.toISOString().split("T")[0],
-    ).reduce((s, e) => s + e.amount, 0);
+    const thisWeekExecuted = executions
+      .filter(
+        (e) =>
+          e.date >= thisMonday.toISOString().split("T")[0]
+          && e.date <= thisSunday.toISOString().split("T")[0],
+      )
+      .reduce((s, e) => s + e.amount, 0);
+
+    // Summary multipliers (reference values — UI may display them).
+    const fgMultExample = mctx.fg; // raw value for display
+    const btcFunding = mctx.fundingByAsset.get("BTC")?.rate ?? null;
+    const ethFunding = mctx.fundingByAsset.get("ETH")?.rate ?? null;
 
     return NextResponse.json({
       currentWeek: currentWeekIdx + 1,
@@ -168,7 +162,21 @@ export async function GET() {
       thisWeekExecuted: Math.round(thisWeekExecuted * 100) / 100,
       thisWeekRemaining: Math.round(Math.max(0, totalWeekly - thisWeekExecuted) * 100) / 100,
       fgValue,
-      fgMultiplier,
+      // backwards-compat: mantengo fgMultiplier como el F&G base puro (lo que la UI antigua esperaba).
+      fgMultiplier: (() => {
+        if (fgMultExample <= 24) return 2.0;
+        if (fgMultExample <= 44) return 1.5;
+        if (fgMultExample <= 55) return 1.0;
+        if (fgMultExample <= 74) return 0.75;
+        return 0.5;
+      })(),
+      marketContext: {
+        fg: mctx.fg,
+        btcFunding,
+        ethFunding,
+        vixLevel: mctx.vix?.level ?? null,
+        vixChangePct: mctx.vix?.changePct ?? null,
+      },
       schedule,
       weeks: weeks.map((w, i) => ({
         ...w,
