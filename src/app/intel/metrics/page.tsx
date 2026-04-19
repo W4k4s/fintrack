@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { computeIntelMetrics, COOLDOWN_CONFIG, type ScopeMetrics } from "@/lib/intel/metrics";
+import {
+  computeIntelMetrics,
+  COOLDOWN_CONFIG,
+  IGNORED_AFTER_DAYS,
+  type ScopeMetrics,
+} from "@/lib/intel/metrics";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +19,23 @@ const SCOPE_ICONS: Record<string, string> = {
   tax_harvest: "🧾",
   rebalance: "🔄",
   dca_pending: "🔔",
+  profile_review: "🧭",
   custom: "⚙️",
 };
 
 function pct(v: number): string {
   return `${(v * 100).toFixed(0)}%`;
+}
+
+function formatHours(h: number | null): string {
+  if (h == null) return "—";
+  if (h < 1) return `${Math.round(h * 60)}m`;
+  if (h < 48) return `${h.toFixed(1)}h`;
+  return `${(h / 24).toFixed(1)}d`;
+}
+
+function formatEur(v: number): string {
+  return `${v.toFixed(0)}€`;
 }
 
 function relativeUntil(iso: string): string {
@@ -33,6 +50,10 @@ function highDismiss(m: ScopeMetrics): boolean {
   return m.total >= COOLDOWN_CONFIG.minSamples && m.dismissedRate > COOLDOWN_CONFIG.dismissThreshold;
 }
 
+function highIgnored(m: ScopeMetrics): boolean {
+  return m.total >= COOLDOWN_CONFIG.minSamples && m.ignoredRate >= 0.5;
+}
+
 export default async function IntelMetricsPage({
   searchParams,
 }: {
@@ -41,6 +62,8 @@ export default async function IntelMetricsPage({
   const params = await searchParams;
   const windowDays = Math.min(90, Math.max(1, Number(params.windowDays ?? 30)));
   const snap = await computeIntelMetrics(windowDays);
+  const driftScope = snap.scopes.find((s) => s.scope === "drift");
+  const exec = driftScope?.executionStats;
 
   return (
     <div className="px-6 py-6 max-w-6xl mx-auto">
@@ -49,9 +72,9 @@ export default async function IntelMetricsPage({
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Intel · Métricas</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Rendimiento por scope en los últimos {windowDays} días. Scopes con dismiss_rate &gt;
-              {pct(COOLDOWN_CONFIG.dismissThreshold)} entran en cooldown automático de{" "}
-              {COOLDOWN_CONFIG.durationDays} días (Telegram suprimido, panel sigue).
+              Rendimiento por scope en los últimos {windowDays} días. Scopes con dismiss &gt;
+              {pct(COOLDOWN_CONFIG.dismissThreshold)} entran en cooldown automático {COOLDOWN_CONFIG.durationDays}d. &quot;Ruido&quot; = signals
+              sin resolver &ge;{IGNORED_AFTER_DAYS}d.
             </p>
           </div>
           <div className="flex items-center gap-2 text-sm">
@@ -96,9 +119,27 @@ export default async function IntelMetricsPage({
                 <th className="text-right px-3 py-3">Total</th>
                 <th className="text-right px-3 py-3">Crit / High</th>
                 <th className="text-right px-3 py-3">Med / Low</th>
-                <th className="text-right px-3 py-3">Acted %</th>
-                <th className="text-right px-3 py-3">Dismissed %</th>
-                <th className="text-right px-3 py-3">TG sent / supp</th>
+                <th className="text-right px-3 py-3" title="Acted rate global">Acted</th>
+                <th
+                  className="text-right px-3 py-3"
+                  title="Acted rate por severity: crit+high / med+low"
+                >
+                  Acted H/L
+                </th>
+                <th className="text-right px-3 py-3">Dismiss</th>
+                <th
+                  className="text-right px-3 py-3"
+                  title={`Signals unread/read sin resolver tras ${IGNORED_AFTER_DAYS}d`}
+                >
+                  Ruido
+                </th>
+                <th
+                  className="text-right px-3 py-3"
+                  title="Mediana createdAt → resolvedAt para signals acted"
+                >
+                  Time→act
+                </th>
+                <th className="text-right px-3 py-3">TG s/s</th>
                 <th className="text-left px-4 py-3">Estado</th>
               </tr>
             </thead>
@@ -106,6 +147,7 @@ export default async function IntelMetricsPage({
               {snap.scopes.map((m) => {
                 const icon = SCOPE_ICONS[m.scope] ?? "•";
                 const isHighDismiss = highDismiss(m);
+                const isHighIgnored = highIgnored(m);
                 return (
                   <tr
                     key={m.scope}
@@ -127,12 +169,27 @@ export default async function IntelMetricsPage({
                     <td className="text-right px-3 py-3 tabular-nums text-green-400">
                       {pct(m.actedRate)}
                     </td>
+                    <td className="text-right px-3 py-3 tabular-nums text-xs text-muted-foreground">
+                      <span className="text-green-400">{pct(m.actedRateHighSeverity)}</span>
+                      {" / "}
+                      <span>{pct(m.actedRateLowSeverity)}</span>
+                    </td>
                     <td
                       className={`text-right px-3 py-3 tabular-nums ${
                         isHighDismiss ? "text-red-400 font-semibold" : "text-muted-foreground"
                       }`}
                     >
                       {pct(m.dismissedRate)}
+                    </td>
+                    <td
+                      className={`text-right px-3 py-3 tabular-nums ${
+                        isHighIgnored ? "text-yellow-400 font-semibold" : "text-muted-foreground"
+                      }`}
+                    >
+                      {pct(m.ignoredRate)}
+                    </td>
+                    <td className="text-right px-3 py-3 tabular-nums text-xs text-muted-foreground">
+                      {formatHours(m.timeToActionMedianHours)}
                     </td>
                     <td className="text-right px-3 py-3 tabular-nums text-xs text-muted-foreground">
                       {m.notificationsSent} / {m.notificationsSuppressed}
@@ -146,6 +203,10 @@ export default async function IntelMetricsPage({
                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-yellow-500/15 text-yellow-400 border border-yellow-500/30">
                           ⚠️ dismiss alto
                         </span>
+                      ) : isHighIgnored ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-yellow-500/15 text-yellow-400 border border-yellow-500/30">
+                          🔕 ignorado
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">ok</span>
                       )}
@@ -157,6 +218,50 @@ export default async function IntelMetricsPage({
           </table>
         </div>
       )}
+
+      {exec && exec.ordersTotal > 0 && (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold mb-2">Ejecución plan rebalance</h2>
+          <p className="text-xs text-muted-foreground mb-3">
+            Estado de las órdenes generadas por signals scope=drift en la ventana. Execution rate excluye superseded.
+          </p>
+          <div className="rounded-xl border border-border p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Stat label="Órdenes total" value={String(exec.ordersTotal)} />
+            <Stat label="Execution rate" value={pct(exec.executionRate)} accent="green" />
+            <Stat label="Ejecutado €" value={formatEur(exec.executedAmountEur)} accent="green" />
+            <Stat label="Planeado €" value={formatEur(exec.plannedAmountEur)} />
+            <Stat label="Executed" value={String(exec.ordersExecuted)} accent="green" />
+            <Stat label="Pending" value={String(exec.ordersPending)} accent="muted" />
+            <Stat label="Dismissed" value={String(exec.ordersDismissed)} accent="muted" />
+            <Stat label="Stale" value={String(exec.ordersStale)} accent="muted" />
+            <Stat label="Superseded" value={String(exec.ordersSuperseded)} accent="muted" />
+            <Stat label="Needs pick" value={String(exec.ordersNeedsPick)} accent="muted" />
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: "green" | "muted";
+}) {
+  const color =
+    accent === "green"
+      ? "text-green-400"
+      : accent === "muted"
+        ? "text-muted-foreground"
+        : "text-foreground";
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground uppercase tracking-wide">{label}</div>
+      <div className={`text-xl font-semibold tabular-nums mt-1 ${color}`}>{value}</div>
     </div>
   );
 }
