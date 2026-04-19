@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { exchanges, accounts, assets, bankTransactions } from "@/lib/db/schema";
 import { eq, and, lte } from "drizzle-orm";
+import { recomputeTrSecuritiesAvgBuy } from "@/lib/assets/cost-basis";
 
 export async function POST(req: NextRequest) {
   try {
@@ -148,6 +149,14 @@ export async function POST(req: NextRequest) {
         });
         txInserted++;
       }
+    }
+
+    // Refresh TR securities cost basis from aggregated bank_transactions.
+    // Safe to call after every import — idempotent and reads the current snapshot.
+    try {
+      await recomputeTrSecuritiesAvgBuy();
+    } catch (err) {
+      console.error("[tr-import] recomputeTrSecuritiesAvgBuy failed", err);
     }
 
     // Update exchange last sync

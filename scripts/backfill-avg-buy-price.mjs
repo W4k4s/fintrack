@@ -94,6 +94,83 @@ for (const symbol of symbols) {
 }
 
 console.log("");
-console.log(`Updated avg_buy_price for ${updatedSymbols} symbols (${updatedRows} asset rows)`);
+console.log(`Updated avg_buy_price for ${updatedSymbols} symbols (${updatedRows} asset rows) from transactions`);
 if (nullified > 0) console.log(`${nullified} symbols ended with no net position (nullified)`);
+
+// --- TR securities pass -----------------------------------------------------
+// TR securities (MSCI World, Gold ETC, etc.) never enter `transactions` — we
+// derive cost basis from bank_transactions trade entries (ISIN + debit/credit).
+// Keep in sync with lib/assets/cost-basis.ts::recomputeTrSecuritiesAvgBuy().
+
+const ISIN_MAP = {
+  "IE00B4L5Y983": "MSCI World",
+  "IE00B0M62X26": "EU Infl Bond",
+  "IE00B579F325": "Gold ETC",
+  "IE00BP3QZ825": "MSCI Momentum",
+  "US5949181045": "MSFT",
+  "US67066G1040": "NVDA",
+  "ES0113900J37": "SAN",
+  "XF000BTC0017": "BTC",
+};
+
+const trExchange = db.prepare("SELECT id FROM exchanges WHERE slug='trade-republic'").get();
+if (!trExchange) {
+  console.log("(no Trade Republic exchange found — skipping TR securities pass)");
+  db.close();
+  process.exit(0);
+}
+
+const trSecurities = db
+  .prepare("SELECT id FROM accounts WHERE exchange_id=? AND name='Securities'")
+  .get(trExchange.id);
+if (!trSecurities) {
+  console.log("(no TR Securities account found — skipping TR securities pass)");
+  db.close();
+  process.exit(0);
+}
+
+const trades = db
+  .prepare(
+    "SELECT description, debit, credit FROM bank_transactions WHERE source='trade-republic' AND type='trade'",
+  )
+  .all();
+
+const isinRegex = /(?:Buy|Sell)\s+trade\s+([A-Z]{2}[A-Z0-9]{10})/i;
+const netByIsin = new Map();
+for (const tx of trades) {
+  const m = (tx.description || "").match(isinRegex);
+  if (!m) continue;
+  const isin = m[1];
+  if (!ISIN_MAP[isin]) continue;
+  const delta = Number(tx.debit || 0) - Number(tx.credit || 0);
+  netByIsin.set(isin, (netByIsin.get(isin) || 0) + delta);
+}
+
+const eurPerUsd = rates.EUR || 0.85;
+let trUpdated = 0;
+
+for (const [isin, netCostEur] of netByIsin) {
+  const symbol = ISIN_MAP[isin];
+  if (netCostEur <= 0) {
+    console.log(`  ${symbol} (${isin}): net cost ${netCostEur.toFixed(2)}€ — no open position, skipped`);
+    continue;
+  }
+  const assetRow = db
+    .prepare("SELECT id, amount FROM assets WHERE account_id=? AND symbol=?")
+    .get(trSecurities.id, symbol);
+  if (!assetRow || !assetRow.amount || assetRow.amount <= 0) {
+    console.log(`  ${symbol} (${isin}): ${netCostEur.toFixed(2)}€ cost but no asset row → skipped`);
+    continue;
+  }
+  const avgBuyEur = netCostEur / assetRow.amount;
+  const avgBuyUsd = avgBuyEur / eurPerUsd;
+  db.prepare("UPDATE assets SET avg_buy_price=? WHERE id=?").run(avgBuyUsd, assetRow.id);
+  console.log(
+    `  ${symbol} (${isin}): ${assetRow.amount.toFixed(6)} units, ${netCostEur.toFixed(2)}€ net cost → avg=€${avgBuyEur.toFixed(4)} ($${avgBuyUsd.toFixed(4)})`,
+  );
+  trUpdated++;
+}
+
+console.log("");
+console.log(`Updated avg_buy_price for ${trUpdated} TR securities from bank_transactions`);
 db.close();

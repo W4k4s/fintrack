@@ -1,6 +1,7 @@
 import { db, schema } from "@/lib/db";
-import { asc, eq } from "drizzle-orm";
-import { getRates } from "@/lib/currency-rates";
+import { and, asc, eq } from "drizzle-orm";
+import { getEurPerUsd, getRates } from "@/lib/currency-rates";
+import { ISIN_MAP } from "@/lib/isin-map";
 
 const USD_STABLECOINS = new Set(["USDT", "USDC", "BUSD", "FDUSD", "TUSD", "DAI", "USD"]);
 
@@ -97,5 +98,89 @@ export async function recomputeAllAvgBuyPrices(): Promise<{ symbol: string; avgB
     const avg = await recomputeAvgBuyPrice(row.symbol);
     results.push({ symbol: row.symbol, avgBuyUsd: avg });
   }
+  return results;
+}
+
+/**
+ * TR securities (MSCI World, Gold ETC, etc.) never enter the `transactions`
+ * table — their only historical record is the bank_transactions "trade"
+ * entries parsed from the TR account statement (type=trade, source=trade-republic,
+ * description="Buy|Sell trade {ISIN} {name}", debit|credit in EUR).
+ *
+ * For each ISIN we aggregate net cost EUR (sum debits - sum credits), resolve
+ * ISIN→symbol via ISIN_MAP, and write avgBuyPrice (USD) on the matching
+ * assets row in the TR Securities account.
+ *
+ * Limitation: this is a weighted-average approximation. Partial sells reduce
+ * the aggregate basis below what FIFO would compute, because we can't recover
+ * per-sell quantity from the bank statement. Currently-held TR securities
+ * (no partial exits) are exact. Documented.
+ */
+export async function recomputeTrSecuritiesAvgBuy(): Promise<{ symbol: string; avgBuyUsd: number | null }[]> {
+  const [tr] = await db
+    .select()
+    .from(schema.exchanges)
+    .where(eq(schema.exchanges.slug, "trade-republic"))
+    .limit(1);
+  if (!tr) return [];
+
+  const trAccounts = await db
+    .select()
+    .from(schema.accounts)
+    .where(eq(schema.accounts.exchangeId, tr.id));
+  const securities = trAccounts.find((a) => a.name === "Securities");
+  if (!securities) return [];
+
+  const trades = await db
+    .select()
+    .from(schema.bankTransactions)
+    .where(
+      and(
+        eq(schema.bankTransactions.source, "trade-republic"),
+        eq(schema.bankTransactions.type, "trade"),
+      ),
+    );
+
+  const isinRegex = /(Buy|Sell)\s+trade\s+([A-Z]{2}[A-Z0-9]{10})/i;
+  const netCostEurByIsin = new Map<string, number>();
+  for (const tx of trades) {
+    const m = tx.description.match(isinRegex);
+    if (!m) continue;
+    const isin = m[2];
+    const symbol = ISIN_MAP[isin];
+    if (!symbol) continue;
+    const debit = Number(tx.debit ?? 0);
+    const credit = Number(tx.credit ?? 0);
+    const delta = debit - credit;
+    netCostEurByIsin.set(isin, (netCostEurByIsin.get(isin) ?? 0) + delta);
+  }
+
+  const eurPerUsd = await getEurPerUsd();
+  const results: { symbol: string; avgBuyUsd: number | null }[] = [];
+
+  for (const [isin, netCostEur] of netCostEurByIsin) {
+    const symbol = ISIN_MAP[isin];
+    if (!symbol) continue;
+
+    const [assetRow] = await db
+      .select()
+      .from(schema.assets)
+      .where(and(eq(schema.assets.accountId, securities.id), eq(schema.assets.symbol, symbol)))
+      .limit(1);
+
+    if (!assetRow || !assetRow.amount || assetRow.amount <= 0 || netCostEur <= 0) {
+      results.push({ symbol, avgBuyUsd: null });
+      continue;
+    }
+
+    const avgBuyEur = netCostEur / assetRow.amount;
+    const avgBuyUsd = avgBuyEur / eurPerUsd;
+    await db
+      .update(schema.assets)
+      .set({ avgBuyPrice: avgBuyUsd })
+      .where(eq(schema.assets.id, assetRow.id));
+    results.push({ symbol, avgBuyUsd });
+  }
+
   return results;
 }
