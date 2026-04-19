@@ -4,6 +4,7 @@ import { fgRegimeDetector } from "./fg-regime";
 import { dcaPendingDetector } from "./dca-pending";
 import { newsFilterDetector } from "./news-filter";
 import { macroCalendarDetector } from "./macro-calendar";
+import { marketStressDetector } from "./market-stress";
 
 export const ALL_DETECTORS: Detector[] = [
   priceDipDetector,
@@ -11,6 +12,7 @@ export const ALL_DETECTORS: Detector[] = [
   dcaPendingDetector,
   newsFilterDetector,
   macroCalendarDetector,
+  marketStressDetector,
 ];
 
 export function detectorsForScope(scope: IntelScope | "all"): Detector[] {
