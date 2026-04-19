@@ -1,6 +1,7 @@
 import { db, schema } from "@/lib/db";
 import { and, eq, inArray, lt, ne } from "drizzle-orm";
 import type { RebalancePlan } from "./types";
+import type { IntelRebalanceOrder } from "@/lib/db/schema";
 
 /** Ventana antes de marcar una order pending como `stale` (expirada por tiempo). */
 export const ORDER_EXPIRATION_DAYS = 14;
@@ -119,6 +120,55 @@ export async function expireOldOrders(now: Date = new Date()): Promise<number> {
     )
     .returning({ id: schema.intelRebalanceOrders.id });
   return result.length;
+}
+
+/**
+ * Terminal statuses a efectos de "signal cerrada": una signal cuyas orders
+ * están todas en este conjunto se considera resuelta. `partial` cuenta como
+ * cerrada — el usuario decidió conformarse con la parte ejecutada.
+ */
+const TERMINAL_ORDER_STATUSES = new Set<IntelRebalanceOrder["status"]>([
+  "executed",
+  "partial",
+  "dismissed",
+  "stale",
+]);
+
+/**
+ * Si todas las orders (no superseded) del signal están en status terminal,
+ * marca la signal como `userStatus=acted` y setea resolvedAt. Si el signal
+ * ya está acted/dismissed/snoozed, no hace nada. Devuelve true si ha
+ * transicionado (para loggear o notificar).
+ */
+export async function maybeMarkSignalActed(signalId: number): Promise<boolean> {
+  const orders = await db
+    .select({
+      status: schema.intelRebalanceOrders.status,
+    })
+    .from(schema.intelRebalanceOrders)
+    .where(eq(schema.intelRebalanceOrders.signalId, signalId));
+
+  const active = orders.filter((o) => o.status !== "superseded");
+  if (active.length === 0) return false;
+  const allTerminal = active.every((o) => TERMINAL_ORDER_STATUSES.has(o.status));
+  if (!allTerminal) return false;
+
+  const [signal] = await db
+    .select()
+    .from(schema.intelSignals)
+    .where(eq(schema.intelSignals.id, signalId))
+    .limit(1);
+  if (!signal) return false;
+  if (signal.userStatus === "acted") return false;
+  // No forzamos sobre dismissed/snoozed — esas son decisiones explícitas del usuario.
+  if (signal.userStatus === "dismissed" || signal.userStatus === "snoozed") return false;
+
+  const nowIso = new Date().toISOString();
+  await db
+    .update(schema.intelSignals)
+    .set({ userStatus: "acted", resolvedAt: nowIso })
+    .where(eq(schema.intelSignals.id, signalId));
+  return true;
 }
 
 /**

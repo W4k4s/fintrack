@@ -272,7 +272,7 @@ export const intelRebalanceOrders = sqliteTable("intel_rebalance_orders", {
   venue: text("venue").notNull(), // exchange slug
   amountEur: real("amount_eur").notNull(),
   status: text("status", {
-    enum: ["pending", "executed", "dismissed", "stale", "superseded", "needs_pick"],
+    enum: ["pending", "executed", "partial", "dismissed", "stale", "superseded", "needs_pick"],
   }).notNull().default("pending"),
   executedAt: text("executed_at"),
   actualAmountEur: real("actual_amount_eur"),

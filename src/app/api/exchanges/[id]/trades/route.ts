@@ -3,6 +3,13 @@ import { db, schema } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
 import { getAdapter } from "@/lib/exchanges";
 import { tryRecomputeAvgBuyPrice } from "@/lib/assets/cost-basis";
+import { getEurPerUsd } from "@/lib/currency-rates";
+import {
+  toEurAmount,
+  tryAutoMatchOrdersBatch,
+  type MatchableTransaction,
+} from "@/lib/intel/rebalance/order-matcher";
+import { notifyAutoMatched } from "@/lib/intel/rebalance/auto-match-notifier";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -37,6 +44,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     let inserted = 0;
     let skipped = 0;
     const insertedSymbols = new Set<string>();
+    const insertedTrades: Array<{
+      symbol: string;
+      type: "buy" | "sell";
+      date: string;
+      total: number;
+      quoteCurrency: string;
+    }> = [];
 
     for (const trade of trades) {
       const key = `${trade.date.split("T")[0]}|${trade.symbol}|${trade.amount}|${trade.price}`;
@@ -60,10 +74,46 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         notes: `${trade.pair} on ${exchange.name} (fee: ${trade.fee} ${trade.feeCurrency})`,
       });
       insertedSymbols.add(trade.symbol);
+      insertedTrades.push({
+        symbol: trade.symbol,
+        type: trade.side,
+        date: trade.date.split("T")[0],
+        total: trade.cost,
+        quoteCurrency,
+      });
       inserted++;
     }
 
     for (const sym of insertedSymbols) await tryRecomputeAvgBuyPrice(sym);
+
+    // Fase 8.8 — auto-match orders rebalance desde trades importados por API.
+    let autoMatched = 0;
+    let autoAmbiguous = 0;
+    if (insertedTrades.length > 0) {
+      try {
+        const eurPerUsd = await getEurPerUsd();
+        const matchable: MatchableTransaction[] = [];
+        for (const t of insertedTrades) {
+          const amountEur = toEurAmount(t.total, t.quoteCurrency, eurPerUsd);
+          if (amountEur == null) continue;
+          matchable.push({
+            symbol: t.symbol,
+            venue: exchange.slug,
+            type: t.type,
+            amountEur,
+            date: t.date,
+          });
+        }
+        if (matchable.length > 0) {
+          const res = await tryAutoMatchOrdersBatch(matchable);
+          autoMatched = res.matched.length;
+          autoAmbiguous = res.ambiguous;
+          await notifyAutoMatched(res.matched, res.ambiguous, `${exchange.name} trades`);
+        }
+      } catch (err) {
+        console.error("[exchanges/trades] auto-match failed", err);
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -71,6 +121,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       totalFetched: trades.length,
       inserted,
       skipped,
+      autoMatched,
+      autoAmbiguous,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

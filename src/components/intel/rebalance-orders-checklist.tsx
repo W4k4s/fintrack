@@ -88,19 +88,20 @@ export function RebalanceOrdersChecklist({
     (o) => !["superseded", "stale"].includes(o.status),
   );
   const executedCount = actionable.filter((o) => o.status === "executed").length;
+  const partialCount = actionable.filter((o) => o.status === "partial").length;
   const dismissedCount = actionable.filter((o) => o.status === "dismissed").length;
   const totalActionable = actionable.length;
+  const closed = executedCount + partialCount + dismissedCount;
   const progressPct =
-    totalActionable > 0
-      ? Math.round(((executedCount + dismissedCount) / totalActionable) * 100)
-      : 0;
+    totalActionable > 0 ? Math.round((closed / totalActionable) * 100) : 0;
 
   return (
     <div className="mb-4">
       <div className="flex items-center justify-between mb-3">
         <div className="text-sm font-medium">
-          Ejecución: {executedCount} ejecutadas · {dismissedCount} saltadas ·{" "}
-          {totalActionable - executedCount - dismissedCount} pendientes
+          Ejecución: {executedCount} ejecutadas
+          {partialCount > 0 ? ` · ${partialCount} parciales` : ""} · {dismissedCount} saltadas ·{" "}
+          {totalActionable - closed} pendientes
         </div>
         <div className="text-xs font-mono text-muted-foreground">
           {progressPct}%
@@ -220,6 +221,7 @@ function StatusBadge({ status }: { status: ActiveState }) {
       label: "✓ ejecutada",
       cls: "text-green-400",
     },
+    partial: { label: "◐ parcial", cls: "text-yellow-400" },
     dismissed: { label: "⏭ saltada", cls: "text-muted-foreground" },
     needs_pick: { label: "⚠ pick", cls: "text-amber-300" },
     superseded: { label: "superseded", cls: "text-muted-foreground opacity-60" },
@@ -245,7 +247,7 @@ function RowActions({
   if (order.status === "superseded" || order.status === "stale") {
     return <span className="text-muted-foreground text-xs">—</span>;
   }
-  if (order.status === "executed" || order.status === "dismissed") {
+  if (order.status === "executed" || order.status === "partial" || order.status === "dismissed") {
     return (
       <button
         onClick={onRevert}

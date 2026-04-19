@@ -1,6 +1,8 @@
 import { db, schema } from "@/lib/db";
 import { and, eq } from "drizzle-orm";
 import type { IntelRebalanceOrder } from "@/lib/db/schema";
+import { classifyExecution } from "./execution-status";
+import { maybeMarkSignalActed } from "./orders";
 
 /**
  * Transacción normalizada en EUR + venue listo para intentar match contra
@@ -111,10 +113,15 @@ export async function tryAutoMatchOrder(
 
   const order = candidates[0];
   const nowIso = new Date().toISOString();
+  // Fase 8.6 — clasificación partial vs executed según ratio actual/planned.
+  // Si el tx real está por debajo del 80% del plan, se marca partial.
+  const classification = classifyExecution(tx.amountEur, order.amountEur);
+  const newStatus: IntelRebalanceOrder["status"] =
+    classification === "dismissed" ? "executed" : classification;
   await db
     .update(schema.intelRebalanceOrders)
     .set({
-      status: "executed",
+      status: newStatus,
       executedAt: nowIso,
       actualAmountEur: tx.amountEur,
       updatedAt: nowIso,
@@ -122,8 +129,15 @@ export async function tryAutoMatchOrder(
     })
     .where(eq(schema.intelRebalanceOrders.id, order.id));
 
+  // Fase 8.7 — si este match cierra el signal, marcarlo acted.
+  try {
+    await maybeMarkSignalActed(order.signalId);
+  } catch (err) {
+    console.error("[order-matcher] maybeMarkSignalActed failed", err);
+  }
+
   return {
-    matched: { ...order, status: "executed", executedAt: nowIso, actualAmountEur: tx.amountEur },
+    matched: { ...order, status: newStatus, executedAt: nowIso, actualAmountEur: tx.amountEur },
     ambiguousCandidates: [],
   };
 }
