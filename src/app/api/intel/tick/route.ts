@@ -8,7 +8,7 @@ import { spawnClaudeForSignal } from "@/lib/intel/claude-spawn";
 import { cleanupOldSignals } from "@/lib/intel/retention";
 import { evaluateCooldowns } from "@/lib/intel/cooldowns";
 import { recordAllocationSnapshot } from "@/lib/intel/allocation/snapshot";
-import { syncRebalanceOrdersForCreated } from "@/lib/intel/rebalance/orders";
+import { expireOldOrders, syncRebalanceOrdersForCreated } from "@/lib/intel/rebalance/orders";
 import type { IntelScope } from "@/lib/intel/types";
 
 /**
@@ -36,6 +36,14 @@ export async function POST(req: NextRequest) {
     await cleanupOldSignals();
   } catch (err) {
     console.error("[intel] cleanup failed", err);
+  }
+
+  // Fase 8.5 — expirar órdenes rebalance con >14d sin acción.
+  try {
+    const expired = await expireOldOrders();
+    if (expired > 0) console.log(`[intel] expired ${expired} stale rebalance orders`);
+  } catch (err) {
+    console.error("[intel] expire orders failed", err);
   }
 
   const now = new Date();

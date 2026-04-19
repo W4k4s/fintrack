@@ -1,6 +1,9 @@
 import { db, schema } from "@/lib/db";
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray, lt, ne } from "drizzle-orm";
 import type { RebalancePlan } from "./types";
+
+/** Ventana antes de marcar una order pending como `stale` (expirada por tiempo). */
+export const ORDER_EXPIRATION_DAYS = 14;
 
 /**
  * Transforma un plan a filas listas para insertar. Pura, sin IO — testable.
@@ -92,6 +95,29 @@ export async function supersedePreviousOrders(
     )
     .returning({ id: schema.intelRebalanceOrders.id });
 
+  return result.length;
+}
+
+/**
+ * Marca como `stale` las órdenes pending/needs_pick con createdAt anterior a
+ * (now - ORDER_EXPIRATION_DAYS). Opportunistic — llamado desde el tick como
+ * parte del cleanup, sin cron nuevo.
+ */
+export async function expireOldOrders(now: Date = new Date()): Promise<number> {
+  const cutoff = new Date(
+    now.getTime() - ORDER_EXPIRATION_DAYS * 86400 * 1000,
+  ).toISOString();
+  const nowIso = now.toISOString();
+  const result = await db
+    .update(schema.intelRebalanceOrders)
+    .set({ status: "stale", updatedAt: nowIso })
+    .where(
+      and(
+        inArray(schema.intelRebalanceOrders.status, ["pending", "needs_pick"]),
+        lt(schema.intelRebalanceOrders.createdAt, cutoff),
+      ),
+    )
+    .returning({ id: schema.intelRebalanceOrders.id });
   return result.length;
 }
 

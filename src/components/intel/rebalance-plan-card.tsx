@@ -58,6 +58,24 @@ export function RebalancePlanCard({
         </div>
       )}
 
+      {plan.transfersNeeded && plan.transfersNeeded.length > 0 && (
+        <div className="mb-3 border border-blue-500/30 bg-blue-500/5 rounded px-3 py-2 text-xs text-blue-200">
+          <div className="font-medium mb-1 text-blue-300">
+            Fondeo necesario antes de ejecutar
+          </div>
+          <ul className="space-y-0.5">
+            {plan.transfersNeeded.map((t, i) => (
+              <li key={i}>
+                <span className="font-mono">{eur(t.needEur)}</span>{" "}
+                <span className="text-muted-foreground">→</span>{" "}
+                <span className="font-mono">{t.venue}</span>
+                <span className="text-muted-foreground"> · {t.hint}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {hasOrders ? (
         <>
           <div className="mb-3 text-xs text-muted-foreground">

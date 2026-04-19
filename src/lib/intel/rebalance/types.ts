@@ -50,6 +50,15 @@ export interface PlanCoverage {
   capApplied: boolean;
 }
 
+export interface TransferNeed {
+  /** Venue donde faltan fondos para ejecutar los buys. */
+  venue: string;
+  /** EUR necesarios (buys de ese venue menos sells liberados ahí). */
+  needEur: number;
+  /** Pista accionable sobre cómo fondear (SEPA, off-ramp, etc). */
+  hint: string;
+}
+
 export interface ClassDrift {
   actualPct: number;
   targetPct: number;
@@ -72,4 +81,6 @@ export interface RebalancePlan {
   coverage: PlanCoverage;
   /** List of class names that triggered the plan (drift >= MED). */
   generatedFrom: AssetClass[];
+  /** Gaps EUR por venue donde los buys superan a los sells — necesita fondeo externo. */
+  transfersNeeded: TransferNeed[];
 }

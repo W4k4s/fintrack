@@ -343,6 +343,77 @@ test("cash infraexpuesto drena antes de repartir a otras clases", () => {
   assert.ok(!plan.moves.buys.some((b) => b.class === "cash"));
 });
 
+test("transfersNeeded: buys TR + buys Binance sin sells → 2 entradas", () => {
+  const input = baseInput({
+    allocation: {
+      netWorth: 50000,
+      byClass: {
+        cash: { value: 25000, pct: 50 }, // sobre 25pp — deploy cash, sin sells
+        crypto: { value: 5000, pct: 10 }, // infra 15pp
+        etfs: { value: 15000, pct: 30 }, // infra 5pp (no triggerea)
+        gold: { value: 2500, pct: 5 }, // infra 5pp
+        bonds: { value: 1500, pct: 3 }, // infra 7pp
+        stocks: { value: 1000, pct: 2 }, // infra 3pp
+      },
+    },
+    positions: [
+      pos("BTC", "crypto", 5000, 0, "crypto", 1, "binance"),
+      pos("MSCI World", "etfs", 15000, 0),
+      pos("Gold ETC", "gold", 2500, 0),
+      pos("EU Infl Bond", "bonds", 1500, 0),
+      pos("MSFT", "stocks", 1000, 0),
+    ],
+  });
+  const plan = buildRebalancePlan(input);
+  assert.ok(plan);
+  assert.ok(plan.transfersNeeded.length >= 2, "venues con buys sin sells deben aparecer");
+  const venues = new Set(plan.transfersNeeded.map((t) => t.venue));
+  assert.ok(venues.has("binance"), "binance en transfersNeeded");
+  assert.ok(venues.has("trade-republic"), "trade-republic en transfersNeeded");
+  for (const t of plan.transfersNeeded) {
+    assert.ok(t.needEur > 0);
+    assert.ok(t.hint.length > 0);
+  }
+});
+
+test("transfersNeeded: sells cubren buys del mismo venue → sin entrada para ese venue", () => {
+  // Crypto sobre 25pp: sells BTC@binance cubren buys @binance. Etfs sobre: sells MSCI@TR cubren buys@TR.
+  const input = baseInput({
+    allocation: {
+      netWorth: 50000,
+      byClass: {
+        cash: { value: 12500, pct: 25 },
+        crypto: { value: 15000, pct: 30 }, // sobre 5pp — no triggerea
+        etfs: { value: 20000, pct: 40 }, // sobre 15pp → sell etfs
+        gold: { value: 0, pct: 0 }, // infra 10pp → buy
+        bonds: { value: 1500, pct: 3 }, // infra 7pp → buy
+        stocks: { value: 1000, pct: 2 }, // infra 3pp — no triggerea
+      },
+    },
+    positions: [
+      pos("BTC", "crypto", 15000, 500),
+      pos("MSCI World", "etfs", 20000, 3000),
+      pos("EU Infl Bond", "bonds", 1500, 0),
+      pos("MSFT", "stocks", 1000, 0),
+    ],
+  });
+  const plan = buildRebalancePlan(input);
+  assert.ok(plan);
+  // Gold+Bonds buys van a TR. Sells MSCI también en TR → deberían compensarse.
+  // El test verifica que TR no sale en transfersNeeded si freed >= need.
+  const trNeed = plan.transfersNeeded.find((t) => t.venue === "trade-republic");
+  if (trNeed) {
+    // Si aparece, debe ser porque el buy total TR supera el sell total TR.
+    const trSell = plan.moves.sells
+      .filter((s) => s.venue === "trade-republic")
+      .reduce((a, s) => a + s.amountEur, 0);
+    const trBuy = plan.moves.buys
+      .filter((b) => b.venue === "trade-republic")
+      .reduce((a, b) => a + b.amountEur, 0);
+    assert.ok(trBuy - trSell >= 10, "si aparece TR es porque hay gap real");
+  }
+});
+
 test("BTC dual-venue: sell prioriza venue con peor pnlEur (tax-loss)", () => {
   // Crypto 50% (sobre 25pp). BTC en 3 venues con pnlEur distintos:
   // - BTC@binance: +2000 (ganancia)

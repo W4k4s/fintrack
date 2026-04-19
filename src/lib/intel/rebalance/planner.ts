@@ -10,6 +10,7 @@ import type {
   PlanFiscal,
   PlanSell,
   RebalancePlan,
+  TransferNeed,
 } from "./types";
 
 const DRIFT_MED_PP = 7;
@@ -458,5 +459,46 @@ export function buildRebalancePlan(input: PlannerInput): RebalancePlan | null {
     fiscal,
     coverage,
     generatedFrom: triggered,
+    transfersNeeded: computeTransfersNeeded(sells, buys),
   };
+}
+
+/**
+ * Detecta venues donde los buys planeados superan a los sells liberados. Cash
+ * deploy queda fuera porque vive en banks (ING/TR cash) y requiere SEPA a
+ * cualquier venue — es el mecanismo por defecto. La hint específica depende
+ * del venue destino.
+ */
+function computeTransfersNeeded(
+  sells: PlanSell[],
+  buys: PlanBuy[],
+): TransferNeed[] {
+  const sellByVenue: Record<string, number> = {};
+  const buyByVenue: Record<string, number> = {};
+  for (const s of sells) sellByVenue[s.venue] = (sellByVenue[s.venue] ?? 0) + s.amountEur;
+  for (const b of buys) buyByVenue[b.venue] = (buyByVenue[b.venue] ?? 0) + b.amountEur;
+
+  const needs: TransferNeed[] = [];
+  for (const [venue, need] of Object.entries(buyByVenue)) {
+    const freed = sellByVenue[venue] ?? 0;
+    const gap = need - freed;
+    if (gap < MIN_MOVE_EUR) continue;
+    needs.push({
+      venue,
+      needEur: roundToStep(gap),
+      hint: transferHint(venue),
+    });
+  }
+  needs.sort((a, b) => b.needEur - a.needEur);
+  return needs;
+}
+
+function transferHint(venue: string): string {
+  if (venue === "trade-republic") {
+    return "Transfiere desde tu banco (ING) vía SEPA al IBAN Trade Republic.";
+  }
+  if (venue === "binance" || venue === "kucoin" || venue === "mexc") {
+    return `Fondea ${venue} vía SEPA desde ING/TR cash, o con USDC si ya tienes stablecoins.`;
+  }
+  return `Deposita EUR en ${venue} antes de ejecutar los buys.`;
 }

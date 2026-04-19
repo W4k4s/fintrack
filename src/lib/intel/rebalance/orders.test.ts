@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { planToOrderRows } from "./orders.ts";
+import { planToOrderRows, ORDER_EXPIRATION_DAYS } from "./orders.ts";
 import type { RebalancePlan } from "./types.ts";
 
 // Lógica DB cubierta por tests e2e manuales vía tick real; aquí probamos la
@@ -116,4 +116,8 @@ test("planToOrderRows: plan sin moves → 0 rows", () => {
   plan.moves.buys = [];
   const rows = planToOrderRows(99, plan);
   assert.equal(rows.length, 0);
+});
+
+test("ORDER_EXPIRATION_DAYS: ventana razonable (7-30 días)", () => {
+  assert.ok(ORDER_EXPIRATION_DAYS >= 7 && ORDER_EXPIRATION_DAYS <= 30);
 });
