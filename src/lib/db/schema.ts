@@ -230,8 +230,23 @@ export const intelNewsItems = sqliteTable("intel_news_items", {
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
+// Per-scope notification cooldown. Auto-populated by the feedback evaluator
+// when dismissed_rate for a scope exceeds the threshold. While cooldown_until
+// > now, Telegram sends for that scope are suppressed (signals still land on
+// /intel). critical severity bypasses cooldown.
+export const intelScopeCooldowns = sqliteTable("intel_scope_cooldowns", {
+  scope: text("scope").primaryKey(),
+  cooldownUntil: text("cooldown_until").notNull(),
+  reason: text("reason").notNull(), // "high_dismiss_rate"
+  dismissedRate: real("dismissed_rate"),
+  sampleSize: integer("sample_size"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
 export type IntelSignal = typeof intelSignals.$inferSelect;
 export type NewIntelSignal = typeof intelSignals.$inferInsert;
 export type IntelNotification = typeof intelNotifications.$inferSelect;
 export type IntelRun = typeof intelRuns.$inferSelect;
 export type IntelNewsItem = typeof intelNewsItems.$inferSelect;
+export type IntelScopeCooldown = typeof intelScopeCooldowns.$inferSelect;

@@ -1,6 +1,7 @@
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { isQuietHourMadrid } from "./tz";
+import { getActiveCooldown } from "./cooldowns";
 
 /**
  * Envía notificación Telegram asociada a una signal. Respeta quiet hours
@@ -71,6 +72,20 @@ export async function sendIntelNotification(
       payload: text,
     });
     return;
+  }
+
+  if (!forceSend) {
+    const cooldownUntil = await getActiveCooldown(sig.scope, now);
+    if (cooldownUntil) {
+      await db.insert(schema.intelNotifications).values({
+        signalId,
+        channel: "telegram",
+        status: "suppressed",
+        suppressionReason: "scope_cooldown",
+        payload: text,
+      });
+      return;
+    }
   }
 
   const messageId = await tgSend(chatId, text);

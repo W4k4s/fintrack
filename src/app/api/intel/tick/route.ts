@@ -5,6 +5,8 @@ import { detectorsForScope } from "@/lib/intel/detectors";
 import { linkNewsItemsToSignals } from "@/lib/intel/detectors/news-filter";
 import { persistSignals } from "@/lib/intel/persist";
 import { spawnClaudeForSignal } from "@/lib/intel/claude-spawn";
+import { cleanupOldSignals } from "@/lib/intel/retention";
+import { evaluateCooldowns } from "@/lib/intel/cooldowns";
 import type { IntelScope } from "@/lib/intel/types";
 
 /**
@@ -26,6 +28,13 @@ export async function POST(req: NextRequest) {
     .insert(schema.intelRuns)
     .values({ scope, startedAt: runStartIso })
     .returning({ id: schema.intelRuns.id });
+
+  // Opportunistic retention — cheap if nothing stale exists.
+  try {
+    await cleanupOldSignals();
+  } catch (err) {
+    console.error("[intel] cleanup failed", err);
+  }
 
   const now = new Date();
   // madridNow lo usan los detectores solo para contexto "mismo instante";
@@ -84,6 +93,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Feedback loop: re-evaluate per-scope cooldowns with updated signals.
+  let cooldownsApplied: string[] = [];
+  try {
+    const evals = await evaluateCooldowns();
+    cooldownsApplied = evals.filter((e) => e.applied).map((e) => e.scope);
+  } catch (err) {
+    console.error("[intel] cooldown evaluation failed", err);
+  }
+
   if (runRow) {
     await db
       .update(schema.intelRuns)
@@ -102,6 +120,7 @@ export async function POST(req: NextRequest) {
     signalsCreated: totalCreated,
     spawnsLaunched: spawns,
     errors,
+    cooldownsApplied,
     results,
   });
 }

@@ -84,12 +84,18 @@ export default async function IntelPage() {
             </div>
           </div>
         </div>
-        <div className="mt-3">
+        <div className="mt-3 flex gap-4">
           <Link
             href="/intel/news"
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
             📰 Ver todas las noticias procesadas →
+          </Link>
+          <Link
+            href="/intel/metrics"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            📊 Métricas por scope →
           </Link>
         </div>
       </header>
