@@ -176,6 +176,8 @@ export async function GET() {
         ethFunding,
         vixLevel: mctx.vix?.level ?? null,
         vixChangePct: mctx.vix?.changePct ?? null,
+        basisBtcPct: mctx.basisBtc?.basisPct ?? null,
+        basisBtcDaysToExpiry: mctx.basisBtc?.daysToExpiry ?? null,
       },
       schedule,
       weeks: weeks.map((w, i) => ({

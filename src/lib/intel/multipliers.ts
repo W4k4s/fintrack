@@ -1,5 +1,6 @@
 import { fetchFundingRates, type FundingRate } from "./market/funding";
 import { fetchVix, type VixSnapshot } from "./market/vix";
+import { fetchBasisBtc, type BasisSnapshot } from "./market/basis";
 import type { AssetClass } from "./allocation/classify";
 
 // ---------------------------------------------------------------------------
@@ -23,16 +24,31 @@ export function fundingBoost(rate: number): number {
   return 0;
 }
 
-export function cryptoMultiplier(fg: number, funding: FundingRate | null): {
+// Basis futures-spot BTC ~3m. Backwardation profunda (future barato) sugiere
+// estrés que suele preceder rebotes; contango alto significa que el carry es
+// caro y los apalancados están pagando mucho por estar largos (sobrecalentamiento).
+export function basisBoost(basisPct: number): number {
+  if (basisPct <= -0.5) return 0.2; // backwardation fuerte
+  if (basisPct >= 3) return -0.15; // contango alto (>12%/año anualizado aprox)
+  return 0;
+}
+
+export function cryptoMultiplier(
+  fg: number,
+  funding: FundingRate | null,
+  basis: BasisSnapshot | null = null,
+): {
   value: number;
   fgMult: number;
-  boost: number;
+  fundingBoost: number;
+  basisBoost: number;
 } {
   const fgMult = fgBaseMultiplier(fg);
-  const boost = funding ? fundingBoost(funding.rate) : 0;
-  const raw = fgMult + boost;
+  const fBoost = funding ? fundingBoost(funding.rate) : 0;
+  const bBoost = basis ? basisBoost(basis.basisPct) : 0;
+  const raw = fgMult + fBoost + bBoost;
   const value = Math.max(0.5, Math.min(2.5, raw));
-  return { value, fgMult, boost };
+  return { value, fgMult, fundingBoost: fBoost, basisBoost: bBoost };
 }
 
 // ---------------------------------------------------------------------------
@@ -71,12 +87,17 @@ export interface MultiplierContext {
   fg: number;
   fundingByAsset: Map<string, FundingRate>;
   vix: VixSnapshot | null;
+  basisBtc: BasisSnapshot | null;
 }
 
 export async function loadMultiplierContext(fg: number): Promise<MultiplierContext> {
-  const [fundingRates, vix] = await Promise.all([fetchFundingRates(), fetchVix()]);
+  const [fundingRates, vix, basisBtc] = await Promise.all([
+    fetchFundingRates(),
+    fetchVix(),
+    fetchBasisBtc(),
+  ]);
   const fundingByAsset = new Map(fundingRates.map((r) => [r.asset, r]));
-  return { fg, fundingByAsset, vix };
+  return { fg, fundingByAsset, vix, basisBtc };
 }
 
 export interface AppliedMultiplier {
@@ -86,6 +107,8 @@ export interface AppliedMultiplier {
     fgMult?: number;
     fundingBoost?: number;
     fundingRate?: number | null;
+    basisBoost?: number;
+    basisPct?: number | null;
     vixLevel?: number | null;
   };
 }
@@ -98,11 +121,21 @@ export function multiplierFor(
   const rule = ruleForClass(cls);
   if (rule === "crypto") {
     const funding = ctx.fundingByAsset.get(asset) ?? ctx.fundingByAsset.get("BTC") ?? null;
-    const { value, fgMult, boost } = cryptoMultiplier(ctx.fg, funding);
+    const { value, fgMult, fundingBoost: fBoost, basisBoost: bBoost } = cryptoMultiplier(
+      ctx.fg,
+      funding,
+      ctx.basisBtc,
+    );
     return {
       rule,
       value,
-      components: { fgMult, fundingBoost: boost, fundingRate: funding?.rate ?? null },
+      components: {
+        fgMult,
+        fundingBoost: fBoost,
+        fundingRate: funding?.rate ?? null,
+        basisBoost: bBoost,
+        basisPct: ctx.basisBtc?.basisPct ?? null,
+      },
     };
   }
   if (rule === "equity") {
