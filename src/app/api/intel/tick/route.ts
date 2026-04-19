@@ -8,6 +8,7 @@ import { spawnClaudeForSignal } from "@/lib/intel/claude-spawn";
 import { cleanupOldSignals } from "@/lib/intel/retention";
 import { evaluateCooldowns } from "@/lib/intel/cooldowns";
 import { recordAllocationSnapshot } from "@/lib/intel/allocation/snapshot";
+import { syncRebalanceOrdersForCreated } from "@/lib/intel/rebalance/orders";
 import type { IntelScope } from "@/lib/intel/types";
 
 /**
@@ -61,6 +62,14 @@ export async function POST(req: NextRequest) {
       const { created, skipped } = await persistSignals(candidates);
       totalCreated += created.length;
       results.push({ scope: detector.scope, created, skipped });
+
+      if (detector.scope === "drift" && created.length > 0) {
+        try {
+          await syncRebalanceOrdersForCreated(created);
+        } catch (e) {
+          console.error("[intel] rebalance orders sync failed", e);
+        }
+      }
 
       if (detector.scope === "news" && created.length > 0) {
         const dedupToNewsId = new Map<string, number>();

@@ -45,5 +45,31 @@ sqlite.exec(
   `CREATE INDEX IF NOT EXISTS idx_intel_allocation_snapshots_date ON intel_allocation_snapshots(date)`,
 );
 
+// Phase 8.1b — intel_rebalance_orders: checklist ejecutable derivado del plan.
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS intel_rebalance_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    signal_id INTEGER NOT NULL REFERENCES intel_signals(id) ON DELETE CASCADE,
+    type TEXT NOT NULL,
+    asset_symbol TEXT,
+    asset_class TEXT NOT NULL,
+    venue TEXT NOT NULL,
+    amount_eur REAL NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    executed_at TEXT,
+    actual_amount_eur REAL,
+    actual_units REAL,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  )
+`);
+sqlite.exec(
+  `CREATE INDEX IF NOT EXISTS idx_intel_rebalance_orders_status_signal ON intel_rebalance_orders(status, signal_id)`,
+);
+sqlite.exec(
+  `CREATE INDEX IF NOT EXISTS idx_intel_rebalance_orders_signal ON intel_rebalance_orders(signal_id)`,
+);
+
 export const db = drizzle(sqlite, { schema });
 export { schema };

@@ -259,6 +259,29 @@ export const intelAllocationSnapshots = sqliteTable("intel_allocation_snapshots"
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
+// Fase 8 — órdenes concretas derivadas del rebalance plan. Una row por cada
+// sell/buy del payload.plan. Permite checklist en UI y auto-match contra
+// transactions ejecutadas. Status `superseded` cuando un plan nuevo reemplaza
+// al anterior sin haber sido ejecutado completo.
+export const intelRebalanceOrders = sqliteTable("intel_rebalance_orders", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  signalId: integer("signal_id").notNull().references(() => intelSignals.id, { onDelete: "cascade" }),
+  type: text("type", { enum: ["sell", "buy"] }).notNull(),
+  assetSymbol: text("asset_symbol"), // nullable: needs_pick
+  assetClass: text("asset_class").notNull(), // cash|crypto|etfs|gold|bonds|stocks
+  venue: text("venue").notNull(), // exchange slug
+  amountEur: real("amount_eur").notNull(),
+  status: text("status", {
+    enum: ["pending", "executed", "dismissed", "stale", "superseded", "needs_pick"],
+  }).notNull().default("pending"),
+  executedAt: text("executed_at"),
+  actualAmountEur: real("actual_amount_eur"),
+  actualUnits: real("actual_units"),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
 export type IntelSignal = typeof intelSignals.$inferSelect;
 export type NewIntelSignal = typeof intelSignals.$inferInsert;
 export type IntelNotification = typeof intelNotifications.$inferSelect;
@@ -266,3 +289,5 @@ export type IntelRun = typeof intelRuns.$inferSelect;
 export type IntelNewsItem = typeof intelNewsItems.$inferSelect;
 export type IntelScopeCooldown = typeof intelScopeCooldowns.$inferSelect;
 export type IntelAllocationSnapshot = typeof intelAllocationSnapshots.$inferSelect;
+export type IntelRebalanceOrder = typeof intelRebalanceOrders.$inferSelect;
+export type NewIntelRebalanceOrder = typeof intelRebalanceOrders.$inferInsert;
