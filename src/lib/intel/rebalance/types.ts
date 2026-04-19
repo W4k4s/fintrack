@@ -5,6 +5,8 @@ export interface PlanSell {
   symbol: string;
   class: AssetClass;
   bucket: TaxBucket;
+  /** Exchange slug where the sell must execute (e.g. "binance", "trade-republic"). */
+  venue: string;
   amountEur: number;
   /** Estimated unrealized P&L realized on this sell. Positive = gain, negative = loss. */
   unrealizedPnlEur: number;
@@ -14,6 +16,8 @@ export interface PlanBuy {
   /** null when clase has no existing holdings — see `needsStrategyPick`. */
   symbol: string | null;
   class: AssetClass;
+  /** Exchange slug where the buy must execute. Default por clase si needsStrategyPick. */
+  venue: string;
   amountEur: number;
   needsStrategyPick?: boolean;
 }

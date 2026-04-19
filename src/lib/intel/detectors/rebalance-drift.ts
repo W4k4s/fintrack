@@ -133,8 +133,10 @@ export const rebalanceDriftDetector: Detector = {
         accounts.map((a) => [a.id, a.exchangeId] as const),
       );
       const exchangeCategoryById = new Map<number, string | undefined>();
+      const exchangeSlugById = new Map<number, string>();
       for (const [id, ex] of exchangeById) {
         exchangeCategoryById.set(id, getExchangeInfo(ex.slug)?.category);
+        exchangeSlugById.set(id, ex.slug);
       }
       const accountCategoryById = new Map<number, string | undefined>();
       for (const [id, acc] of accountById) {
@@ -147,6 +149,7 @@ export const rebalanceDriftDetector: Detector = {
         accountCategoryById,
         exchangeIdByAccountId,
         exchangeCategoryById,
+        exchangeSlugById,
         eurPerUsd,
       );
 

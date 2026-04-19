@@ -19,9 +19,24 @@ const MAX_POSITION_SELL_PCT = 0.5;
 const MIN_MOVE_EUR = 10;
 /** Redondeo de importes a múltiplos de 10 EUR para UI. */
 const ROUND_STEP = 10;
+/**
+ * Venue default por clase cuando `needsStrategyPick=true` (clase vacía). La UI
+ * puede sugerir otro al resolver el pick, pero por defecto asumimos el venue
+ * más alineado con la naturaleza de la clase.
+ */
+const DEFAULT_VENUE_BY_CLASS: Record<AssetClass, string> = {
+  cash: "trade-republic",
+  crypto: "binance",
+  etfs: "trade-republic",
+  gold: "trade-republic",
+  bonds: "trade-republic",
+  stocks: "trade-republic",
+};
 
 export interface PositionDetail {
   symbol: string;
+  /** Exchange slug (e.g. "binance", "trade-republic"). Distingue dual-venue BTC→binance vs BTC→trade-republic. */
+  venue: string;
   class: AssetClass;
   bucket: TaxBucket | null;
   amount: number;
@@ -52,12 +67,17 @@ export function buildPositionDetails(
   accountCategoryById: Map<number, string | undefined>,
   exchangeIdByAccountId: Map<number, number | undefined>,
   exchangeCategoryById: Map<number, string | undefined>,
+  exchangeSlugById: Map<number, string>,
   eurPerUsd: number,
 ): PositionDetail[] {
-  const bySymbol = new Map<
+  // Agrupamos por (symbol, venue) — NO por symbol solo. BTC en binance y BTC en
+  // trade-republic son posiciones separadas con cost-basis propio y venue de
+  // ejecución distinto.
+  const byKey = new Map<
     string,
     {
       symbol: string;
+      venue: string;
       amount: number;
       valueUsd: number;
       costUsd: number;
@@ -73,9 +93,11 @@ export function buildPositionDetails(
 
     const exchangeId = exchangeIdByAccountId.get(a.accountId);
     const exchangeCat = exchangeId ? exchangeCategoryById.get(exchangeId) : undefined;
+    const venue = exchangeId ? exchangeSlugById.get(exchangeId) : undefined;
 
     // Bank accounts = cash para allocation. No se vende, no forma parte de positions vendibles.
     if (exchangeCat === "bank") continue;
+    if (!venue) continue; // sin venue conocido no podemos ejecutar — descartar.
 
     const classified = classifyAsset(a.symbol);
     let cls: AssetClass = classified;
@@ -85,12 +107,8 @@ export function buildPositionDetails(
     if (cls === "cash") {
       bucket = null;
     } else if (exchangeCat === "broker") {
-      // Broker (TR) siempre es bucket traditional, independientemente del fallback.
       bucket = "traditional";
       if (cls === "crypto") {
-        // El fallback nos mintió: este símbolo está en un broker pero no lo tenemos catalogado.
-        // Mantener clase como crypto sería peor (afectaría allocation); preferimos "stocks"
-        // como neutral dentro de traditional.
         cls = "stocks";
         bucketForced = true;
       }
@@ -100,9 +118,10 @@ export function buildPositionDetails(
       bucket = "traditional";
     }
 
-    const key = a.symbol;
-    const entry = bySymbol.get(key) ?? {
+    const key = `${a.symbol}@${venue}`;
+    const entry = byKey.get(key) ?? {
       symbol: a.symbol,
+      venue,
       amount: 0,
       valueUsd: 0,
       costUsd: 0,
@@ -113,16 +132,17 @@ export function buildPositionDetails(
     entry.amount += a.amount;
     entry.valueUsd += a.amount * (a.currentPrice || 0);
     entry.costUsd += a.amount * (a.avgBuyPrice || 0);
-    bySymbol.set(key, entry);
+    byKey.set(key, entry);
   }
 
   const out: PositionDetail[] = [];
-  for (const e of bySymbol.values()) {
+  for (const e of byKey.values()) {
     const valueEur = e.valueUsd * eurPerUsd;
     const costEur = e.costUsd * eurPerUsd;
     const pnlEur = valueEur - costEur;
     out.push({
       symbol: e.symbol,
+      venue: e.venue,
       class: e.cls,
       bucket: e.bucket,
       amount: e.amount,
@@ -269,6 +289,7 @@ export function buildRebalancePlan(input: PlannerInput): RebalancePlan | null {
         symbol: pos.symbol,
         class: cls,
         bucket: pos.bucket!,
+        venue: pos.venue,
         amountEur,
         unrealizedPnlEur: Math.round(pnlShare * 100) / 100,
       });
@@ -289,10 +310,11 @@ export function buildRebalancePlan(input: PlannerInput): RebalancePlan | null {
     );
 
     if (classPositions.length === 0) {
-      // Clase vacía — marcador, UI pedirá asset pick.
+      // Clase vacía — marcador, UI pedirá asset pick. Venue default por clase.
       buys.push({
         symbol: null,
         class: cls,
+        venue: DEFAULT_VENUE_BY_CLASS[cls],
         amountEur: roundToStep(classBuyTarget),
         needsStrategyPick: true,
       });
@@ -302,21 +324,23 @@ export function buildRebalancePlan(input: PlannerInput): RebalancePlan | null {
     const classValue = classPositions.reduce((acc, p) => acc + p.valueEur, 0);
     const tentative = classPositions.map((p) => ({
       symbol: p.symbol,
+      venue: p.venue,
       amountEur: roundToStep((p.valueEur / classValue) * classBuyTarget),
     }));
-    // Ajuste del residuo en el asset de mayor value para cuadrar la suma.
+    // Ajuste del residuo en la posición de mayor value (match por symbol+venue,
+    // no solo symbol: si hay SOL@binance y SOL@mexc, son filas distintas).
     const targetRounded = roundToStep(classBuyTarget);
     const sum = tentative.reduce((acc, t) => acc + t.amountEur, 0);
     const diff = targetRounded - sum;
     if (Math.abs(diff) >= ROUND_STEP && tentative.length > 0) {
       const sortedByValue = [...classPositions].sort((a, b) => b.valueEur - a.valueEur);
-      const topSymbol = sortedByValue[0].symbol;
-      const ix = tentative.findIndex((t) => t.symbol === topSymbol);
+      const top = sortedByValue[0];
+      const ix = tentative.findIndex((t) => t.symbol === top.symbol && t.venue === top.venue);
       if (ix >= 0) tentative[ix].amountEur = roundToStep(tentative[ix].amountEur + diff);
     }
     for (const t of tentative) {
       if (t.amountEur < MIN_MOVE_EUR) continue;
-      buys.push({ symbol: t.symbol, class: cls, amountEur: t.amountEur });
+      buys.push({ symbol: t.symbol, class: cls, venue: t.venue, amountEur: t.amountEur });
     }
   }
 

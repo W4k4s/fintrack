@@ -48,8 +48,9 @@ function pos(
   pnlEur: number,
   bucket: PositionDetail["bucket"] = cls === "crypto" ? "crypto" : "traditional",
   amount = 1,
+  venue: string = cls === "crypto" ? "binance" : "trade-republic",
 ): PositionDetail {
-  return { symbol, class: cls, valueEur, pnlEur, bucket, amount };
+  return { symbol, venue, class: cls, valueEur, pnlEur, bucket, amount };
 }
 
 test("plan null si nada supera 7pp drift", () => {
@@ -340,6 +341,76 @@ test("cash infraexpuesto drena antes de repartir a otras clases", () => {
   // Coverage < 100% típicamente cuando capital drena a cash primero.
   // Al menos el plan no asigna buy a cash (se excluye de compras).
   assert.ok(!plan.moves.buys.some((b) => b.class === "cash"));
+});
+
+test("BTC dual-venue: sell prioriza venue con peor pnlEur (tax-loss)", () => {
+  // Crypto 50% (sobre 25pp). BTC en 3 venues con pnlEur distintos:
+  // - BTC@binance: +2000 (ganancia)
+  // - BTC@mexc: -1500 (pérdida) → debería venderse antes
+  // - BTC@trade-republic: +500 (ganancia pequeña)
+  // Cap 50%/posición. Target sell crypto ≈ 12500€ (sobre 25pp sobre 50k).
+  const input = baseInput({
+    allocation: {
+      netWorth: 50000,
+      byClass: {
+        cash: { value: 12500, pct: 25 },
+        crypto: { value: 25000, pct: 50 },
+        etfs: { value: 5000, pct: 10 },
+        gold: { value: 2500, pct: 5 },
+        bonds: { value: 2500, pct: 5 },
+        stocks: { value: 2500, pct: 5 },
+      },
+    },
+    positions: [
+      // BTC en 3 venues. Mismo symbol pero filas independientes.
+      pos("BTC", "crypto", 10000, +2000, "crypto", 1, "binance"),
+      pos("BTC", "crypto", 8000, -1500, "crypto", 1, "mexc"),
+      // Nota: BTC@TR clasificaría como "stocks" por bucketForced; lo omito aquí
+      // y pongo SOL para rellenar crypto hasta 25k.
+      pos("SOL", "crypto", 7000, +300, "crypto", 1, "binance"),
+      pos("MSCI World", "etfs", 5000, 500),
+      pos("Gold ETC", "gold", 2500, 0),
+      pos("EU Infl Bond", "bonds", 2500, 0),
+      pos("MSFT", "stocks", 2500, 200),
+    ],
+  });
+  const plan = buildRebalancePlan(input);
+  assert.ok(plan);
+  assert.ok(plan.moves.sells.length > 0);
+  const firstSell = plan.moves.sells[0];
+  assert.equal(firstSell.symbol, "BTC", "primer sell debe ser BTC");
+  assert.equal(firstSell.venue, "mexc", "debe ir primero el venue con peor pnl");
+  // Todos los sells deben llevar venue propagado.
+  assert.ok(plan.moves.sells.every((s) => typeof s.venue === "string" && s.venue.length > 0));
+});
+
+test("clase vacía usa venue default (crypto→binance, stocks→trade-republic)", () => {
+  const input = baseInput({
+    allocation: {
+      netWorth: 50000,
+      byClass: {
+        cash: { value: 25000, pct: 50 }, // sobre 25pp
+        crypto: { value: 0, pct: 0 },
+        etfs: { value: 20000, pct: 40 },
+        gold: { value: 5000, pct: 10 },
+        bonds: { value: 0, pct: 0 },
+        stocks: { value: 0, pct: 0 },
+      },
+    },
+    positions: [
+      pos("MSCI World", "etfs", 20000, 0),
+      pos("Gold ETC", "gold", 5000, 0),
+    ],
+  });
+  const plan = buildRebalancePlan(input);
+  assert.ok(plan);
+  const picks = plan.moves.buys.filter((b) => b.needsStrategyPick);
+  const cryptoPick = picks.find((p) => p.class === "crypto");
+  const stocksPick = picks.find((p) => p.class === "stocks");
+  assert.ok(cryptoPick, "pick crypto presente");
+  assert.ok(stocksPick, "pick stocks presente");
+  assert.equal(cryptoPick.venue, "binance");
+  assert.equal(stocksPick.venue, "trade-republic");
 });
 
 test("no sell cuando solo hay bank accounts (no asset vendible)", () => {
