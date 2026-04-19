@@ -20,6 +20,7 @@ const SCOPE_ICONS: Record<string, string> = {
   rebalance: "🔄",
   dca_pending: "🔔",
   profile_review: "🧭",
+  concentration_risk: "🎯",
   custom: "⚙️",
 };
 
