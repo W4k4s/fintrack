@@ -21,6 +21,7 @@ const SCOPE_ICONS: Record<string, string> = {
   dca_pending: "🔔",
   profile_review: "🧭",
   concentration_risk: "🎯",
+  correlation_risk: "🔗",
   custom: "⚙️",
 };
 

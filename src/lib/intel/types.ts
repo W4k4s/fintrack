@@ -11,6 +11,7 @@ export type IntelScope =
   | "dca_pending"
   | "profile_review"
   | "concentration_risk"
+  | "correlation_risk"
   | "custom";
 
 export type Severity = "low" | "med" | "high" | "critical";

@@ -174,7 +174,8 @@ export const intelSignals = sqliteTable("intel_signals", {
     enum: [
       "price_dip", "price_surge", "fg_regime", "funding_anomaly",
       "news", "macro_event", "drift", "tax_harvest", "rebalance",
-      "dca_pending", "profile_review", "concentration_risk", "custom",
+      "dca_pending", "profile_review", "concentration_risk",
+      "correlation_risk", "custom",
     ],
   }).notNull(),
   asset: text("asset"), // BTC, ETH, "MSCI World"... null si macro

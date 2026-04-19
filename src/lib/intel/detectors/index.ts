@@ -9,6 +9,7 @@ import { rebalanceDriftDetector } from "./rebalance-drift";
 import { taxHarvestWindowDetector } from "./tax-harvest-window";
 import { profileReviewDetector } from "./profile-review";
 import { concentrationRiskDetector } from "./concentration-risk";
+import { correlationRiskDetector } from "./correlation-risk";
 
 export const ALL_DETECTORS: Detector[] = [
   priceDipDetector,
@@ -21,6 +22,7 @@ export const ALL_DETECTORS: Detector[] = [
   taxHarvestWindowDetector,
   profileReviewDetector,
   concentrationRiskDetector,
+  correlationRiskDetector,
 ];
 
 export function detectorsForScope(scope: IntelScope | "all"): Detector[] {
