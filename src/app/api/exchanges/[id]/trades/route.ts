@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
 import { getAdapter } from "@/lib/exchanges";
+import { tryRecomputeAvgBuyPrice } from "@/lib/assets/cost-basis";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     let inserted = 0;
     let skipped = 0;
+    const insertedSymbols = new Set<string>();
 
     for (const trade of trades) {
       const key = `${trade.date.split("T")[0]}|${trade.symbol}|${trade.amount}|${trade.price}`;
@@ -57,8 +59,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         date: trade.date.split("T")[0],
         notes: `${trade.pair} on ${exchange.name} (fee: ${trade.fee} ${trade.feeCurrency})`,
       });
+      insertedSymbols.add(trade.symbol);
       inserted++;
     }
+
+    for (const sym of insertedSymbols) await tryRecomputeAvgBuyPrice(sym);
 
     return NextResponse.json({
       success: true,

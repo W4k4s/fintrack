@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { parseCsvTrades } from "@/lib/csv-parsers";
+import { tryRecomputeAvgBuyPrice } from "@/lib/assets/cost-basis";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     let inserted = 0;
     let skipped = 0;
+    const insertedSymbols = new Set<string>();
 
     for (const trade of trades) {
       const key = `${trade.date}|${trade.symbol}|${trade.amount}|${trade.price}`;
@@ -70,9 +72,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         date: trade.date,
         notes: `${trade.pair} on ${exchange.name} (fee: ${trade.fee} ${trade.feeCurrency}) [CSV import]`,
       });
-      existingKeys.add(key); // prevent dupes within same file
+      existingKeys.add(key);
+      insertedSymbols.add(trade.symbol);
       inserted++;
     }
+
+    for (const sym of insertedSymbols) await tryRecomputeAvgBuyPrice(sym);
 
     return NextResponse.json({
       success: true,

@@ -5,6 +5,7 @@ import { CcxtAdapter } from "./ccxt-adapter";
 import { ManualAdapter } from "./manual-adapter";
 import { ExchangeAdapter } from "./adapter";
 import { getExchangeInfo } from "./registry";
+import { tryRecomputeAvgBuyPrice } from "@/lib/assets/cost-basis";
 
 export function getAdapter(exchange: typeof schema.exchanges.$inferSelect): ExchangeAdapter {
   const info = getExchangeInfo(exchange.slug);
@@ -77,6 +78,7 @@ export async function syncExchange(exchangeId: number) {
       );
 
       const trades = await adapter.fetchTrades();
+      const insertedSymbols = new Set<string>();
       for (const trade of trades) {
         const key = `${trade.date.split("T")[0]}|${trade.symbol}|${trade.amount}|${trade.price}`;
         if (existingIds.has(key)) {
@@ -97,8 +99,10 @@ export async function syncExchange(exchangeId: number) {
           date: trade.date.split("T")[0],
           notes: `${trade.pair} on ${exchange.name} (fee: ${trade.fee} ${trade.feeCurrency})`,
         });
+        insertedSymbols.add(trade.symbol);
         tradesInserted++;
       }
+      for (const sym of insertedSymbols) await tryRecomputeAvgBuyPrice(sym);
     } catch (e) {
       console.error(`Trade sync failed for ${exchange.name}:`, e);
     }
