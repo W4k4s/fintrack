@@ -1,0 +1,13 @@
+[Unit]
+Description=FinTrack Intel — digest semanal Telegram (domingos 19:00 Madrid)
+
+[Timer]
+# Domingo 19:00 zona Europe/Madrid.
+OnCalendar=Sun 19:00 Europe/Madrid
+# Si el sistema estaba apagado, dispara el envío al rearrancar.
+Persistent=true
+AccuracySec=1min
+Unit=fintrack-intel-digest-weekly.service
+
+[Install]
+WantedBy=timers.target

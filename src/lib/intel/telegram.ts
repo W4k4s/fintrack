@@ -14,7 +14,7 @@ import { getActiveCooldown } from "./cooldowns";
 
 const TG_API = "https://api.telegram.org";
 
-async function tgSend(chatId: string, text: string): Promise<string | null> {
+export async function tgSend(chatId: string, text: string): Promise<string | null> {
   const token = process.env.INTEL_TG_BOT_TOKEN;
   if (!token) {
     console.warn("[intel] INTEL_TG_BOT_TOKEN no definido; skip send");

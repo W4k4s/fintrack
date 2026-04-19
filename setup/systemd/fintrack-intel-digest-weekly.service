@@ -1,0 +1,9 @@
+[Unit]
+Description=FinTrack Intel — enviar digest semanal Telegram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -sS --max-time 60 -X POST http://localhost:3000/api/intel/digest-weekly -o /tmp/fintrack-intel-digest-last.json
+SuccessExitStatus=0 7 28 52 56
