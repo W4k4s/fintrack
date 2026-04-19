@@ -4,6 +4,10 @@ import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { SignalActions } from "./actions";
 import { AnalysisRenderer, parseHeadlineShort } from "./analysis";
+import { RebalancePlanCard } from "@/components/intel/rebalance-plan-card";
+import { computeAllocation } from "@/lib/intel/allocation/compute";
+import type { RebalancePlan } from "@/lib/intel/rebalance/types";
+import { ASSET_CLASSES, type AssetClass } from "@/lib/intel/allocation/classify";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +34,8 @@ export default async function SignalDetailPage({
 
   const payload = safeParse(row.payload);
   const headlineShort = parseHeadlineShort(row.analysisText);
+  const plan = extractPlan(payload);
+  const staleInfo = plan ? await computeStaleness(plan) : null;
 
   return (
     <div className="px-6 py-6 max-w-3xl mx-auto">
@@ -81,6 +87,8 @@ export default async function SignalDetailPage({
         )}
       </div>
 
+      {plan && <RebalancePlanCard plan={plan} stale={staleInfo} />}
+
       {row.scope === "news" && (
         <NewsSource payload={payload} />
       )}
@@ -130,6 +138,36 @@ function safeParse(s: string): unknown {
     return JSON.parse(s);
   } catch {
     return {};
+  }
+}
+
+function extractPlan(payload: unknown): RebalancePlan | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = (payload as { plan?: unknown }).plan;
+  if (!p || typeof p !== "object") return null;
+  const plan = p as RebalancePlan;
+  if (!plan.moves || !plan.fiscal || !plan.targets) return null;
+  return plan;
+}
+
+async function computeStaleness(plan: RebalancePlan) {
+  try {
+    const alloc = await computeAllocation();
+    if (alloc.netWorth <= 0) return null;
+    const driftNow: Record<string, number> = {};
+    let maxDelta = 0;
+    for (const cls of ASSET_CLASSES) {
+      const snap = plan.targets[cls as AssetClass];
+      if (!snap) continue;
+      const currentActual = alloc.byClass[cls]?.pct ?? 0;
+      const currentDrift = currentActual - snap.targetPct;
+      driftNow[cls] = Math.round(currentDrift * 100) / 100;
+      const delta = Math.abs(currentDrift - snap.driftPp);
+      if (delta > maxDelta) maxDelta = delta;
+    }
+    return { driftNow, maxDeltaPp: Math.round(maxDelta * 100) / 100 };
+  } catch {
+    return null;
   }
 }
 

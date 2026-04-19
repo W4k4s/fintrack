@@ -71,6 +71,9 @@ export const strategyProfiles = sqliteTable("strategy_profiles", {
   emergencyMonths: integer("emergency_months").notNull().default(3),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
   notes: text("notes"),
+  // Manual override del realized YTD bucket "traditional" (ETFs/acciones/oro/bonos).
+  // Cubre ventas TR vía bank_transactions que no entran en `estimateRealizedYtdEur`.
+  realizedYtdTraditionalOverrideEur: real("realized_ytd_traditional_override_eur"),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
