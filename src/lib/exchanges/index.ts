@@ -6,6 +6,9 @@ import { ManualAdapter } from "./manual-adapter";
 import { ExchangeAdapter } from "./adapter";
 import { getExchangeInfo } from "./registry";
 import { tryRecomputeAvgBuyPrice } from "@/lib/assets/cost-basis";
+import { toEurAmount, tryAutoMatchOrdersBatch, type MatchableTransaction } from "@/lib/intel/rebalance/order-matcher";
+import { getEurPerUsd } from "@/lib/currency-rates";
+import { notifyAutoMatched } from "@/lib/intel/rebalance/auto-match-notifier";
 
 export function getAdapter(exchange: typeof schema.exchanges.$inferSelect): ExchangeAdapter {
   const info = getExchangeInfo(exchange.slug);
@@ -79,6 +82,8 @@ export async function syncExchange(exchangeId: number) {
 
       const trades = await adapter.fetchTrades();
       const insertedSymbols = new Set<string>();
+      const matchable: MatchableTransaction[] = [];
+      const eurPerUsd = await getEurPerUsd().catch(() => 0.92);
       for (const trade of trades) {
         const key = `${trade.date.split("T")[0]}|${trade.symbol}|${trade.amount}|${trade.price}`;
         if (existingIds.has(key)) {
@@ -101,8 +106,23 @@ export async function syncExchange(exchangeId: number) {
         });
         insertedSymbols.add(trade.symbol);
         tradesInserted++;
+
+        const amountEur = toEurAmount(trade.cost, quoteCurrency, eurPerUsd);
+        if (amountEur != null && (trade.side === "buy" || trade.side === "sell")) {
+          matchable.push({
+            symbol: trade.symbol,
+            venue: exchange.slug,
+            type: trade.side,
+            amountEur,
+            date: trade.date,
+          });
+        }
       }
       for (const sym of insertedSymbols) await tryRecomputeAvgBuyPrice(sym);
+      if (matchable.length > 0) {
+        const { matched, ambiguous } = await tryAutoMatchOrdersBatch(matchable);
+        await notifyAutoMatched(matched, ambiguous, `sync ${exchange.name}`);
+      }
     } catch (e) {
       console.error(`Trade sync failed for ${exchange.name}:`, e);
     }

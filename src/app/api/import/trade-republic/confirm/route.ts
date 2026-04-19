@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { exchanges, accounts, assets, bankTransactions } from "@/lib/db/schema";
 import { eq, and, lte } from "drizzle-orm";
 import { recomputeTrSecuritiesAvgBuy } from "@/lib/assets/cost-basis";
+import { ISIN_MAP } from "@/lib/isin-map";
+import { tryAutoMatchOrdersBatch, type MatchableTransaction } from "@/lib/intel/rebalance/order-matcher";
+import { notifyAutoMatched } from "@/lib/intel/rebalance/auto-match-notifier";
 
 export async function POST(req: NextRequest) {
   try {
@@ -157,6 +160,40 @@ export async function POST(req: NextRequest) {
       await recomputeTrSecuritiesAvgBuy();
     } catch (err) {
       console.error("[tr-import] recomputeTrSecuritiesAvgBuy failed", err);
+    }
+
+    // Auto-match órdenes Fase 8: parsea los trades TR importados y busca matches
+    // en intel_rebalance_orders. TR ya es EUR directo, no necesita conversión.
+    try {
+      const trades = Array.isArray(transactions)
+        ? transactions.filter(
+            (tx: { type?: string }) => tx?.type === "trade",
+          )
+        : [];
+      const isinRegex = /(Buy|Sell)\s+trade\s+([A-Z]{2}[A-Z0-9]{10})/i;
+      const matchable: MatchableTransaction[] = [];
+      for (const tx of trades) {
+        const m = (tx.description as string | undefined)?.match(isinRegex);
+        if (!m) continue;
+        const side = m[1].toLowerCase() === "sell" ? "sell" : "buy";
+        const symbol = ISIN_MAP[m[2]];
+        if (!symbol) continue;
+        const amountEur = Math.abs(Number(tx.debit ?? 0) - Number(tx.credit ?? 0));
+        if (!Number.isFinite(amountEur) || amountEur <= 0) continue;
+        matchable.push({
+          symbol,
+          venue: "trade-republic",
+          type: side,
+          amountEur,
+          date: tx.date,
+        });
+      }
+      if (matchable.length > 0) {
+        const { matched, ambiguous } = await tryAutoMatchOrdersBatch(matchable);
+        await notifyAutoMatched(matched, ambiguous, "import Trade Republic");
+      }
+    } catch (err) {
+      console.error("[tr-import] auto-match orders failed", err);
     }
 
     // Update exchange last sync
