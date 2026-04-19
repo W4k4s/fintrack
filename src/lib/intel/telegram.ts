@@ -9,7 +9,7 @@ import { getActiveCooldown } from "./cooldowns";
  *
  * Token y chat_id leídos de env:
  *   - INTEL_TG_BOT_TOKEN  (compartido con bot IsmaClaw idealmente)
- *   - INTEL_TG_CHAT_ID    (chat del usuario, ej 8453861582)
+ *   - INTEL_TG_CHAT_ID    (chat del usuario, ej 123456789)
  */
 
 const TG_API = "https://api.telegram.org";
