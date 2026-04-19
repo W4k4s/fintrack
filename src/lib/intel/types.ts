@@ -9,6 +9,7 @@ export type IntelScope =
   | "tax_harvest"
   | "rebalance"
   | "dca_pending"
+  | "profile_review"
   | "custom";
 
 export type Severity = "low" | "med" | "high" | "critical";

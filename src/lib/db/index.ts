@@ -30,5 +30,20 @@ ensureColumn(
   "realized_ytd_traditional_override_eur REAL",
 );
 
+// Phase 6.2 — intel_allocation_snapshots (1 row/día, UNIQUE date).
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS intel_allocation_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL UNIQUE,
+    profile_id INTEGER NOT NULL REFERENCES strategy_profiles(id) ON DELETE CASCADE,
+    net_worth_eur REAL NOT NULL,
+    allocation TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  )
+`);
+sqlite.exec(
+  `CREATE INDEX IF NOT EXISTS idx_intel_allocation_snapshots_date ON intel_allocation_snapshots(date)`,
+);
+
 export const db = drizzle(sqlite, { schema });
 export { schema };

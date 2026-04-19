@@ -7,6 +7,7 @@ import { macroCalendarDetector } from "./macro-calendar";
 import { marketStressDetector } from "./market-stress";
 import { rebalanceDriftDetector } from "./rebalance-drift";
 import { taxHarvestWindowDetector } from "./tax-harvest-window";
+import { profileReviewDetector } from "./profile-review";
 
 export const ALL_DETECTORS: Detector[] = [
   priceDipDetector,
@@ -17,6 +18,7 @@ export const ALL_DETECTORS: Detector[] = [
   marketStressDetector,
   rebalanceDriftDetector,
   taxHarvestWindowDetector,
+  profileReviewDetector,
 ];
 
 export function detectorsForScope(scope: IntelScope | "all"): Detector[] {

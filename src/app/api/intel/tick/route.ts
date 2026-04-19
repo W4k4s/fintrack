@@ -7,6 +7,7 @@ import { persistSignals } from "@/lib/intel/persist";
 import { spawnClaudeForSignal } from "@/lib/intel/claude-spawn";
 import { cleanupOldSignals } from "@/lib/intel/retention";
 import { evaluateCooldowns } from "@/lib/intel/cooldowns";
+import { recordAllocationSnapshot } from "@/lib/intel/allocation/snapshot";
 import type { IntelScope } from "@/lib/intel/types";
 
 /**
@@ -37,6 +38,15 @@ export async function POST(req: NextRequest) {
   }
 
   const now = new Date();
+
+  // Fase 6.2 — snapshot de allocation (1/día, idempotente). Se escribe antes
+  // de correr detectores para que profile-review vea el día de hoy.
+  try {
+    await recordAllocationSnapshot(now);
+  } catch (err) {
+    console.error("[intel] allocation snapshot failed", err);
+  }
+
   // madridNow lo usan los detectores solo para contexto "mismo instante";
   // la conversión a hora/día Madrid ocurre dentro de cada detector via lib/intel/tz.
   const madridNow = now;

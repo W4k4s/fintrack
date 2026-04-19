@@ -174,7 +174,7 @@ export const intelSignals = sqliteTable("intel_signals", {
     enum: [
       "price_dip", "price_surge", "fg_regime", "funding_anomaly",
       "news", "macro_event", "drift", "tax_harvest", "rebalance",
-      "dca_pending", "custom",
+      "dca_pending", "profile_review", "custom",
     ],
   }).notNull(),
   asset: text("asset"), // BTC, ETH, "MSCI World"... null si macro
@@ -247,9 +247,22 @@ export const intelScopeCooldowns = sqliteTable("intel_scope_cooldowns", {
   updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
+// Intel allocation snapshots — 1 row/día con el snapshot completo de la
+// allocation (por clase) y drift vs targets del perfil activo. Permite
+// detectores longitudinales (profile-review) sin parsear signals históricas.
+export const intelAllocationSnapshots = sqliteTable("intel_allocation_snapshots", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  date: text("date").notNull().unique(), // YYYY-MM-DD
+  profileId: integer("profile_id").notNull().references(() => strategyProfiles.id, { onDelete: "cascade" }),
+  netWorthEur: real("net_worth_eur").notNull(),
+  allocation: text("allocation").notNull(), // JSON { cash: {actualPct, targetPct, driftPp}, ... }
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
 export type IntelSignal = typeof intelSignals.$inferSelect;
 export type NewIntelSignal = typeof intelSignals.$inferInsert;
 export type IntelNotification = typeof intelNotifications.$inferSelect;
 export type IntelRun = typeof intelRuns.$inferSelect;
 export type IntelNewsItem = typeof intelNewsItems.$inferSelect;
 export type IntelScopeCooldown = typeof intelScopeCooldowns.$inferSelect;
+export type IntelAllocationSnapshot = typeof intelAllocationSnapshots.$inferSelect;
