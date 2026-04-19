@@ -1,0 +1,9 @@
+[Unit]
+Description=FinTrack Intel — enviar briefing diario Telegram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -sS --max-time 60 -X POST http://localhost:3000/api/intel/digest-daily -o /tmp/fintrack-intel-digest-daily-last.json
+SuccessExitStatus=0 7 28 52 56

@@ -1,0 +1,12 @@
+[Unit]
+Description=FinTrack Intel — briefing diario pre-apertura Telegram (L-V 08:30 Madrid)
+
+[Timer]
+# Todos los días a las 08:30 Europe/Madrid. El endpoint filtra finde.
+OnCalendar=*-*-* 08:30 Europe/Madrid
+Persistent=true
+AccuracySec=1min
+Unit=fintrack-intel-digest-daily.service
+
+[Install]
+WantedBy=timers.target
