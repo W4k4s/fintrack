@@ -51,3 +51,6 @@ data/*.db-wal
 data/*.db-shm
 docs/samples/
 test/
+
+# Local Python venv (Playwright testing, not needed in repo)
+.venv-playwright/
