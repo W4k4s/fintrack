@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { usePrivacy } from "@/components/privacy-provider";
 
 interface CurrencyContextType {
   currency: string;
@@ -48,6 +49,7 @@ const CurrencyContext = createContext<CurrencyContextType>({
 export function CurrencyProvider({ children }: { children: ReactNode }) {
   const [currency, setCurrencyState] = useState("USD");
   const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
+  const { mask } = usePrivacy();
 
   useEffect(() => {
     const saved = localStorage.getItem("fintrack-currency") || "USD";
@@ -67,12 +69,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   const format = (usd: number) => {
     const val = usd * rate;
-    return new Intl.NumberFormat("en-US", {
+    return mask(new Intl.NumberFormat("en-US", {
       style: "currency",
       currency,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(val);
+    }).format(val));
   };
 
   // Normalize any source currency to USD, then to the display currency.
@@ -89,12 +91,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     toUsd(amount, sourceCurrency) * rate;
 
   const formatFrom = (amount: number, sourceCurrency: string) =>
-    new Intl.NumberFormat("en-US", {
+    mask(new Intl.NumberFormat("en-US", {
       style: "currency",
       currency,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(convertFrom(amount, sourceCurrency));
+    }).format(convertFrom(amount, sourceCurrency)));
 
   return (
     <CurrencyContext.Provider value={{ currency, symbol: sym, rate, setCurrency, convert, format, convertFrom, formatFrom }}>

@@ -1,78 +1,291 @@
 @import "tailwindcss";
 
+/* ============================================================
+   FinTrack — Design Tokens v2 (Quantitative Editorial)
+   Fraunces (display) · IBM Plex Sans (body) · IBM Plex Mono (numbers)
+   ============================================================ */
+
 @theme inline {
+  /* Surfaces & text */
   --color-background: var(--bg);
   --color-foreground: var(--fg);
   --color-card: var(--card-bg);
   --color-card-foreground: var(--card-fg);
+  --color-elevated: var(--elevated-bg);
   --color-border: var(--border-color);
+  --color-border-strong: var(--border-strong);
   --color-muted: var(--muted-color);
   --color-muted-foreground: var(--muted-fg);
-  --color-accent: #10b981;
-  --color-accent-foreground: #ecfdf5;
-  --color-destructive: #ef4444;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  /* Semantic */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-fg);
+  --color-success-soft: var(--success-soft);
+  --color-warn: var(--warn);
+  --color-warn-foreground: var(--warn-fg);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-fg);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-fg);
+  --color-info-soft: var(--info-soft);
+
+  /* Legacy compat — existing Tailwind utilities still resolve */
+  --color-accent: var(--success);
+  --color-accent-foreground: var(--success-fg);
+  --color-destructive: var(--danger);
+
+  /* Chart palette (8 steps, editorial spectrum) */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+
+  /* Typography */
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: var(--font-serif), ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Radius scale */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+
+  /* Motion tokens */
+  --ease-standard: cubic-bezier(0.2, 0, 0.1, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
 }
 
-/* Dark theme (default) */
+/* ============================================================
+   Dark theme (default) — Editorial zinc, warm ink
+   ============================================================ */
 :root {
-  --bg: #09090b;
-  --fg: #fafafa;
-  --card-bg: #18181b;
+  --bg: #0b0b0e;
+  --fg: #f4f4f5;
+  --card-bg: #131318;
   --card-fg: #fafafa;
-  --border-color: #27272a;
+  --elevated-bg: #1a1a21;
+  --border-color: #23232b;
+  --border-strong: #35353f;
   --muted-color: #a1a1aa;
   --muted-fg: #71717a;
-  --hover-bg: rgba(255,255,255,0.05);
+  --hover-bg: rgba(255,255,255,0.045);
+
+  /* Semantic (dark) */
+  --success:      #34d399;
+  --success-fg:   #ecfdf5;
+  --success-soft: rgba(52, 211, 153, 0.12);
+  --warn:         #fbbf24;
+  --warn-fg:      #fffbeb;
+  --warn-soft:    rgba(251, 191, 36, 0.13);
+  --danger:       #f87171;
+  --danger-fg:    #fef2f2;
+  --danger-soft:  rgba(248, 113, 113, 0.14);
+  --info:         #60a5fa;
+  --info-fg:      #eff6ff;
+  --info-soft:    rgba(96, 165, 250, 0.13);
+
+  /* Chart palette — legible on dark, semantic-neutral */
+  --chart-1: #60a5fa; /* blue   */
+  --chart-2: #34d399; /* green  */
+  --chart-3: #fbbf24; /* amber  */
+  --chart-4: #f472b6; /* pink   */
+  --chart-5: #a78bfa; /* violet */
+  --chart-6: #22d3ee; /* cyan   */
+  --chart-7: #fb923c; /* orange */
+  --chart-8: #94a3b8; /* slate  */
 }
 
-/* Light theme */
+/* ============================================================
+   Light theme — Warm paper, high contrast ink
+   ============================================================ */
 :root.light {
-  --bg: #f8fafc;
-  --fg: #0f172a;
+  --bg: #fafaf7;
+  --fg: #111114;
   --card-bg: #ffffff;
-  --card-fg: #0f172a;
-  --border-color: #e2e8f0;
-  --muted-color: #64748b;
-  --muted-fg: #94a3b8;
-  --hover-bg: rgba(0,0,0,0.04);
+  --card-fg: #111114;
+  --elevated-bg: #f4f4ef;
+  --border-color: #e7e7e0;
+  --border-strong: #d4d4cc;
+  --muted-color: #52525b;
+  --muted-fg: #71717a;
+  --hover-bg: rgba(0,0,0,0.035);
+
+  /* Semantic (light) — darkened for contrast on paper */
+  --success:      #047857;
+  --success-fg:   #ecfdf5;
+  --success-soft: rgba(4, 120, 87, 0.10);
+  --warn:         #b45309;
+  --warn-fg:      #fffbeb;
+  --warn-soft:    rgba(180, 83, 9, 0.10);
+  --danger:       #b91c1c;
+  --danger-fg:    #fef2f2;
+  --danger-soft:  rgba(185, 28, 28, 0.09);
+  --info:         #1d4ed8;
+  --info-fg:      #eff6ff;
+  --info-soft:    rgba(29, 78, 216, 0.09);
+
+  /* Chart palette — darkened for light bg */
+  --chart-1: #1d4ed8;
+  --chart-2: #047857;
+  --chart-3: #b45309;
+  --chart-4: #be185d;
+  --chart-5: #6d28d9;
+  --chart-6: #0e7490;
+  --chart-7: #c2410c;
+  --chart-8: #475569;
 }
 
 * {
   border-color: var(--color-border);
 }
 
+html {
+  color-scheme: dark;
+}
+:root.light { color-scheme: light; }
+
 body {
   background: var(--color-background);
   color: var(--color-foreground);
-  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Scrollbar */
+/* ============================================================
+   Editorial type — Fraunces display
+   ============================================================ */
+.font-display,
+.display {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+  font-variation-settings: "opsz" 144, "SOFT" 50;
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+}
+
+.text-display {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+  font-variation-settings: "opsz" 144;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.02;
+  font-size: clamp(2.25rem, 1.4rem + 3.6vw, 4rem);
+}
+
+.text-headline {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  font-size: clamp(1.5rem, 1.15rem + 1.5vw, 2.25rem);
+}
+
+.text-title {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.25;
+  font-size: clamp(1.125rem, 1rem + 0.6vw, 1.375rem);
+}
+
+.text-overline {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.6875rem;
+  color: var(--muted-color);
+}
+
+/* Numbers — tabular Plex Mono */
+.num,
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" on, "lnum" on, "zero" on;
+  letter-spacing: -0.01em;
+}
+
+/* Every font-mono utility in Tailwind also gets tabular lining */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" on, "zero" on;
+}
+
+/* ============================================================
+   Scrollbar — quiet
+   ============================================================ */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--muted-fg); border-radius: 3px; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--muted-fg); }
 
-/* Light mode specific overrides */
+/* Light mode hover helper */
 :root.light .hover-bg { background: var(--hover-bg); }
 
-/* Recharts tooltip override */
-.recharts-tooltip-wrapper {
-  z-index: 50 !important;
-}
+/* ============================================================
+   Recharts tooltip — theme-aware
+   ============================================================ */
+.recharts-tooltip-wrapper { z-index: 50 !important; }
+
 .recharts-default-tooltip {
-  background-color: rgba(24, 24, 27, 0.98) !important;
-  border: 1px solid #3f3f46 !important;
-  border-radius: 8px !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important;
-  backdrop-filter: blur(8px) !important;
+  background-color: color-mix(in oklab, var(--card-bg) 96%, transparent) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.2) !important;
+  backdrop-filter: blur(10px) !important;
+  font-family: var(--font-sans) !important;
+}
+:root.light .recharts-default-tooltip {
+  box-shadow: 0 10px 28px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.05) !important;
 }
 .recharts-default-tooltip .recharts-tooltip-label {
-  color: #a1a1aa !important;
+  color: var(--muted-color) !important;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.02em !important;
 }
 .recharts-default-tooltip .recharts-tooltip-item {
-  color: #fafafa !important;
+  color: var(--fg) !important;
+  font-variant-numeric: tabular-nums !important;
 }
+
+/* ============================================================
+   Focus ring — subtle, consistent across themes
+   ============================================================ */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--info);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ============================================================
+   Motion — respect reduced motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
