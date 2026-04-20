@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { desc, eq, inArray } from "drizzle-orm";
 import { resolveTicker } from "@/lib/intel/research/fetcher";
+import { spawnClaudeForResearch } from "@/lib/intel/research/claude-runner";
 
 /**
  * POST /api/intel/research
@@ -57,8 +58,11 @@ export async function POST(req: NextRequest) {
     })
     .returning({ id: schema.intelAssetsTracked.id });
 
-  // TODO (siguiente sesión): encolar worker async que llama al fetcher + Claude
-  // y actualiza dossier_json / verdict / status.
+  // Fire-and-forget: lanzar worker async. En Next dev el proceso sigue vivo
+  // después de responder, suficiente para local. No await: el POST retorna ya.
+  spawnClaudeForResearch(row.id).catch((e) => {
+    console.error(`[research] async spawn crashed for id=${row.id}:`, e);
+  });
 
   return NextResponse.json({ id: row.id, status: "researching", reused: false }, { status: 201 });
 }
@@ -80,7 +84,7 @@ export async function GET(req: NextRequest) {
       statusParam && statusParam.length > 0
         ? inArray(
             schema.intelAssetsTracked.status,
-            statusParam as ("researching" | "shortlisted" | "watching" | "open_position" | "closed" | "archived" | "failed")[],
+            statusParam as ("researching" | "researched" | "shortlisted" | "watching" | "open_position" | "closed" | "archived" | "failed")[],
           )
         : undefined,
     )

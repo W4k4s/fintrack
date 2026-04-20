@@ -303,7 +303,7 @@ export const intelAssetsTracked = sqliteTable("intel_assets_tracked", {
   }),
   status: text("status", {
     enum: [
-      "researching", "shortlisted", "watching", "open_position",
+      "researching", "researched", "shortlisted", "watching", "open_position",
       "closed", "archived", "failed",
     ],
   }).notNull().default("researching"),
