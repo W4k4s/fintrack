@@ -183,7 +183,9 @@ function daysToYahooRange(days: number): string {
 export async function fetchPriceHistory(rawTicker: string, days = 1100): Promise<FetchResult<PriceHistory>> {
   const resolved = resolveTicker(rawTicker);
   if (resolved.source === "coingecko" && resolved.geckoId) {
-    return fetchCoinGecko(resolved.geckoId, days);
+    // Free tier restringe histórico a 365 días desde 2024 (error 10012).
+    const capped = Math.min(days, 365);
+    return fetchCoinGecko(resolved.geckoId, capped);
   }
   return fetchYahoo(resolved.normalized, daysToYahooRange(days));
 }
