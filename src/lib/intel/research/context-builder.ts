@@ -8,6 +8,8 @@ import { db, schema } from "@/lib/db";
 import { desc } from "drizzle-orm";
 import { fetchPriceHistory, type PriceHistory } from "./fetcher";
 import { computeTechnicalSnapshot, type TechnicalSnapshot } from "./indicators";
+import { computeCorrelationVsTopHoldings, type HoldingCorr } from "./correlation-holdings";
+import { fetchRecentNewsForTicker, type NewsHit } from "./news-lookup";
 
 export interface ResearchContext {
   ticker: string;
@@ -18,6 +20,8 @@ export interface ResearchContext {
     netWorthEur: number;
     allocation: Record<string, { actualPct: number; targetPct: number; driftPp: number }>;
   } | null;
+  correlationVsHoldings: HoldingCorr[];
+  newsLast7d: NewsHit[];
   fetchErrors: string[];
 }
 
@@ -51,7 +55,26 @@ export async function buildResearchContext(ticker: string): Promise<ResearchCont
     errors.push("portfolio_snapshot: no snapshot yet");
   }
 
-  return { ticker, priceHistory, technical, portfolioSnapshot, fetchErrors: errors };
+  let correlationVsHoldings: HoldingCorr[] = [];
+  if (priceHistory) {
+    try {
+      correlationVsHoldings = await computeCorrelationVsTopHoldings(priceHistory.points, 5);
+    } catch (e) {
+      errors.push(`correlation: ${(e as Error).message}`);
+    }
+  }
+
+  let newsLast7d: NewsHit[] = [];
+  try {
+    newsLast7d = await fetchRecentNewsForTicker(ticker, 7, 10);
+  } catch (e) {
+    errors.push(`news: ${(e as Error).message}`);
+  }
+
+  return {
+    ticker, priceHistory, technical, portfolioSnapshot,
+    correlationVsHoldings, newsLast7d, fetchErrors: errors,
+  };
 }
 
 /**
@@ -115,12 +138,26 @@ export function formatMarketData(ctx: ResearchContext): string {
     lines.push("  unavailable");
   }
 
-  lines.push(
-    "",
-    "correlation_vs_top_holdings: unavailable (Fase 0.4 TODO)",
-    "news_last_7d: unavailable (Fase 0.4 TODO)",
-    "fundamentals: unavailable en este motor (marcar `unknown` donde aplique)",
-  );
+  lines.push("", "correlation_vs_top_holdings:");
+  if (ctx.correlationVsHoldings.length === 0) {
+    lines.push("  (portfolio sin holdings de riesgo o no computable)");
+  } else {
+    for (const c of ctx.correlationVsHoldings) {
+      const corrStr = c.corr90d != null ? c.corr90d.toFixed(3) : `null (${c.reason})`;
+      lines.push(`  ${c.symbol} weight=${c.weightPct.toFixed(1)}% corr90d=${corrStr}`);
+    }
+  }
+
+  lines.push("", `news_last_7d (${ctx.newsLast7d.length} hits):`);
+  if (ctx.newsLast7d.length === 0) {
+    lines.push("  (ningún hit en intel_news_items últimos 7 días)");
+  } else {
+    for (const n of ctx.newsLast7d) {
+      lines.push(`  [${n.publishedAt.slice(0, 10)}] ${n.source} — ${n.title.slice(0, 150)} (match=${n.matchedBy})`);
+    }
+  }
+
+  lines.push("", "fundamentals: unavailable en este motor (marcar `unknown` donde aplique)");
 
   if (ctx.fetchErrors.length) {
     lines.push("", `fetch_errors: ${ctx.fetchErrors.join("; ")}`);
