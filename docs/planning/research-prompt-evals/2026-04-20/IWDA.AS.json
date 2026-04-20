@@ -1,0 +1,94 @@
+{
+  "ticker": "IWDA.AS",
+  "id": 14,
+  "status": "researched",
+  "verdict": "pass",
+  "failureReason": null,
+  "elapsedSec": 35,
+  "dossier": {
+    "ticker": "IWDA.AS",
+    "asset_class": "etf",
+    "sub_class_proposed": "etf_core",
+    "disqualifiers_checked": [
+      "corr_vs_holdings_gt_0_8",
+      "concentration_cap",
+      "crypto_cap",
+      "liquidity_floor",
+      "dilution_recent",
+      "valuation_extreme"
+    ],
+    "disqualifiers_checked_detail": [
+      {
+        "id": "corr_vs_holdings_gt_0_8",
+        "status": "fail",
+        "evidence": "corr 90d IWDA vs MSCI World = 1.000 y el holding 'MSCI World' ya pesa 9.6% del portfolio — está justo en el umbral del 10% y el activo ES el mismo índice. Duplicación directa de exposición."
+      },
+      {
+        "id": "concentration_cap",
+        "status": "pass",
+        "evidence": "etfs actual 11.42% vs target 30% (drift -18.58pp); cap etf_core 28%. Hay margen amplio para sumar core."
+      },
+      {
+        "id": "crypto_cap",
+        "status": "pass",
+        "evidence": "no aplica, es ETF equity."
+      },
+      {
+        "id": "liquidity_floor",
+        "status": "pass",
+        "evidence": "IWDA (iShares Core MSCI World UCITS) es uno de los ETFs UCITS más líquidos de Europa, AUM multi-billion EUR, volumen diario sobra."
+      },
+      {
+        "id": "dilution_recent",
+        "status": "pass",
+        "evidence": "no aplica a ETF físico replicante."
+      },
+      {
+        "id": "valuation_extreme",
+        "status": "unknown",
+        "evidence": "fundamentals del ETF no disponibles en este motor; IWDA replica MSCI World, P/E agregado del índice ~20-22x históricamente, no extremo pero elevado."
+      }
+    ],
+    "checklist_failed": [
+      "corr_vs_holdings_gt_0_8"
+    ],
+    "verdict": "pass",
+    "verdict_reason_short": "IWDA es literalmente MSCI World, que ya está en portfolio al 9.6% — corr 90d = 1.000. Sumar IWDA no diversifica, duplica la misma posición con otro ticker.",
+    "what_is_it": "IWDA.AS es el iShares Core MSCI World UCITS ETF (acc) cotizado en Ámsterdam en EUR. Replica físicamente el índice MSCI World — ~1.400 acciones de mercados desarrollados, ~70% USA, concentración alta en mega-caps tech. Es el ETF core por excelencia para carteras globales diversificadas.",
+    "base_rate_note": "Para ETFs diversificados globales el prior es distinto al de stocks individuales: baten a gestión activa ~80-90% a 10 años. El problema aquí no es el activo en sí (es excelente como core) sino que ya lo tienes.",
+    "pros": [
+      "Core global diversificado con TER bajo (~0.20%), acumulación, domicilio Irlanda — fiscalmente eficiente para residente español.",
+      "Bucket etfs con drift -18.58pp vs target: hay hueco estructural enorme para ETFs core.",
+      "Cash al 66.84% (drift +51.84pp) — el portfolio está descompensado hacia liquidez y necesita despliegue a equity core."
+    ],
+    "cons": [
+      "Duplica exposición a MSCI World ya presente al 9.6%: misma beta, mismo factor, mismo riesgo concentrado en mega-caps US.",
+      "RSI14 = 71 (sobrecompra técnica) y Bollinger %B = 1.034 (por encima de banda superior) — no es zona óptima para entrar lump-sum.",
+      "Sesgo USA ~70% y USD no hedged: concentra riesgo divisa y riesgo geográfico en un momento de valoraciones S&P elevadas.",
+      "Distancia a SMA200 +6.87% y MACD girado al alza reciente: extensión técnica por encima de la media."
+    ],
+    "red_flags": [
+      "Sumar IWDA cuando ya tienes MSCI World al 9.6% es literalmente doblar posición con otro ticker — antirregla de diversificación. Si el objetivo es rellenar el bucket etfs, la decisión razonable es aportar AL holding existente, no abrir uno redundante."
+    ],
+    "correlation_notes": "corr 90d: MSCI World 1.000 (mismo índice), BTC 0.066, Gold ETC 0.233, USDC -0.313, EUR aligned_bars insuficientes.",
+    "technical_state_now": "Precio 116.68 EUR, SMA50 112.15, SMA200 109.17 (dist +6.87%). RSI14 = 71.01 (sobrecompra). MACD 0.98 / signal 0.20 / hist +0.78 (momentum alcista reciente). Bollinger %B = 1.034 (fuera de banda superior). Vol 90d = 11.79% (baja, típica de ETF global diversificado).",
+    "upcoming_catalysts": [
+      {
+        "event": "Earnings season mega-caps US (peso dominante del índice)",
+        "date_estimate": "2026-Q2"
+      },
+      {
+        "event": "Decisión tipos Fed / BCE con impacto en múltiplos equity global",
+        "date_estimate": "2026-Q2"
+      }
+    ],
+    "mini_backtest": null,
+    "suggested_rules": null,
+    "confidence": "high",
+    "confidence_evidence": [
+      "Correlación 90d IWDA vs MSCI World = 1.000 (MARKET_DATA correlation_vs_top_holdings).",
+      "Holding MSCI World ya pesa 9.6% del portfolio (portfolio_snapshot correlation block).",
+      "Bucket etfs en 11.42% vs target 30%, drift -18.58pp (portfolio_snapshot)."
+    ]
+  }
+}

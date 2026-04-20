@@ -1,0 +1,99 @@
+{
+  "ticker": "REP.MC",
+  "id": 19,
+  "status": "researched",
+  "verdict": "wait",
+  "failureReason": null,
+  "elapsedSec": 90,
+  "dossier": {
+    "ticker": "REP.MC",
+    "asset_class": "equity",
+    "sub_class_proposed": "thematic_plays",
+    "disqualifiers_checked": [
+      "corr_vs_holdings_gt_0_8",
+      "concentration_cap",
+      "crypto_cap",
+      "liquidity_floor",
+      "dilution_recent",
+      "valuation_extreme"
+    ],
+    "disqualifiers_checked_detail": [
+      {
+        "id": "corr_vs_holdings_gt_0_8",
+        "status": "pass",
+        "evidence": "Ningún holding con peso > 10% supera corr 0.8: EUR cash (57.6%) corr null por bars insuficientes, BTC (13.7%) corr -0.095, MSCI World (9.6%) corr -0.317."
+      },
+      {
+        "id": "concentration_cap",
+        "status": "pass",
+        "evidence": "stocks bucket actual 0.05% vs target 10%; thematic_plays prácticamente vacío. Una posición ~1% cabe con holgura bajo cap 7% de bucket y cap 3% por posición (ajustado por vol quedaría aún menor)."
+      },
+      {
+        "id": "crypto_cap",
+        "status": "pass",
+        "evidence": "No aplica, es equity."
+      },
+      {
+        "id": "liquidity_floor",
+        "status": "pass",
+        "evidence": "Repsol cotiza en IBEX 35 con volumen diario muy por encima de 1M USD; mega-cap integrada europea."
+      },
+      {
+        "id": "dilution_recent",
+        "status": "unknown",
+        "evidence": "Fundamentales no disponibles en este motor — no se puede verificar emisiones/buybacks últimos 12m. Gap de datos a cubrir antes de cualquier entrada."
+      },
+      {
+        "id": "valuation_extreme",
+        "status": "unknown",
+        "evidence": "P/E, P/S, margen operativo no disponibles. En principio un integrado oil no opera a múltiplos P/E > 80, pero no se puede confirmar sin fundamentales."
+      }
+    ],
+    "checklist_failed": [],
+    "verdict": "wait",
+    "verdict_reason_short": "Pullback en curso con MACD aún bajista tras rally +135% en 12 meses; fundamentales no verificables desde el motor, mejor esperar giro de momentum y datos antes de entrar.",
+    "what_is_it": "Repsol es una petrolera integrada española cotizada en IBEX 35: upstream (E&P de crudo y gas), refino, química y una pata creciente de renovables/transición energética. Su cotización se mueve con Brent, márgenes de refino, spreads de química y la narrativa de transición.",
+    "base_rate_note": "~5% de stocks individuales baten al índice a largo plazo; las integradas oil son cíclicas y su alpha histórico vs índice global ha sido desigual, con etapas largas de underperformance.",
+    "pros": [
+      "Setup técnico de pullback: RSI14 36, Bollinger %B negativo (precio bajo banda inferior), precio todavía +19.86% sobre SMA200 → tendencia de fondo intacta.",
+      "Correlación 90d muy baja o negativa frente a los holdings principales (BTC -0.095, MSCI World -0.317, Gold -0.006): sí diversifica de verdad.",
+      "Liquidez sobrada y sub_class stocks al 0.05% vs target 10% con cash al 66.84%: hay margen y necesidad real de desplegar en renta variable.",
+      "Europea, denominada en EUR: sin riesgo FX frente al portfolio."
+    ],
+    "cons": [
+      "Rally muy estirado: de 9.58 EUR (abr-2025) a 22.57 EUR (abr-2026), +135% en 12 meses; mean reversion puede no haber terminado.",
+      "MACD -0.20 por debajo de signal 0.40 con histograma -0.60 y precio bajo SMA50: el momentum aún no se ha girado a favor.",
+      "Oil integrado es cíclico y depende de macro no controlable (OPEC+, Brent, demanda china, márgenes de refino).",
+      "Sin fundamentales verificables (P/E, payout, deuda neta, dilución) no se puede calibrar un target/stop razonado, solo técnico — tesis incompleta.",
+      "Vol 90d 39.34% es atípicamente alta para un integrated oil — señal de ruido/presión extra que reduce la relación riesgo/recompensa."
+    ],
+    "red_flags": [
+      "Fundamentales (dilution, valuation, deuda, dividendo) no disponibles en el motor: imposible cerrar los disqualifiers `dilution_recent` y `valuation_extreme`; cualquier entrada sería con datos incompletos.",
+      "Volatilidad 90d 39% es alta para un integrado europeo — históricamente Repsol se mueve por debajo de ese nivel; merece entender qué la ha elevado antes de comprometer capital."
+    ],
+    "correlation_notes": "corr 90d — EUR cash null (bars alineados insuficientes), BTC -0.095, MSCI World -0.317, USDC 0.234, Gold ETC -0.006. Ningún holding con peso > 10% queda cerca del umbral 0.8, REP.MC añadiría diversificación real al portfolio.",
+    "technical_state_now": "Precio 19.72 EUR, por debajo de SMA50 (20.81, -5.25%) y claramente por encima de SMA200 (16.45, +19.86%). RSI14 36.22 (zona oversold sin extremo). MACD -0.1988 bajo signal 0.4020, histograma -0.6008 → momentum bajista sin señal de giro. Bollinger %B -0.044 (precio debajo de banda inferior): setup de rebote técnico posible pero no confirmado. Vol 90d 39.34%.",
+    "upcoming_catalysts": [
+      {
+        "event": "Resultados trimestrales Repsol (Q1 2026)",
+        "date_estimate": "2026-Q2"
+      },
+      {
+        "event": "Reunión OPEC+ sobre cuotas de producción",
+        "date_estimate": "2026-Q2"
+      },
+      {
+        "event": "Actualización plan estratégico / capex transición",
+        "date_estimate": "2026-Q3"
+      }
+    ],
+    "mini_backtest": null,
+    "suggested_rules": null,
+    "confidence": "med",
+    "confidence_evidence": [
+      "Snapshot técnico 2026-04-17: RSI14 = 36.22, Bollinger %B = -0.044, MACD -0.1988 vs signal 0.4020 (hist -0.6008).",
+      "Precio 19.72 EUR, +19.86% sobre SMA200 (16.45) y -5.25% vs SMA50 (20.81); vol 90d 39.34%.",
+      "Rango histórico 3 años: mínimo 9.58 (abr-2025) → máximo 22.57 (abr-2026), rally +135% en 12m y pullback -13% desde peak."
+    ]
+  }
+}

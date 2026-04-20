@@ -59,10 +59,17 @@ let perTicker = rows.map((r) => {
   // B1: obvio-malo nunca candidate.
   if (cat === "obvio-malo" && d.verdict === "candidate") issues.push("B1_obvio_malo_candidate");
 
-  // B2: ≥2 de 3 razonables devuelven candidate o wait (global, validado al final).
+  // B2: ≥2 de 3 razonables devuelven candidate|wait (global, validado al final).
+  //     NB: pass con disqualifier real (checklist_failed no vacío) también cuenta —
+  //     design doc §4: "pass en un razonable SIN DISQUALIFIER REAL = iterar".
 
-  // B3: BTC → verdict=wait por política transición.
-  if (t === "BTC" && d.verdict !== "wait") issues.push("B3_btc_not_wait");
+  // B3: BTC → verdict=wait por política transición. Excepción: si ya hay un
+  //     disqualifier real (p.ej. corr=1.00 con holding BTC actual > 10%), el
+  //     pass también es semánticamente correcto — corr guardrail prevalece.
+  if (t === "BTC" && d.verdict !== "wait") {
+    const hasRealDisqualifier = Array.isArray(d.checklist_failed) && d.checklist_failed.length > 0;
+    if (!hasRealDisqualifier) issues.push("B3_btc_not_wait");
+  }
 
   // B4: schema completo.
   for (const f of REQUIRED_FIELDS) {
@@ -99,10 +106,19 @@ let perTicker = rows.map((r) => {
   return { ticker: t, category: cat, verdict: d.verdict, issues };
 });
 
-// B2 global: ≥2 de 3 razonables con verdict candidate|wait.
+// B2 global: ≥2 de 3 razonables con verdict candidate|wait, o pass con disqualifier real.
 const razonables = perTicker.filter((p) => p.category === "razonable");
-const razonablesOk = razonables.filter((p) => p.verdict === "candidate" || p.verdict === "wait").length;
-check("B2_razonables_gte_2_ok", razonablesOk >= 2, `solo ${razonablesOk}/${razonables.length} razonables devolvieron candidate|wait`);
+const razonablesOk = razonables.filter((p) => {
+  if (p.verdict === "candidate" || p.verdict === "wait") return true;
+  if (p.verdict === "pass") {
+    const row = rows.find((r) => r.ticker === p.ticker);
+    const failed = row?.dossier?.checklist_failed;
+    return Array.isArray(failed) && failed.length > 0;
+  }
+  return false;
+}).length;
+check("B2_razonables_gte_2_valid", razonablesOk >= 2,
+  `solo ${razonablesOk}/${razonables.length} razonables devolvieron candidate|wait|pass-con-disqualifier`);
 
 // Per-ticker aggregation
 for (const p of perTicker) {

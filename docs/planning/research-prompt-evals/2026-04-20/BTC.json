@@ -1,0 +1,96 @@
+{
+  "ticker": "BTC",
+  "id": 15,
+  "status": "researched",
+  "verdict": "pass",
+  "failureReason": null,
+  "elapsedSec": 40,
+  "dossier": {
+    "ticker": "BTC",
+    "asset_class": "crypto",
+    "sub_class_proposed": "crypto_core",
+    "disqualifiers_checked": [
+      "corr_vs_holdings_gt_0_8",
+      "concentration_cap",
+      "crypto_cap",
+      "liquidity_floor",
+      "dilution_recent",
+      "valuation_extreme"
+    ],
+    "disqualifiers_checked_detail": [
+      {
+        "id": "corr_vs_holdings_gt_0_8",
+        "status": "fail",
+        "evidence": "corr 90d BTC vs holding BTC = 1.00 (holding actual 13.7% del portfolio, > 10%). Añadir más BTC duplica exposición al factor que ya domina el bucket crypto."
+      },
+      {
+        "id": "concentration_cap",
+        "status": "pass",
+        "evidence": "crypto actual 16.02% vs target 25%; bucket crypto_core cap 10%, BTC ya pesa 13.7% — técnicamente por encima del sub-cap crypto_core, requiere revisión de caps o recategorización."
+      },
+      {
+        "id": "crypto_cap",
+        "status": "pass",
+        "evidence": "crypto agregado 16.02% — dentro de la banda 15-17% donde solo BTC puede aportarse; BTC es el único permitido en esa ventana."
+      },
+      {
+        "id": "liquidity_floor",
+        "status": "pass",
+        "evidence": "BTC market cap > 1T USD, volumen diario > 20B USD. Liquidez no es problema."
+      },
+      {
+        "id": "dilution_recent",
+        "status": "pass",
+        "evidence": "no aplica a BTC (supply fijo 21M, emisión programática decreciente post-halving)."
+      },
+      {
+        "id": "valuation_extreme",
+        "status": "unknown",
+        "evidence": "BTC no tiene P/E ni revenue; métricas on-chain (MVRV, NUPL, realized cap) no disponibles en este motor."
+      }
+    ],
+    "checklist_failed": [
+      "corr_vs_holdings_gt_0_8"
+    ],
+    "verdict": "pass",
+    "verdict_reason_short": "BTC ya pesa 13.7% del portfolio (>10%) y corr 90d consigo mismo es 1.00 — añadir más concentra el factor dominante en vez de diversificar.",
+    "what_is_it": "Bitcoin es la cryptomoneda pionera, una red descentralizada con supply programático de 21M de unidades. En el portfolio de Isma funciona como activo no correlacionado con equity/bonds tradicionales y hedge parcial contra dilución monetaria.",
+    "base_rate_note": "BTC no es un stock individual; la base rate relevante es la de asset allocation: un crypto_core bien dimensionado aporta diversificación, pero pasarse del cap convierte el hedge en apuesta concentrada.",
+    "pros": [
+      "Activo ya validado en la estrategia de Isma (crypto_core target 10%).",
+      "Corr baja con MSCI World (0.066) y USDC (-0.111) — aporta diversificación real al bucket equity.",
+      "Momentum técnico positivo: RSI 61 (no sobrecomprado), MACD cruzado al alza, precio sobre SMA50.",
+      "Flujos ETF sostenidos (+1.4B USD última semana) siguen sosteniendo demanda institucional."
+    ],
+    "cons": [
+      "BTC ya excede el sub-cap crypto_core del 10% (pesa 13.7%) — la acción racional es esperar/rebalancear, no añadir.",
+      "Precio por debajo de SMA200 (-13.12%) indica tendencia intermedia débil pese al rebote reciente.",
+      "Volatilidad 90d del 49.5% exige position sizing muy pequeño si se contempla top-up.",
+      "Tensiones geopolíticas (US-Iran, Hormuz) y hack KelpDAO (-14B DeFi) recuerdan que el sector sigue vulnerable a shocks de riesgo."
+    ],
+    "red_flags": [
+      "Bucket crypto_core ya supera su cap estructural del 10%; añadir más normaliza el incumplimiento del guardrail.",
+      "Cash al 66.84% (drift +51.84pp sobre target 15%) sugiere que la prioridad de portfolio es desplegar cash en ETFs/bonds/gold infraponderados, no concentrar más crypto."
+    ],
+    "correlation_notes": "corr 90d: BTC vs BTC holding 1.00 (trivial), vs MSCI World 0.066, vs USDC -0.111, vs Gold ETC 0.198, vs EUR cash n/a (pocas barras alineadas).",
+    "technical_state_now": "Precio 64,456 EUR. RSI14 = 61.13 (zona alta neutral, no sobrecompra). SMA50 = 60,652 (precio por encima), SMA200 = 74,192 (precio -13.12% por debajo, tendencia larga aún bajista). MACD = 1241 / signal 837 / hist +404 (cruce alcista reciente). Bollinger %B = 0.835 (cerca banda superior).",
+    "upcoming_catalysts": [
+      {
+        "event": "Revisión cuatrimestral estrategia Isma — posible rebalance crypto",
+        "date_estimate": "2026-Q2"
+      },
+      {
+        "event": "Decisión Fed sobre tipos (impacto macro en BTC)",
+        "date_estimate": "2026-Q2"
+      }
+    ],
+    "mini_backtest": null,
+    "suggested_rules": null,
+    "confidence": "high",
+    "confidence_evidence": [
+      "Holding BTC actual 13.7% del portfolio (snapshot 2026-04-20), target crypto 25% y sub-cap crypto_core 10% según strategy_profiles.",
+      "Correlación 90d BTC vs holding BTC = 1.00 por definición (mismo activo), activa disqualifier corr_vs_holdings_gt_0_8.",
+      "Cash 66.84% vs target 15% (drift +51.84pp) — ETFs/bonds/gold/stocks todos infraponderados, prioridad de despliegue no es crypto."
+    ]
+  }
+}

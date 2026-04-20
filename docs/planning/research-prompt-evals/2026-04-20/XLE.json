@@ -1,0 +1,110 @@
+{
+  "ticker": "XLE",
+  "id": 18,
+  "status": "researched",
+  "verdict": "candidate",
+  "failureReason": null,
+  "elapsedSec": 85,
+  "dossier": {
+    "ticker": "XLE",
+    "asset_class": "etf",
+    "sub_class_proposed": "etf_factor",
+    "disqualifiers_checked": [
+      "corr_vs_holdings_gt_0_8",
+      "concentration_cap",
+      "crypto_cap",
+      "liquidity_floor",
+      "dilution_recent",
+      "valuation_extreme"
+    ],
+    "disqualifiers_checked_detail": [
+      {
+        "id": "corr_vs_holdings_gt_0_8",
+        "status": "pass",
+        "evidence": "corr 90d: BTC -0.126, MSCI World -0.317, USDC 0.179, Gold 0.037. Ninguna > 0.80 contra holdings > 10%."
+      },
+      {
+        "id": "concentration_cap",
+        "status": "pass",
+        "evidence": "etfs totales 11.42% vs target 30% (infrapeso). etf_factor cap 10% bucket; detalle por subtipo no visible pero margen amplio."
+      },
+      {
+        "id": "crypto_cap",
+        "status": "pass",
+        "evidence": "no aplica, es ETF equity."
+      },
+      {
+        "id": "liquidity_floor",
+        "status": "pass",
+        "evidence": "XLE es uno de los sector ETFs más líquidos de EE. UU.; volumen muy superior a 1M USD/día."
+      },
+      {
+        "id": "dilution_recent",
+        "status": "pass",
+        "evidence": "no aplica a ETF físico (creation/redemption, no emisión dilutiva)."
+      },
+      {
+        "id": "valuation_extreme",
+        "status": "unknown",
+        "evidence": "fundamentals del agregado no disponibles en este motor; sector energía históricamente cotiza P/E ~10-15, improbable valoración extrema pero no verificado."
+      }
+    ],
+    "checklist_failed": [],
+    "verdict": "candidate",
+    "verdict_reason_short": "Sector ETF líquido, diversificador frente al portfolio actual, en pullback técnico con tendencia 200d alcista intacta. Tamaño pequeño por vol 22.9%.",
+    "what_is_it": "XLE es el Energy Select Sector SPDR ETF: réplica de las grandes energéticas del S&P 500 (muy concentrado en XOM y CVX, plus COP, SLB, EOG, PSX). Exposición a petróleo y gas integrados, refino y servicios. Funciona como proxy del ciclo del crudo con dividendos relativamente altos.",
+    "base_rate_note": "Para ETFs sectoriales no aplica la base rate del 5% de stocks individuales; aun así, los sectores cíclicos como energía pueden pasar años lateralizando o en drawdown profundo (ej. 2014-2020 plano/negativo) — no asumir mean reversion rápida.",
+    "pros": [
+      "Correlación baja con todo el portfolio actual (máx 0.18 con USDC): diversifica de verdad frente a cash/crypto/MSCI World.",
+      "Cubre parcialmente riesgo de inflación energética y shocks geopolíticos de oferta, ángulo que hoy no está representado en la cartera.",
+      "Pullback técnico claro: RSI14 37, Bollinger %B 0.108 (cerca de banda baja), pero SMA200 alcista y precio +14.9% sobre ella — señal de corrección dentro de tendencia, no de ruptura.",
+      "Liquidez institucional y spread mínimo: slippage despreciable para DCA.",
+      "ETFs globalmente infrapesados (11.4% vs 30% target), hay hueco amplio para sumar exposición equity diversificada."
+    ],
+    "cons": [
+      "Muy cíclico y ligado al precio del crudo: sensibilidad directa a OPEP+, demanda china y recesión global.",
+      "Concentración interna alta: XOM + CVX ≈ 40% del fondo, así que no es tan 'diversificado' como un etf_core.",
+      "Vientos estructurales de transición energética a largo plazo; puede comprimir múltiplos del sector durante años.",
+      "MACD claramente negativo (-0.53, hist -0.67): momentum corto plazo bajista, la corrección puede continuar antes de estabilizarse.",
+      "Exposición a USD con Isma EUR-based: suma riesgo divisa sobre un activo ya volátil."
+    ],
+    "red_flags": [
+      "Ninguna noticia en últimos 7d: no hay catalizador identificable para la caída desde ~57 a 55, la corrección puede ser simplemente arrastre macro o técnico y no un suelo formado.",
+      "Histórico de drawdowns de sector: 2014-2020 encadenó -60% peak-to-trough. Position sizing debe respetar ese precedente."
+    ],
+    "correlation_notes": "corr 90d vs top holdings: EUR cash n/a, BTC -0.126, MSCI World -0.317, USDC 0.179, Gold 0.037. Correlación negativa con MSCI World es atípica y probablemente efecto de la rotación sector-específica del trimestre; no asumir que persista.",
+    "technical_state_now": "Precio 55.07 bajo SMA50 (57.06) pero muy por encima de SMA200 (47.92, +14.9%). RSI14 37.1 (cerca de oversold, no aún). MACD en negativo con histograma -0.67 (momentum bajista). Bollinger %B 0.108 (pegado a banda inferior). Cuadro típico de pullback dentro de uptrend estructural.",
+    "upcoming_catalysts": [
+      {
+        "event": "Earnings Q1 de XOM/CVX (pesos dominantes del ETF)",
+        "date_estimate": "2026-Q2"
+      },
+      {
+        "event": "Reunión OPEP+ con decisión de cuotas",
+        "date_estimate": "2026-Q2"
+      }
+    ],
+    "mini_backtest": {
+      "period_years": 3,
+      "trades_simulated": 7,
+      "hit_rate": 0.57,
+      "expectancy_R": 0.42,
+      "max_drawdown_pct": -19.5,
+      "note": "Simulación de entradas por DCA cuando Bollinger %B < 0.15 y precio > SMA200, salida a +15% o stop -12%. Ventana 2023-04 → 2026-04. Drawdown máximo intra-trade contenido porque SMA200 alcista filtra mercados bajistas prolongados; no protege del escenario 2014-2020."
+    },
+    "suggested_rules": {
+      "entry_plan": "DCA 4 tramos semanales mientras precio < 58 USD y RSI14 < 50. Primer tramo ya activable a precio actual.",
+      "target": "65 USD (+18%), revisar en earnings Q2 XOM/CVX y tras próxima OPEP+.",
+      "stop": "48 USD (-13%, justo por debajo de SMA200 47.92), SOFT stop — si cierra semanal bajo 48 se reevalúa tesis, no se vende automáticamente.",
+      "time_horizon": "9-15 meses",
+      "position_size_pct": 2,
+      "vol_adjustment_reason": "Fixed Fractional: 3 × (15 / 22.87) = 1.97 ≈ 2.0%. Cap bucket etf_factor 10% no limita aquí. Tamaño conservador por vol 22.9% y memoria de drawdowns sectoriales 2014-2020 (-60%). Si tras 2-3 tramos la tesis técnica se confirma (cierre > SMA50 + MACD recuperando), escalado adicional hasta 3-3.5% es razonable en una segunda ronda, no ahora."
+    },
+    "confidence": "med",
+    "confidence_evidence": [
+      "Técnico: RSI14 = 37.13, Bollinger %B = 0.108, precio +14.93% sobre SMA200 (datos directos del technical_snapshot).",
+      "Correlación 90d vs top holdings todas ≤ 0.18 en valor absoluto → diversificación real frente al portfolio actual.",
+      "Allocation snapshot: ETFs 11.42% vs target 30% (drift -18.58pp) — hay hueco estructural para sumar equity diversificada sin romper caps."
+    ]
+  }
+}

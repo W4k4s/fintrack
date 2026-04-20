@@ -1,0 +1,91 @@
+{
+  "ticker": "HKD",
+  "id": 12,
+  "status": "researched",
+  "verdict": "pass",
+  "failureReason": null,
+  "elapsedSec": 40,
+  "dossier": {
+    "ticker": "HKD",
+    "asset_class": "equity",
+    "sub_class_proposed": "thematic_plays",
+    "disqualifiers_checked": [
+      "corr_vs_holdings_gt_0_8",
+      "concentration_cap",
+      "crypto_cap",
+      "liquidity_floor",
+      "dilution_recent",
+      "valuation_extreme"
+    ],
+    "disqualifiers_checked_detail": [
+      {
+        "id": "corr_vs_holdings_gt_0_8",
+        "status": "pass",
+        "evidence": "corr 90d vs holdings principales baja: BTC 0.20, MSCI World -0.01, USDC -0.04, Gold -0.02. Ningún holding > 10% muestra corr > 0.80."
+      },
+      {
+        "id": "concentration_cap",
+        "status": "unknown",
+        "evidence": "stocks actual 0.05%, hay margen abundante en bucket thematic_plays; sin embargo el sizing vol-ajustado sale muy bajo por vol 90d = 58.46%."
+      },
+      {
+        "id": "crypto_cap",
+        "status": "pass",
+        "evidence": "no aplica, equity."
+      },
+      {
+        "id": "liquidity_floor",
+        "status": "unknown",
+        "evidence": "HKD (AMTD Digital) es conocido por float extremadamente reducido post-IPO 2022 y volumen errático; no hay dato de volumen 30d ni market cap en MARKET_DATA. Histórico de precio (de 6.89 a 1.80 en 3 años, -74%) sugiere micro/small-cap ilíquida. Gap de datos preocupante."
+      },
+      {
+        "id": "dilution_recent",
+        "status": "unknown",
+        "evidence": "fundamentales no disponibles en el motor; AMTD Digital ha tenido historial de spin-offs y distribuciones atípicas desde 2022 que conviene validar."
+      },
+      {
+        "id": "valuation_extreme",
+        "status": "unknown",
+        "evidence": "P/E y P/S no disponibles; HKD fue el meme-stock más extremo de 2022 (pico > 1600 USD intradía con fundamentales marginales). Múltiplos históricos han sido irracionales."
+      }
+    ],
+    "checklist_failed": [
+      "liquidity_floor"
+    ],
+    "verdict": "pass",
+    "verdict_reason_short": "HKD es el meme-stock por excelencia de 2022 con trayectoria -74% en 3 años, float reducido e historial de volatilidad extrema. Datos clave (liquidez, dilución, valoración) no verificables — y con este perfil el default es pass.",
+    "what_is_it": "HKD es AMTD Digital, subsidiaria fintech de AMTD Group con sede en Hong Kong que hizo IPO en NYSE en julio 2022 y protagonizó uno de los squeezes más extremos de la historia reciente (de ~13 USD a > 1600 USD en semanas, sin catalizador fundamental). Desde entonces el precio ha colapsado > 99% y cotiza cerca de 1.80 USD con volumen errático.",
+    "base_rate_note": "~5% de stocks individuales baten al índice a largo plazo; en la cohorte de meme-stocks post-squeeze 2021-2022, la tasa base de recuperación del all-time-high es prácticamente nula — la mayoría sigue cayendo o queda en zombie.",
+    "pros": [
+      "Precio ha colapsado 99%+ desde máximos, así que el riesgo de 'comprar en pico de euforia' está descartado por completo.",
+      "Baja correlación con holdings actuales (BTC 0.20, MSCI 0.01), así que técnicamente no duplica factor."
+    ],
+    "cons": [
+      "Historial de precio catastrófico: -74% en 3 años pese a rebotes intermedios — tendencia estructural bajista.",
+      "Vol 90d = 58% es extrema para un 'equity tradicional', hace el sizing responsable casi irrelevante (< 1%).",
+      "Fundamentales no verificables desde el motor; una tesis sin datos de revenue, margen ni float es especulación pura.",
+      "Reputación del ticker (meme-stock #1 de 2022) lo convierte en objetivo recurrente de pump-and-dump retail, no en vehículo de inversión."
+    ],
+    "red_flags": [
+      "Datos incompletos: no hay volumen 30d, market cap, P/E, P/S ni información de dilución en MARKET_DATA — no se pueden evaluar 3 de 6 disqualifiers.",
+      "Float histórico reportado como extremadamente pequeño tras la IPO (causa técnica del squeeze de 2022); aunque haya crecido por emisiones, sigue siendo un stock sin cobertura institucional seria.",
+      "Cero hits de news en últimos 7 días pese a rebote técnico reciente: movimiento sin narrativa = señal de flujo especulativo, no de tesis."
+    ],
+    "correlation_notes": "corr 90d: BTC 0.198, MSCI World -0.014, USDC -0.043, Gold -0.015. EUR cash no alineable. Diversificadora en teoría, pero la descorrelación de un activo que cae estructuralmente no es un pro.",
+    "technical_state_now": "Precio 1.80 USD; SMA50 1.62, SMA200 1.64; dist a SMA200 +10.04% (rebote reciente sobre media larga). RSI14 = 64.4 (cerca de sobrecompra en 70). MACD positivo y expandiéndose (0.054 / 0.035, hist +0.020). %B Bollinger 0.88 (tocando banda superior). Rebote técnico cortoplacista en contexto de tendencia multianual bajista.",
+    "upcoming_catalysts": [
+      {
+        "event": "Resultados/filings AMTD Digital (verificar calendario real)",
+        "date_estimate": "unknown"
+      }
+    ],
+    "mini_backtest": null,
+    "suggested_rules": null,
+    "confidence": "med",
+    "confidence_evidence": [
+      "Serie histórica 751 barras 2023-04 a 2026-04 muestra -74% desde 6.89 USD a 1.80 USD (fuente: MARKET_DATA history_sample).",
+      "Vol 90d = 58.46% calculada por el motor — consistente con small-cap/meme-stock, no con equity estándar.",
+      "Correlaciones 90d vs top holdings todas |r| < 0.25, descartando duplicación de factor pero también cualquier beta útil."
+    ]
+  }
+}

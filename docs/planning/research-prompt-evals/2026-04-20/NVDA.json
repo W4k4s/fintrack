@@ -1,0 +1,95 @@
+{
+  "ticker": "NVDA",
+  "id": 13,
+  "status": "researched",
+  "verdict": "wait",
+  "failureReason": null,
+  "elapsedSec": 40,
+  "dossier": {
+    "ticker": "NVDA",
+    "asset_class": "equity",
+    "sub_class_proposed": "thematic_plays",
+    "disqualifiers_checked": [
+      "corr_vs_holdings_gt_0_8",
+      "concentration_cap",
+      "crypto_cap",
+      "liquidity_floor",
+      "dilution_recent",
+      "valuation_extreme"
+    ],
+    "disqualifiers_checked_detail": [
+      {
+        "id": "corr_vs_holdings_gt_0_8",
+        "status": "pass",
+        "evidence": "corr 90d vs holdings > 10% del portfolio: BTC (13.7%) -0.088, EUR cash (57.6%) null. Ningún holding >10% cruza el umbral 0.80."
+      },
+      {
+        "id": "concentration_cap",
+        "status": "pass",
+        "evidence": "stocks actual 0.05%, thematic_plays prácticamente vacío. Cap thematic_plays 7% con margen amplio; cap por posición 3% × 15/34.48 = 1.3%."
+      },
+      {
+        "id": "crypto_cap",
+        "status": "pass",
+        "evidence": "NVDA es equity, no cuenta en crypto_cap."
+      },
+      {
+        "id": "liquidity_floor",
+        "status": "pass",
+        "evidence": "NVDA es mega-cap con volumen diario habitual > 10B USD, muy por encima del umbral 1M USD."
+      },
+      {
+        "id": "dilution_recent",
+        "status": "unknown",
+        "evidence": "fundamentales no disponibles en este motor; históricamente NVDA hace buybacks netos, pero no verificable ahora."
+      },
+      {
+        "id": "valuation_extreme",
+        "status": "unknown",
+        "evidence": "fundamentales no disponibles; P/E forward NVDA suele estar entre 30-50 con growth > 50% YoY, no llega al umbral 80 por múltiplo puro, pero requiere validación."
+      }
+    ],
+    "checklist_failed": [],
+    "verdict": "wait",
+    "verdict_reason_short": "Checklist pasa pero técnico extendido (RSI 71.6, %B 0.93, +11% sobre SMA200) — entrar aquí es perseguir. Esperar pullback a SMA50/200 antes de DCA.",
+    "what_is_it": "NVIDIA es el líder mundial en GPUs y aceleradores para IA, data-center y computación de alto rendimiento. Su software (CUDA) y su hardware (H100/H200/Blackwell) son hoy el estándar de facto para entrenar e inferir modelos grandes, lo que le da márgenes operativos y pricing power excepcionales.",
+    "base_rate_note": "~5% de stocks individuales baten al índice a largo plazo. NVDA ha sido una excepción histórica en la última década, pero el prior sigue siendo que mean-reversion llega: comprar en extremo técnico reduce expectativa incluso en ganadores seculares.",
+    "pros": [
+      "Monopolio práctico en el stack IA (hardware + CUDA) con switching costs altos — justifica premium sostenido.",
+      "Correlación moderada con MSCI World (0.50) y prácticamente nula con BTC (-0.09): aporta exposición a factor AI/semis que el portfolio actual (66.8% cash, 16% crypto, 11% ETFs) no tiene.",
+      "Portfolio severamente infraponderado en stocks (0.05% vs target 10%) — hay sitio estructural para una posición thematic.",
+      "Precio por encima de SMA200 y MACD positivo cruzado: tendencia alcista intacta, no es un falling knife."
+    ],
+    "cons": [
+      "RSI 71.6 y Bollinger %B 0.93: zona de sobrecompra, probabilidad alta de pullback de corto plazo.",
+      "Precio +11% sobre SMA200 — DCA aquí promedia mal si hay corrección sana a la media.",
+      "Concentración sectorial: toda la tesis AI depende de que capex de hyperscalers (Microsoft, Meta, Google, Amazon) siga creciendo; cualquier señal de saturación castiga múltiplo rápido.",
+      "Valoración (aunque no verificada aquí) históricamente elevada; cualquier decepción en guidance del Data Center produce drawdowns del 20-30%.",
+      "Competencia creciente: chips custom de hyperscalers (TPU, Trainium, MTIA) y AMD MI300/MI350 erosionan la narrativa de monopolio a medio plazo."
+    ],
+    "red_flags": [
+      "Fundamentales no disponibles en este motor — no puedo validar P/E forward, growth revenue YoY, ni dilución. Gap de datos que debe cerrarse antes de abrir posición.",
+      "News flow dominado por productos derivados (covered-call ETFs tipo YieldMax/Roundhill): señal de saturación retail alrededor del ticker, típico de fases maduras del ciclo."
+    ],
+    "correlation_notes": "corr 90d: BTC -0.088, MSCI World 0.500, USDC -0.110, Gold ETC 0.186, EUR cash null (aligned_bars insuficientes). Ningún holding > 10% del portfolio supera 0.80. Diversifica bien respecto a crypto y cash, correlación media con equity global (esperado).",
+    "technical_state_now": "Precio 202.06 USD, SMA50 183.90, SMA200 182.00. Dist SMA200 +11.02%. RSI14 71.64 (sobrecompra). MACD 5.34 / signal 2.44 / hist +2.91 (momentum alcista). Bollinger %B 0.929 (muy cerca de banda superior). Vol 90d 34.48%.",
+    "upcoming_catalysts": [
+      {
+        "event": "Earnings Q1 FY27 con guidance Data Center / Blackwell ramp",
+        "date_estimate": "2026-Q2"
+      },
+      {
+        "event": "GTC / actualización roadmap post-Blackwell",
+        "date_estimate": "2026-Q2"
+      }
+    ],
+    "mini_backtest": null,
+    "suggested_rules": null,
+    "confidence": "med",
+    "confidence_evidence": [
+      "RSI14 71.64 y Bollinger %B 0.929 medidos sobre serie 2023-04-21 → 2026-04-20 (751 barras) — señal técnica de sobrecompra robusta.",
+      "Correlaciones 90d calculadas: BTC -0.088, MSCI World 0.500 — soporte cuantitativo para no-solape con holdings principales.",
+      "Portfolio snapshot 2026-04-20: stocks 0.05% vs target 10%, thematic_plays vacío — margen de concentration_cap verificado."
+    ]
+  }
+}

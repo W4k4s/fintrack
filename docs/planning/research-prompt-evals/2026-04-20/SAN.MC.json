@@ -1,0 +1,93 @@
+{
+  "ticker": "SAN.MC",
+  "id": 16,
+  "status": "researched",
+  "verdict": "wait",
+  "failureReason": null,
+  "elapsedSec": 70,
+  "dossier": {
+    "ticker": "SAN.MC",
+    "asset_class": "equity",
+    "sub_class_proposed": "thematic_plays",
+    "disqualifiers_checked": [
+      "corr_vs_holdings_gt_0_8",
+      "concentration_cap",
+      "crypto_cap",
+      "liquidity_floor",
+      "dilution_recent",
+      "valuation_extreme"
+    ],
+    "disqualifiers_checked_detail": [
+      {
+        "id": "corr_vs_holdings_gt_0_8",
+        "status": "pass",
+        "evidence": "corr 90d vs BTC (13.7%) = 0.055; vs MSCI World (9.6%) = 0.661 — ningún holding > 10% supera el umbral 0.80. EUR cash (57.6%) no aplica como factor correlacionable."
+      },
+      {
+        "id": "concentration_cap",
+        "status": "pass",
+        "evidence": "stocks actual 0.05% (target 10%), thematic_plays tiene margen hasta 7% bucket y 3% por posición; entrada propuesta quedaría holgada."
+      },
+      {
+        "id": "crypto_cap",
+        "status": "pass",
+        "evidence": "no aplica, es equity."
+      },
+      {
+        "id": "liquidity_floor",
+        "status": "pass",
+        "evidence": "SAN.MC cotiza en IBEX/BME con volumen diario > 100M EUR y market cap > 150B EUR, muy por encima de umbrales."
+      },
+      {
+        "id": "dilution_recent",
+        "status": "unknown",
+        "evidence": "fundamentales no disponibles en este motor; Santander ha hecho buybacks en 2024-2025 según política comunicada, pero no se puede verificar aquí — gap de datos."
+      },
+      {
+        "id": "valuation_extreme",
+        "status": "unknown",
+        "evidence": "fundamentales no disponibles; bancos europeos históricamente cotizan P/E 6-9, muy por debajo del umbral 80, pero no verificable en esta ejecución."
+      }
+    ],
+    "checklist_failed": [],
+    "verdict": "wait",
+    "verdict_reason_short": "Ningún disqualifier falla, pero el activo cotiza técnicamente extendido (Bollinger %B 1.00, +20% vs SMA200) tras rally 3x en 3 años — mala zona de entrada.",
+    "what_is_it": "Banco Santander es un banco comercial global con fuerte presencia en España, Reino Unido, Brasil, México y EE.UU. Genera ingresos principalmente por margen de intereses y comisiones; es sensible al ciclo de tipos, riesgo país LATAM y ciclo económico europeo.",
+    "base_rate_note": "~5% de stocks individuales baten al índice a largo plazo; bancos europeos además han tenido retornos totales por debajo del MSCI World en la última década pese a repuntes cíclicos como el actual.",
+    "pros": [
+      "Diversifica un portfolio muy cargado de cash (66.8%) y con stocks al 0.05% vs target 10% — hay hueco estructural claro.",
+      "Correlación 90d con BTC (principal factor de riesgo actual del portfolio) prácticamente nula (0.055), aporta diversificación real.",
+      "Beneficiario del entorno de tipos altos sostenidos en Eurozona y de normalización NII; momentum fundamental del sector bancario europeo sigue en fase expansiva."
+    ],
+    "cons": [
+      "Precio en banda superior de Bollinger (%B=1.001) y 20% por encima de SMA200 — entrada en zona de mean reversion estadística.",
+      "Rally de ~3x en 3 años (3.58€ → 10.76€) ya descuenta buena parte de la tesis de normalización bancaria europea.",
+      "Exposición a Brasil/México y riesgo FX emergente; sensibilidad al ciclo de crédito si Europa entra en recesión.",
+      "RSI 64.9 + MACD extendido sugieren que la fase fácil del movimiento ya ocurrió."
+    ],
+    "red_flags": [
+      "Datos fundamentales no verificables en esta ejecución (P/E, payout, CET1, dilución) — decisión apoyada solo en precio/técnico, gap material.",
+      "Entrada a máximos multianuales después de un triple en 36 meses: patrón clásico de 'llegar tarde a la fiesta'."
+    ],
+    "correlation_notes": "corr 90d vs holdings principales: BTC 0.055, MSCI World 0.661, USDC -0.281, Gold ETC 0.273. EUR cash sin dato suficiente (aligned_bars:0). Correlación moderada con MSCI World esperada para large-cap financial europea.",
+    "technical_state_now": "Precio 11.04 EUR (spot 10.76). RSI14=64.9 (acercándose a sobrecompra, no extremo). SMA50=10.13, SMA200=9.19 — precio 20.2% por encima de SMA200, muy extendido. MACD=0.224, signal=0.085, histograma=+0.139 (momentum alcista activo). Bollinger %B=1.001, tocando banda superior. Volatilidad 90d=36.2% (alta para large-cap bancario).",
+    "upcoming_catalysts": [
+      {
+        "event": "Resultados Q2 2026 (guidance NII y payout)",
+        "date_estimate": "2026-Q3"
+      },
+      {
+        "event": "Próxima decisión BCE sobre tipos",
+        "date_estimate": "2026-Q2"
+      }
+    ],
+    "mini_backtest": null,
+    "suggested_rules": null,
+    "confidence": "med",
+    "confidence_evidence": [
+      "Serie de precio 3 años verificada: 3.58€ (2023-04-20) → 10.76€ (spot 2026-04-17), rally ~3x.",
+      "Técnicos calculados directamente: RSI14=64.92, Bollinger %B=1.001, dist SMA200=+20.17%, vol 90d=36.15%.",
+      "Correlación 90d vs MSCI World = 0.661 y vs BTC = 0.055 medidas sobre bars alineados del portfolio snapshot."
+    ]
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "ticker": "GME",
+  "id": 11,
+  "status": "researched",
+  "verdict": "pass",
+  "failureReason": null,
+  "elapsedSec": 70,
+  "dossier": {
+    "ticker": "GME",
+    "asset_class": "equity",
+    "sub_class_proposed": "thematic_plays",
+    "disqualifiers_checked": [
+      "corr_vs_holdings_gt_0_8",
+      "concentration_cap",
+      "crypto_cap",
+      "liquidity_floor",
+      "dilution_recent",
+      "valuation_extreme"
+    ],
+    "disqualifiers_checked_detail": [
+      {
+        "id": "corr_vs_holdings_gt_0_8",
+        "status": "pass",
+        "evidence": "holdings con peso >10%: BTC 13.7% (corr 90d = -0.35) y EUR cash 57.6% (no aplica). Ninguna correlación supera 0.80."
+      },
+      {
+        "id": "concentration_cap",
+        "status": "pass",
+        "evidence": "stocks actual 0.05% vs target 10%; thematic_plays con margen amplio; sizing por vol limitaría de todas formas la posición."
+      },
+      {
+        "id": "crypto_cap",
+        "status": "pass",
+        "evidence": "GME es equity, no aplica."
+      },
+      {
+        "id": "liquidity_floor",
+        "status": "pass",
+        "evidence": "volumen diario y market cap históricamente muy por encima de umbrales (>1M USD/día y >300M USD cap); dato exacto no presente en MARKET_DATA pero perfil público conocido."
+      },
+      {
+        "id": "dilution_recent",
+        "status": "unknown",
+        "evidence": "fundamentals unavailable en este motor; históricamente GME ha ejecutado ATM offerings significativos (2021, 2024) que diluyeron float > 10%. No puedo verificar los últimos 12 meses aquí."
+      },
+      {
+        "id": "valuation_extreme",
+        "status": "unknown",
+        "evidence": "fundamentals unavailable; GME históricamente cotiza con P/E muy elevado o negativo y P/S desacoplado de fundamentales por narrativa meme. No verificable con los datos recibidos."
+      }
+    ],
+    "checklist_failed": [],
+    "verdict": "pass",
+    "verdict_reason_short": "Meme stock con negocio retail físico en declive estructural, narrativa dominada por sentiment y gaps de datos (dilución/valoración) que en GME históricamente son precisamente los puntos débiles.",
+    "what_is_it": "GameStop es un minorista físico de videojuegos y productos de coleccionismo cuya acción se convirtió en 2021 en el arquetipo del meme stock. Desde entonces su narrativa pivota entre reestructuración retail, tesorería inflada por ampliaciones de capital y oleadas especulativas ligadas a figuras como Ryan Cohen o Roaring Kitty. El negocio core sigue en declive secular.",
+    "base_rate_note": "~5% de stocks individuales baten al índice a largo plazo; los meme stocks están sobrerrepresentados en la cola izquierda porque su precio depende más de flujos de sentiment que de fundamentales.",
+    "pros": [
+      "Balance con caja abultada tras ATM offerings recientes: menor riesgo de insolvencia a corto plazo.",
+      "Correlación negativa con BTC (-0.35) y baja con MSCI World (0.17): si entrara, diversificaría beta pura en el papel.",
+      "Técnico constructivo a corto: precio sobre SMA50 y SMA200, MACD positivo, RSI 61 sin sobrecompra extrema."
+    ],
+    "cons": [
+      "Modelo de negocio retail físico en decadencia estructural frente a distribución digital (Steam, PSN, Xbox Live).",
+      "Movimientos de precio dominados por sentiment social y squeezes, no por flujos de caja — edge analítico tradicional no aplica.",
+      "Management sin roadmap de transformación claro y comunicado; el plan parece 'acumular caja y esperar'.",
+      "Bollinger %B = 0.95 y vol 90d = 36.55%: entrada aquí implica pagar cerca del techo del canal con volatilidad alta."
+    ],
+    "red_flags": [
+      "Datos incompletos: no puedo verificar dilution_recent ni valuation_extreme en este motor, y ambos son precisamente los ejes donde GME ha fallado históricamente.",
+      "Dependencia de narrativa meme: un tuit de Keith Gill o Ryan Cohen puede mover el precio ±30% en un día.",
+      "Uso del capital levantado en ATMs poco claro (exposure a renta fija / BTC treasury mencionado en prensa) — desviaciones de mandato operativo."
+    ],
+    "correlation_notes": "corr 90d vs top holdings: BTC -0.35, MSCI World 0.17, USDC 0.07, Gold ETC -0.19, EUR cash n/a. Diversifica en el papel, pero la baja correlación refleja idiosincrasia meme más que utilidad de hedge.",
+    "technical_state_now": "Precio 24.92 USD sobre SMA50 (23.70) y SMA200 (23.15), dist a SMA200 = +7.64%. RSI14 = 61.65 (zona alcista sin sobrecompra). MACD = 0.34 sobre señal 0.09, histograma positivo y creciente. Bollinger %B = 0.954 (muy cerca de banda superior, zona de extensión). Vol 90d = 36.55% — alta.",
+    "upcoming_catalysts": [
+      {
+        "event": "Earnings trimestrales con uso de tesorería y ventas comparables",
+        "date_estimate": "trimestral"
+      },
+      {
+        "event": "Movimientos/declaraciones de Ryan Cohen o reapariciones de Keith Gill en RRSS",
+        "date_estimate": "irregular"
+      }
+    ],
+    "mini_backtest": null,
+    "suggested_rules": null,
+    "confidence": "med",
+    "confidence_evidence": [
+      "Serie histórica 751 barras 2023-04→2026-04 con rango 10.30-27.98 USD confirma volatilidad extrema y ausencia de tendencia secular clara.",
+      "Snapshot técnico: RSI 61.65, vol 90d 36.55%, %B 0.954 (entrada cerca de banda superior).",
+      "Portfolio snapshot: stocks 0.05% vs target 10% — hay margen bucket, pero no obliga a elegir GME como vehículo."
+    ]
+  }
+}

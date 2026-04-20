@@ -1,0 +1,85 @@
+{
+  "ticker": "PEPE",
+  "id": 10,
+  "status": "researched",
+  "verdict": "pass",
+  "failureReason": null,
+  "elapsedSec": 35,
+  "dossier": {
+    "ticker": "PEPE",
+    "asset_class": "crypto",
+    "sub_class_proposed": "legacy_hold",
+    "disqualifiers_checked": [
+      "corr_vs_holdings_gt_0_8",
+      "concentration_cap",
+      "crypto_cap",
+      "liquidity_floor",
+      "dilution_recent",
+      "valuation_extreme"
+    ],
+    "disqualifiers_checked_detail": [
+      {
+        "id": "corr_vs_holdings_gt_0_8",
+        "status": "pass",
+        "evidence": "corr 90d PEPE-BTC 0.718 (< 0.80); resto de holdings top < 0.3."
+      },
+      {
+        "id": "concentration_cap",
+        "status": "fail",
+        "evidence": "PEPE clasifica como legacy_hold (cap 3%) y la política V2 explicita 'legacy (SOL/PEPE) no se aporta nunca'. Cualquier nueva compra viola la regla."
+      },
+      {
+        "id": "crypto_cap",
+        "status": "fail",
+        "evidence": "crypto agregado actual 16.02% (en banda 15-17% donde solo BTC pasa). PEPE no es BTC → bloqueo explícito por política de transición."
+      },
+      {
+        "id": "liquidity_floor",
+        "status": "pass",
+        "evidence": "market cap PEPE muy por encima de 300M USD; volumen diario > 1M USD."
+      },
+      {
+        "id": "dilution_recent",
+        "status": "unknown",
+        "evidence": "fundamentals no disponibles en este motor; supply de PEPE es fijo por diseño del contrato, pero no verificado aquí."
+      },
+      {
+        "id": "valuation_extreme",
+        "status": "unknown",
+        "evidence": "PEPE no tiene ingresos ni cashflow: no aplica P/E ni FDV/revenue. Memecoin sin fundamentales medibles."
+      }
+    ],
+    "checklist_failed": [
+      "concentration_cap",
+      "crypto_cap"
+    ],
+    "verdict": "pass",
+    "verdict_reason_short": "PEPE es legacy_hold bajo política V2 (no se aporta nunca) y el crypto cap en banda 15-17% solo deja pasar BTC. Doble bloqueo.",
+    "what_is_it": "PEPE es una memecoin ERC-20 lanzada en 2023, sin utilidad, sin ingresos y sin equipo de desarrollo activo. Su valor depende puramente de momentum narrativo y liquidez especulativa en centralized exchanges.",
+    "base_rate_note": "La tasa base de memecoins que conservan valor a 3-5 años es muy baja (<5%); la mayoría retornan a valor residual tras el ciclo de hype que las lanzó. Tratar como legacy, no como tesis activa.",
+    "pros": [
+      "Posición legacy ya abierta: mantener cuesta 0, no exige decisión nueva.",
+      "Liquidez decente en exchanges principales facilita la salida cuando Isma decida recortar."
+    ],
+    "cons": [
+      "Cero fundamentales: no hay ingresos, cashflow ni utilidad que anclen un valor mínimo.",
+      "Correlación 0.72 con BTC: en un drawdown crypto caerá más que BTC por su beta alta y liquidez más fina que cripto core.",
+      "Vol 90d ~87% — sizing racional obligaría a posición minúscula; sumado al cap legacy_hold 3%, no hay espacio para que aporte al portfolio aunque acertara."
+    ],
+    "red_flags": [
+      "Política V2 explícita: 'legacy (SOL/PEPE) no se aporta nunca'. Cualquier desvío requiere override manual del usuario.",
+      "Crypto agregado ya en banda restrictiva 15-17% donde solo BTC pasa."
+    ],
+    "correlation_notes": "corr 90d: BTC 0.72, MSCI World 0.18, USDC -0.15, Gold ETC 0.16. Beta alto a BTC con poca diversificación frente a risk-off.",
+    "technical_state_now": "RSI14 54.5 (neutro), precio -23.5% bajo SMA200 (tendencia bajista estructural), Bollinger %B 0.74 (banda alta dentro de canal), vol 90d 86.8%. MACD neutro (hist≈0).",
+    "upcoming_catalysts": [],
+    "mini_backtest": null,
+    "suggested_rules": null,
+    "confidence": "high",
+    "confidence_evidence": [
+      "Crypto allocation actual 16.02% vs target 25% según portfolio_snapshot 2026-04-20.",
+      "Correlación 90d PEPE-BTC = 0.718 calculada sobre bars alineados.",
+      "Política V2 en strategy_profiles clasifica SOL/PEPE como legacy_hold con cap 3% y regla explícita de no-aporte."
+    ]
+  }
+}

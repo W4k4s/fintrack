@@ -1,0 +1,953 @@
+[
+  {
+    "ticker": "PEPE",
+    "id": 10,
+    "status": "researched",
+    "verdict": "pass",
+    "failureReason": null,
+    "elapsedSec": 35,
+    "dossier": {
+      "ticker": "PEPE",
+      "asset_class": "crypto",
+      "sub_class_proposed": "legacy_hold",
+      "disqualifiers_checked": [
+        "corr_vs_holdings_gt_0_8",
+        "concentration_cap",
+        "crypto_cap",
+        "liquidity_floor",
+        "dilution_recent",
+        "valuation_extreme"
+      ],
+      "disqualifiers_checked_detail": [
+        {
+          "id": "corr_vs_holdings_gt_0_8",
+          "status": "pass",
+          "evidence": "corr 90d PEPE-BTC 0.718 (< 0.80); resto de holdings top < 0.3."
+        },
+        {
+          "id": "concentration_cap",
+          "status": "fail",
+          "evidence": "PEPE clasifica como legacy_hold (cap 3%) y la política V2 explicita 'legacy (SOL/PEPE) no se aporta nunca'. Cualquier nueva compra viola la regla."
+        },
+        {
+          "id": "crypto_cap",
+          "status": "fail",
+          "evidence": "crypto agregado actual 16.02% (en banda 15-17% donde solo BTC pasa). PEPE no es BTC → bloqueo explícito por política de transición."
+        },
+        {
+          "id": "liquidity_floor",
+          "status": "pass",
+          "evidence": "market cap PEPE muy por encima de 300M USD; volumen diario > 1M USD."
+        },
+        {
+          "id": "dilution_recent",
+          "status": "unknown",
+          "evidence": "fundamentals no disponibles en este motor; supply de PEPE es fijo por diseño del contrato, pero no verificado aquí."
+        },
+        {
+          "id": "valuation_extreme",
+          "status": "unknown",
+          "evidence": "PEPE no tiene ingresos ni cashflow: no aplica P/E ni FDV/revenue. Memecoin sin fundamentales medibles."
+        }
+      ],
+      "checklist_failed": [
+        "concentration_cap",
+        "crypto_cap"
+      ],
+      "verdict": "pass",
+      "verdict_reason_short": "PEPE es legacy_hold bajo política V2 (no se aporta nunca) y el crypto cap en banda 15-17% solo deja pasar BTC. Doble bloqueo.",
+      "what_is_it": "PEPE es una memecoin ERC-20 lanzada en 2023, sin utilidad, sin ingresos y sin equipo de desarrollo activo. Su valor depende puramente de momentum narrativo y liquidez especulativa en centralized exchanges.",
+      "base_rate_note": "La tasa base de memecoins que conservan valor a 3-5 años es muy baja (<5%); la mayoría retornan a valor residual tras el ciclo de hype que las lanzó. Tratar como legacy, no como tesis activa.",
+      "pros": [
+        "Posición legacy ya abierta: mantener cuesta 0, no exige decisión nueva.",
+        "Liquidez decente en exchanges principales facilita la salida cuando Isma decida recortar."
+      ],
+      "cons": [
+        "Cero fundamentales: no hay ingresos, cashflow ni utilidad que anclen un valor mínimo.",
+        "Correlación 0.72 con BTC: en un drawdown crypto caerá más que BTC por su beta alta y liquidez más fina que cripto core.",
+        "Vol 90d ~87% — sizing racional obligaría a posición minúscula; sumado al cap legacy_hold 3%, no hay espacio para que aporte al portfolio aunque acertara."
+      ],
+      "red_flags": [
+        "Política V2 explícita: 'legacy (SOL/PEPE) no se aporta nunca'. Cualquier desvío requiere override manual del usuario.",
+        "Crypto agregado ya en banda restrictiva 15-17% donde solo BTC pasa."
+      ],
+      "correlation_notes": "corr 90d: BTC 0.72, MSCI World 0.18, USDC -0.15, Gold ETC 0.16. Beta alto a BTC con poca diversificación frente a risk-off.",
+      "technical_state_now": "RSI14 54.5 (neutro), precio -23.5% bajo SMA200 (tendencia bajista estructural), Bollinger %B 0.74 (banda alta dentro de canal), vol 90d 86.8%. MACD neutro (hist≈0).",
+      "upcoming_catalysts": [],
+      "mini_backtest": null,
+      "suggested_rules": null,
+      "confidence": "high",
+      "confidence_evidence": [
+        "Crypto allocation actual 16.02% vs target 25% según portfolio_snapshot 2026-04-20.",
+        "Correlación 90d PEPE-BTC = 0.718 calculada sobre bars alineados.",
+        "Política V2 en strategy_profiles clasifica SOL/PEPE como legacy_hold con cap 3% y regla explícita de no-aporte."
+      ]
+    }
+  },
+  {
+    "ticker": "GME",
+    "id": 11,
+    "status": "researched",
+    "verdict": "pass",
+    "failureReason": null,
+    "elapsedSec": 70,
+    "dossier": {
+      "ticker": "GME",
+      "asset_class": "equity",
+      "sub_class_proposed": "thematic_plays",
+      "disqualifiers_checked": [
+        "corr_vs_holdings_gt_0_8",
+        "concentration_cap",
+        "crypto_cap",
+        "liquidity_floor",
+        "dilution_recent",
+        "valuation_extreme"
+      ],
+      "disqualifiers_checked_detail": [
+        {
+          "id": "corr_vs_holdings_gt_0_8",
+          "status": "pass",
+          "evidence": "holdings con peso >10%: BTC 13.7% (corr 90d = -0.35) y EUR cash 57.6% (no aplica). Ninguna correlación supera 0.80."
+        },
+        {
+          "id": "concentration_cap",
+          "status": "pass",
+          "evidence": "stocks actual 0.05% vs target 10%; thematic_plays con margen amplio; sizing por vol limitaría de todas formas la posición."
+        },
+        {
+          "id": "crypto_cap",
+          "status": "pass",
+          "evidence": "GME es equity, no aplica."
+        },
+        {
+          "id": "liquidity_floor",
+          "status": "pass",
+          "evidence": "volumen diario y market cap históricamente muy por encima de umbrales (>1M USD/día y >300M USD cap); dato exacto no presente en MARKET_DATA pero perfil público conocido."
+        },
+        {
+          "id": "dilution_recent",
+          "status": "unknown",
+          "evidence": "fundamentals unavailable en este motor; históricamente GME ha ejecutado ATM offerings significativos (2021, 2024) que diluyeron float > 10%. No puedo verificar los últimos 12 meses aquí."
+        },
+        {
+          "id": "valuation_extreme",
+          "status": "unknown",
+          "evidence": "fundamentals unavailable; GME históricamente cotiza con P/E muy elevado o negativo y P/S desacoplado de fundamentales por narrativa meme. No verificable con los datos recibidos."
+        }
+      ],
+      "checklist_failed": [],
+      "verdict": "pass",
+      "verdict_reason_short": "Meme stock con negocio retail físico en declive estructural, narrativa dominada por sentiment y gaps de datos (dilución/valoración) que en GME históricamente son precisamente los puntos débiles.",
+      "what_is_it": "GameStop es un minorista físico de videojuegos y productos de coleccionismo cuya acción se convirtió en 2021 en el arquetipo del meme stock. Desde entonces su narrativa pivota entre reestructuración retail, tesorería inflada por ampliaciones de capital y oleadas especulativas ligadas a figuras como Ryan Cohen o Roaring Kitty. El negocio core sigue en declive secular.",
+      "base_rate_note": "~5% de stocks individuales baten al índice a largo plazo; los meme stocks están sobrerrepresentados en la cola izquierda porque su precio depende más de flujos de sentiment que de fundamentales.",
+      "pros": [
+        "Balance con caja abultada tras ATM offerings recientes: menor riesgo de insolvencia a corto plazo.",
+        "Correlación negativa con BTC (-0.35) y baja con MSCI World (0.17): si entrara, diversificaría beta pura en el papel.",
+        "Técnico constructivo a corto: precio sobre SMA50 y SMA200, MACD positivo, RSI 61 sin sobrecompra extrema."
+      ],
+      "cons": [
+        "Modelo de negocio retail físico en decadencia estructural frente a distribución digital (Steam, PSN, Xbox Live).",
+        "Movimientos de precio dominados por sentiment social y squeezes, no por flujos de caja — edge analítico tradicional no aplica.",
+        "Management sin roadmap de transformación claro y comunicado; el plan parece 'acumular caja y esperar'.",
+        "Bollinger %B = 0.95 y vol 90d = 36.55%: entrada aquí implica pagar cerca del techo del canal con volatilidad alta."
+      ],
+      "red_flags": [
+        "Datos incompletos: no puedo verificar dilution_recent ni valuation_extreme en este motor, y ambos son precisamente los ejes donde GME ha fallado históricamente.",
+        "Dependencia de narrativa meme: un tuit de Keith Gill o Ryan Cohen puede mover el precio ±30% en un día.",
+        "Uso del capital levantado en ATMs poco claro (exposure a renta fija / BTC treasury mencionado en prensa) — desviaciones de mandato operativo."
+      ],
+      "correlation_notes": "corr 90d vs top holdings: BTC -0.35, MSCI World 0.17, USDC 0.07, Gold ETC -0.19, EUR cash n/a. Diversifica en el papel, pero la baja correlación refleja idiosincrasia meme más que utilidad de hedge.",
+      "technical_state_now": "Precio 24.92 USD sobre SMA50 (23.70) y SMA200 (23.15), dist a SMA200 = +7.64%. RSI14 = 61.65 (zona alcista sin sobrecompra). MACD = 0.34 sobre señal 0.09, histograma positivo y creciente. Bollinger %B = 0.954 (muy cerca de banda superior, zona de extensión). Vol 90d = 36.55% — alta.",
+      "upcoming_catalysts": [
+        {
+          "event": "Earnings trimestrales con uso de tesorería y ventas comparables",
+          "date_estimate": "trimestral"
+        },
+        {
+          "event": "Movimientos/declaraciones de Ryan Cohen o reapariciones de Keith Gill en RRSS",
+          "date_estimate": "irregular"
+        }
+      ],
+      "mini_backtest": null,
+      "suggested_rules": null,
+      "confidence": "med",
+      "confidence_evidence": [
+        "Serie histórica 751 barras 2023-04→2026-04 con rango 10.30-27.98 USD confirma volatilidad extrema y ausencia de tendencia secular clara.",
+        "Snapshot técnico: RSI 61.65, vol 90d 36.55%, %B 0.954 (entrada cerca de banda superior).",
+        "Portfolio snapshot: stocks 0.05% vs target 10% — hay margen bucket, pero no obliga a elegir GME como vehículo."
+      ]
+    }
+  },
+  {
+    "ticker": "HKD",
+    "id": 12,
+    "status": "researched",
+    "verdict": "pass",
+    "failureReason": null,
+    "elapsedSec": 40,
+    "dossier": {
+      "ticker": "HKD",
+      "asset_class": "equity",
+      "sub_class_proposed": "thematic_plays",
+      "disqualifiers_checked": [
+        "corr_vs_holdings_gt_0_8",
+        "concentration_cap",
+        "crypto_cap",
+        "liquidity_floor",
+        "dilution_recent",
+        "valuation_extreme"
+      ],
+      "disqualifiers_checked_detail": [
+        {
+          "id": "corr_vs_holdings_gt_0_8",
+          "status": "pass",
+          "evidence": "corr 90d vs holdings principales baja: BTC 0.20, MSCI World -0.01, USDC -0.04, Gold -0.02. Ningún holding > 10% muestra corr > 0.80."
+        },
+        {
+          "id": "concentration_cap",
+          "status": "unknown",
+          "evidence": "stocks actual 0.05%, hay margen abundante en bucket thematic_plays; sin embargo el sizing vol-ajustado sale muy bajo por vol 90d = 58.46%."
+        },
+        {
+          "id": "crypto_cap",
+          "status": "pass",
+          "evidence": "no aplica, equity."
+        },
+        {
+          "id": "liquidity_floor",
+          "status": "unknown",
+          "evidence": "HKD (AMTD Digital) es conocido por float extremadamente reducido post-IPO 2022 y volumen errático; no hay dato de volumen 30d ni market cap en MARKET_DATA. Histórico de precio (de 6.89 a 1.80 en 3 años, -74%) sugiere micro/small-cap ilíquida. Gap de datos preocupante."
+        },
+        {
+          "id": "dilution_recent",
+          "status": "unknown",
+          "evidence": "fundamentales no disponibles en el motor; AMTD Digital ha tenido historial de spin-offs y distribuciones atípicas desde 2022 que conviene validar."
+        },
+        {
+          "id": "valuation_extreme",
+          "status": "unknown",
+          "evidence": "P/E y P/S no disponibles; HKD fue el meme-stock más extremo de 2022 (pico > 1600 USD intradía con fundamentales marginales). Múltiplos históricos han sido irracionales."
+        }
+      ],
+      "checklist_failed": [
+        "liquidity_floor"
+      ],
+      "verdict": "pass",
+      "verdict_reason_short": "HKD es el meme-stock por excelencia de 2022 con trayectoria -74% en 3 años, float reducido e historial de volatilidad extrema. Datos clave (liquidez, dilución, valoración) no verificables — y con este perfil el default es pass.",
+      "what_is_it": "HKD es AMTD Digital, subsidiaria fintech de AMTD Group con sede en Hong Kong que hizo IPO en NYSE en julio 2022 y protagonizó uno de los squeezes más extremos de la historia reciente (de ~13 USD a > 1600 USD en semanas, sin catalizador fundamental). Desde entonces el precio ha colapsado > 99% y cotiza cerca de 1.80 USD con volumen errático.",
+      "base_rate_note": "~5% de stocks individuales baten al índice a largo plazo; en la cohorte de meme-stocks post-squeeze 2021-2022, la tasa base de recuperación del all-time-high es prácticamente nula — la mayoría sigue cayendo o queda en zombie.",
+      "pros": [
+        "Precio ha colapsado 99%+ desde máximos, así que el riesgo de 'comprar en pico de euforia' está descartado por completo.",
+        "Baja correlación con holdings actuales (BTC 0.20, MSCI 0.01), así que técnicamente no duplica factor."
+      ],
+      "cons": [
+        "Historial de precio catastrófico: -74% en 3 años pese a rebotes intermedios — tendencia estructural bajista.",
+        "Vol 90d = 58% es extrema para un 'equity tradicional', hace el sizing responsable casi irrelevante (< 1%).",
+        "Fundamentales no verificables desde el motor; una tesis sin datos de revenue, margen ni float es especulación pura.",
+        "Reputación del ticker (meme-stock #1 de 2022) lo convierte en objetivo recurrente de pump-and-dump retail, no en vehículo de inversión."
+      ],
+      "red_flags": [
+        "Datos incompletos: no hay volumen 30d, market cap, P/E, P/S ni información de dilución en MARKET_DATA — no se pueden evaluar 3 de 6 disqualifiers.",
+        "Float histórico reportado como extremadamente pequeño tras la IPO (causa técnica del squeeze de 2022); aunque haya crecido por emisiones, sigue siendo un stock sin cobertura institucional seria.",
+        "Cero hits de news en últimos 7 días pese a rebote técnico reciente: movimiento sin narrativa = señal de flujo especulativo, no de tesis."
+      ],
+      "correlation_notes": "corr 90d: BTC 0.198, MSCI World -0.014, USDC -0.043, Gold -0.015. EUR cash no alineable. Diversificadora en teoría, pero la descorrelación de un activo que cae estructuralmente no es un pro.",
+      "technical_state_now": "Precio 1.80 USD; SMA50 1.62, SMA200 1.64; dist a SMA200 +10.04% (rebote reciente sobre media larga). RSI14 = 64.4 (cerca de sobrecompra en 70). MACD positivo y expandiéndose (0.054 / 0.035, hist +0.020). %B Bollinger 0.88 (tocando banda superior). Rebote técnico cortoplacista en contexto de tendencia multianual bajista.",
+      "upcoming_catalysts": [
+        {
+          "event": "Resultados/filings AMTD Digital (verificar calendario real)",
+          "date_estimate": "unknown"
+        }
+      ],
+      "mini_backtest": null,
+      "suggested_rules": null,
+      "confidence": "med",
+      "confidence_evidence": [
+        "Serie histórica 751 barras 2023-04 a 2026-04 muestra -74% desde 6.89 USD a 1.80 USD (fuente: MARKET_DATA history_sample).",
+        "Vol 90d = 58.46% calculada por el motor — consistente con small-cap/meme-stock, no con equity estándar.",
+        "Correlaciones 90d vs top holdings todas |r| < 0.25, descartando duplicación de factor pero también cualquier beta útil."
+      ]
+    }
+  },
+  {
+    "ticker": "NVDA",
+    "id": 13,
+    "status": "researched",
+    "verdict": "wait",
+    "failureReason": null,
+    "elapsedSec": 40,
+    "dossier": {
+      "ticker": "NVDA",
+      "asset_class": "equity",
+      "sub_class_proposed": "thematic_plays",
+      "disqualifiers_checked": [
+        "corr_vs_holdings_gt_0_8",
+        "concentration_cap",
+        "crypto_cap",
+        "liquidity_floor",
+        "dilution_recent",
+        "valuation_extreme"
+      ],
+      "disqualifiers_checked_detail": [
+        {
+          "id": "corr_vs_holdings_gt_0_8",
+          "status": "pass",
+          "evidence": "corr 90d vs holdings > 10% del portfolio: BTC (13.7%) -0.088, EUR cash (57.6%) null. Ningún holding >10% cruza el umbral 0.80."
+        },
+        {
+          "id": "concentration_cap",
+          "status": "pass",
+          "evidence": "stocks actual 0.05%, thematic_plays prácticamente vacío. Cap thematic_plays 7% con margen amplio; cap por posición 3% × 15/34.48 = 1.3%."
+        },
+        {
+          "id": "crypto_cap",
+          "status": "pass",
+          "evidence": "NVDA es equity, no cuenta en crypto_cap."
+        },
+        {
+          "id": "liquidity_floor",
+          "status": "pass",
+          "evidence": "NVDA es mega-cap con volumen diario habitual > 10B USD, muy por encima del umbral 1M USD."
+        },
+        {
+          "id": "dilution_recent",
+          "status": "unknown",
+          "evidence": "fundamentales no disponibles en este motor; históricamente NVDA hace buybacks netos, pero no verificable ahora."
+        },
+        {
+          "id": "valuation_extreme",
+          "status": "unknown",
+          "evidence": "fundamentales no disponibles; P/E forward NVDA suele estar entre 30-50 con growth > 50% YoY, no llega al umbral 80 por múltiplo puro, pero requiere validación."
+        }
+      ],
+      "checklist_failed": [],
+      "verdict": "wait",
+      "verdict_reason_short": "Checklist pasa pero técnico extendido (RSI 71.6, %B 0.93, +11% sobre SMA200) — entrar aquí es perseguir. Esperar pullback a SMA50/200 antes de DCA.",
+      "what_is_it": "NVIDIA es el líder mundial en GPUs y aceleradores para IA, data-center y computación de alto rendimiento. Su software (CUDA) y su hardware (H100/H200/Blackwell) son hoy el estándar de facto para entrenar e inferir modelos grandes, lo que le da márgenes operativos y pricing power excepcionales.",
+      "base_rate_note": "~5% de stocks individuales baten al índice a largo plazo. NVDA ha sido una excepción histórica en la última década, pero el prior sigue siendo que mean-reversion llega: comprar en extremo técnico reduce expectativa incluso en ganadores seculares.",
+      "pros": [
+        "Monopolio práctico en el stack IA (hardware + CUDA) con switching costs altos — justifica premium sostenido.",
+        "Correlación moderada con MSCI World (0.50) y prácticamente nula con BTC (-0.09): aporta exposición a factor AI/semis que el portfolio actual (66.8% cash, 16% crypto, 11% ETFs) no tiene.",
+        "Portfolio severamente infraponderado en stocks (0.05% vs target 10%) — hay sitio estructural para una posición thematic.",
+        "Precio por encima de SMA200 y MACD positivo cruzado: tendencia alcista intacta, no es un falling knife."
+      ],
+      "cons": [
+        "RSI 71.6 y Bollinger %B 0.93: zona de sobrecompra, probabilidad alta de pullback de corto plazo.",
+        "Precio +11% sobre SMA200 — DCA aquí promedia mal si hay corrección sana a la media.",
+        "Concentración sectorial: toda la tesis AI depende de que capex de hyperscalers (Microsoft, Meta, Google, Amazon) siga creciendo; cualquier señal de saturación castiga múltiplo rápido.",
+        "Valoración (aunque no verificada aquí) históricamente elevada; cualquier decepción en guidance del Data Center produce drawdowns del 20-30%.",
+        "Competencia creciente: chips custom de hyperscalers (TPU, Trainium, MTIA) y AMD MI300/MI350 erosionan la narrativa de monopolio a medio plazo."
+      ],
+      "red_flags": [
+        "Fundamentales no disponibles en este motor — no puedo validar P/E forward, growth revenue YoY, ni dilución. Gap de datos que debe cerrarse antes de abrir posición.",
+        "News flow dominado por productos derivados (covered-call ETFs tipo YieldMax/Roundhill): señal de saturación retail alrededor del ticker, típico de fases maduras del ciclo."
+      ],
+      "correlation_notes": "corr 90d: BTC -0.088, MSCI World 0.500, USDC -0.110, Gold ETC 0.186, EUR cash null (aligned_bars insuficientes). Ningún holding > 10% del portfolio supera 0.80. Diversifica bien respecto a crypto y cash, correlación media con equity global (esperado).",
+      "technical_state_now": "Precio 202.06 USD, SMA50 183.90, SMA200 182.00. Dist SMA200 +11.02%. RSI14 71.64 (sobrecompra). MACD 5.34 / signal 2.44 / hist +2.91 (momentum alcista). Bollinger %B 0.929 (muy cerca de banda superior). Vol 90d 34.48%.",
+      "upcoming_catalysts": [
+        {
+          "event": "Earnings Q1 FY27 con guidance Data Center / Blackwell ramp",
+          "date_estimate": "2026-Q2"
+        },
+        {
+          "event": "GTC / actualización roadmap post-Blackwell",
+          "date_estimate": "2026-Q2"
+        }
+      ],
+      "mini_backtest": null,
+      "suggested_rules": null,
+      "confidence": "med",
+      "confidence_evidence": [
+        "RSI14 71.64 y Bollinger %B 0.929 medidos sobre serie 2023-04-21 → 2026-04-20 (751 barras) — señal técnica de sobrecompra robusta.",
+        "Correlaciones 90d calculadas: BTC -0.088, MSCI World 0.500 — soporte cuantitativo para no-solape con holdings principales.",
+        "Portfolio snapshot 2026-04-20: stocks 0.05% vs target 10%, thematic_plays vacío — margen de concentration_cap verificado."
+      ]
+    }
+  },
+  {
+    "ticker": "IWDA.AS",
+    "id": 14,
+    "status": "researched",
+    "verdict": "pass",
+    "failureReason": null,
+    "elapsedSec": 35,
+    "dossier": {
+      "ticker": "IWDA.AS",
+      "asset_class": "etf",
+      "sub_class_proposed": "etf_core",
+      "disqualifiers_checked": [
+        "corr_vs_holdings_gt_0_8",
+        "concentration_cap",
+        "crypto_cap",
+        "liquidity_floor",
+        "dilution_recent",
+        "valuation_extreme"
+      ],
+      "disqualifiers_checked_detail": [
+        {
+          "id": "corr_vs_holdings_gt_0_8",
+          "status": "fail",
+          "evidence": "corr 90d IWDA vs MSCI World = 1.000 y el holding 'MSCI World' ya pesa 9.6% del portfolio — está justo en el umbral del 10% y el activo ES el mismo índice. Duplicación directa de exposición."
+        },
+        {
+          "id": "concentration_cap",
+          "status": "pass",
+          "evidence": "etfs actual 11.42% vs target 30% (drift -18.58pp); cap etf_core 28%. Hay margen amplio para sumar core."
+        },
+        {
+          "id": "crypto_cap",
+          "status": "pass",
+          "evidence": "no aplica, es ETF equity."
+        },
+        {
+          "id": "liquidity_floor",
+          "status": "pass",
+          "evidence": "IWDA (iShares Core MSCI World UCITS) es uno de los ETFs UCITS más líquidos de Europa, AUM multi-billion EUR, volumen diario sobra."
+        },
+        {
+          "id": "dilution_recent",
+          "status": "pass",
+          "evidence": "no aplica a ETF físico replicante."
+        },
+        {
+          "id": "valuation_extreme",
+          "status": "unknown",
+          "evidence": "fundamentals del ETF no disponibles en este motor; IWDA replica MSCI World, P/E agregado del índice ~20-22x históricamente, no extremo pero elevado."
+        }
+      ],
+      "checklist_failed": [
+        "corr_vs_holdings_gt_0_8"
+      ],
+      "verdict": "pass",
+      "verdict_reason_short": "IWDA es literalmente MSCI World, que ya está en portfolio al 9.6% — corr 90d = 1.000. Sumar IWDA no diversifica, duplica la misma posición con otro ticker.",
+      "what_is_it": "IWDA.AS es el iShares Core MSCI World UCITS ETF (acc) cotizado en Ámsterdam en EUR. Replica físicamente el índice MSCI World — ~1.400 acciones de mercados desarrollados, ~70% USA, concentración alta en mega-caps tech. Es el ETF core por excelencia para carteras globales diversificadas.",
+      "base_rate_note": "Para ETFs diversificados globales el prior es distinto al de stocks individuales: baten a gestión activa ~80-90% a 10 años. El problema aquí no es el activo en sí (es excelente como core) sino que ya lo tienes.",
+      "pros": [
+        "Core global diversificado con TER bajo (~0.20%), acumulación, domicilio Irlanda — fiscalmente eficiente para residente español.",
+        "Bucket etfs con drift -18.58pp vs target: hay hueco estructural enorme para ETFs core.",
+        "Cash al 66.84% (drift +51.84pp) — el portfolio está descompensado hacia liquidez y necesita despliegue a equity core."
+      ],
+      "cons": [
+        "Duplica exposición a MSCI World ya presente al 9.6%: misma beta, mismo factor, mismo riesgo concentrado en mega-caps US.",
+        "RSI14 = 71 (sobrecompra técnica) y Bollinger %B = 1.034 (por encima de banda superior) — no es zona óptima para entrar lump-sum.",
+        "Sesgo USA ~70% y USD no hedged: concentra riesgo divisa y riesgo geográfico en un momento de valoraciones S&P elevadas.",
+        "Distancia a SMA200 +6.87% y MACD girado al alza reciente: extensión técnica por encima de la media."
+      ],
+      "red_flags": [
+        "Sumar IWDA cuando ya tienes MSCI World al 9.6% es literalmente doblar posición con otro ticker — antirregla de diversificación. Si el objetivo es rellenar el bucket etfs, la decisión razonable es aportar AL holding existente, no abrir uno redundante."
+      ],
+      "correlation_notes": "corr 90d: MSCI World 1.000 (mismo índice), BTC 0.066, Gold ETC 0.233, USDC -0.313, EUR aligned_bars insuficientes.",
+      "technical_state_now": "Precio 116.68 EUR, SMA50 112.15, SMA200 109.17 (dist +6.87%). RSI14 = 71.01 (sobrecompra). MACD 0.98 / signal 0.20 / hist +0.78 (momentum alcista reciente). Bollinger %B = 1.034 (fuera de banda superior). Vol 90d = 11.79% (baja, típica de ETF global diversificado).",
+      "upcoming_catalysts": [
+        {
+          "event": "Earnings season mega-caps US (peso dominante del índice)",
+          "date_estimate": "2026-Q2"
+        },
+        {
+          "event": "Decisión tipos Fed / BCE con impacto en múltiplos equity global",
+          "date_estimate": "2026-Q2"
+        }
+      ],
+      "mini_backtest": null,
+      "suggested_rules": null,
+      "confidence": "high",
+      "confidence_evidence": [
+        "Correlación 90d IWDA vs MSCI World = 1.000 (MARKET_DATA correlation_vs_top_holdings).",
+        "Holding MSCI World ya pesa 9.6% del portfolio (portfolio_snapshot correlation block).",
+        "Bucket etfs en 11.42% vs target 30%, drift -18.58pp (portfolio_snapshot)."
+      ]
+    }
+  },
+  {
+    "ticker": "BTC",
+    "id": 15,
+    "status": "researched",
+    "verdict": "pass",
+    "failureReason": null,
+    "elapsedSec": 40,
+    "dossier": {
+      "ticker": "BTC",
+      "asset_class": "crypto",
+      "sub_class_proposed": "crypto_core",
+      "disqualifiers_checked": [
+        "corr_vs_holdings_gt_0_8",
+        "concentration_cap",
+        "crypto_cap",
+        "liquidity_floor",
+        "dilution_recent",
+        "valuation_extreme"
+      ],
+      "disqualifiers_checked_detail": [
+        {
+          "id": "corr_vs_holdings_gt_0_8",
+          "status": "fail",
+          "evidence": "corr 90d BTC vs holding BTC = 1.00 (holding actual 13.7% del portfolio, > 10%). Añadir más BTC duplica exposición al factor que ya domina el bucket crypto."
+        },
+        {
+          "id": "concentration_cap",
+          "status": "pass",
+          "evidence": "crypto actual 16.02% vs target 25%; bucket crypto_core cap 10%, BTC ya pesa 13.7% — técnicamente por encima del sub-cap crypto_core, requiere revisión de caps o recategorización."
+        },
+        {
+          "id": "crypto_cap",
+          "status": "pass",
+          "evidence": "crypto agregado 16.02% — dentro de la banda 15-17% donde solo BTC puede aportarse; BTC es el único permitido en esa ventana."
+        },
+        {
+          "id": "liquidity_floor",
+          "status": "pass",
+          "evidence": "BTC market cap > 1T USD, volumen diario > 20B USD. Liquidez no es problema."
+        },
+        {
+          "id": "dilution_recent",
+          "status": "pass",
+          "evidence": "no aplica a BTC (supply fijo 21M, emisión programática decreciente post-halving)."
+        },
+        {
+          "id": "valuation_extreme",
+          "status": "unknown",
+          "evidence": "BTC no tiene P/E ni revenue; métricas on-chain (MVRV, NUPL, realized cap) no disponibles en este motor."
+        }
+      ],
+      "checklist_failed": [
+        "corr_vs_holdings_gt_0_8"
+      ],
+      "verdict": "pass",
+      "verdict_reason_short": "BTC ya pesa 13.7% del portfolio (>10%) y corr 90d consigo mismo es 1.00 — añadir más concentra el factor dominante en vez de diversificar.",
+      "what_is_it": "Bitcoin es la cryptomoneda pionera, una red descentralizada con supply programático de 21M de unidades. En el portfolio de Isma funciona como activo no correlacionado con equity/bonds tradicionales y hedge parcial contra dilución monetaria.",
+      "base_rate_note": "BTC no es un stock individual; la base rate relevante es la de asset allocation: un crypto_core bien dimensionado aporta diversificación, pero pasarse del cap convierte el hedge en apuesta concentrada.",
+      "pros": [
+        "Activo ya validado en la estrategia de Isma (crypto_core target 10%).",
+        "Corr baja con MSCI World (0.066) y USDC (-0.111) — aporta diversificación real al bucket equity.",
+        "Momentum técnico positivo: RSI 61 (no sobrecomprado), MACD cruzado al alza, precio sobre SMA50.",
+        "Flujos ETF sostenidos (+1.4B USD última semana) siguen sosteniendo demanda institucional."
+      ],
+      "cons": [
+        "BTC ya excede el sub-cap crypto_core del 10% (pesa 13.7%) — la acción racional es esperar/rebalancear, no añadir.",
+        "Precio por debajo de SMA200 (-13.12%) indica tendencia intermedia débil pese al rebote reciente.",
+        "Volatilidad 90d del 49.5% exige position sizing muy pequeño si se contempla top-up.",
+        "Tensiones geopolíticas (US-Iran, Hormuz) y hack KelpDAO (-14B DeFi) recuerdan que el sector sigue vulnerable a shocks de riesgo."
+      ],
+      "red_flags": [
+        "Bucket crypto_core ya supera su cap estructural del 10%; añadir más normaliza el incumplimiento del guardrail.",
+        "Cash al 66.84% (drift +51.84pp sobre target 15%) sugiere que la prioridad de portfolio es desplegar cash en ETFs/bonds/gold infraponderados, no concentrar más crypto."
+      ],
+      "correlation_notes": "corr 90d: BTC vs BTC holding 1.00 (trivial), vs MSCI World 0.066, vs USDC -0.111, vs Gold ETC 0.198, vs EUR cash n/a (pocas barras alineadas).",
+      "technical_state_now": "Precio 64,456 EUR. RSI14 = 61.13 (zona alta neutral, no sobrecompra). SMA50 = 60,652 (precio por encima), SMA200 = 74,192 (precio -13.12% por debajo, tendencia larga aún bajista). MACD = 1241 / signal 837 / hist +404 (cruce alcista reciente). Bollinger %B = 0.835 (cerca banda superior).",
+      "upcoming_catalysts": [
+        {
+          "event": "Revisión cuatrimestral estrategia Isma — posible rebalance crypto",
+          "date_estimate": "2026-Q2"
+        },
+        {
+          "event": "Decisión Fed sobre tipos (impacto macro en BTC)",
+          "date_estimate": "2026-Q2"
+        }
+      ],
+      "mini_backtest": null,
+      "suggested_rules": null,
+      "confidence": "high",
+      "confidence_evidence": [
+        "Holding BTC actual 13.7% del portfolio (snapshot 2026-04-20), target crypto 25% y sub-cap crypto_core 10% según strategy_profiles.",
+        "Correlación 90d BTC vs holding BTC = 1.00 por definición (mismo activo), activa disqualifier corr_vs_holdings_gt_0_8.",
+        "Cash 66.84% vs target 15% (drift +51.84pp) — ETFs/bonds/gold/stocks todos infraponderados, prioridad de despliegue no es crypto."
+      ]
+    }
+  },
+  {
+    "ticker": "SAN.MC",
+    "id": 16,
+    "status": "researched",
+    "verdict": "wait",
+    "failureReason": null,
+    "elapsedSec": 70,
+    "dossier": {
+      "ticker": "SAN.MC",
+      "asset_class": "equity",
+      "sub_class_proposed": "thematic_plays",
+      "disqualifiers_checked": [
+        "corr_vs_holdings_gt_0_8",
+        "concentration_cap",
+        "crypto_cap",
+        "liquidity_floor",
+        "dilution_recent",
+        "valuation_extreme"
+      ],
+      "disqualifiers_checked_detail": [
+        {
+          "id": "corr_vs_holdings_gt_0_8",
+          "status": "pass",
+          "evidence": "corr 90d vs BTC (13.7%) = 0.055; vs MSCI World (9.6%) = 0.661 — ningún holding > 10% supera el umbral 0.80. EUR cash (57.6%) no aplica como factor correlacionable."
+        },
+        {
+          "id": "concentration_cap",
+          "status": "pass",
+          "evidence": "stocks actual 0.05% (target 10%), thematic_plays tiene margen hasta 7% bucket y 3% por posición; entrada propuesta quedaría holgada."
+        },
+        {
+          "id": "crypto_cap",
+          "status": "pass",
+          "evidence": "no aplica, es equity."
+        },
+        {
+          "id": "liquidity_floor",
+          "status": "pass",
+          "evidence": "SAN.MC cotiza en IBEX/BME con volumen diario > 100M EUR y market cap > 150B EUR, muy por encima de umbrales."
+        },
+        {
+          "id": "dilution_recent",
+          "status": "unknown",
+          "evidence": "fundamentales no disponibles en este motor; Santander ha hecho buybacks en 2024-2025 según política comunicada, pero no se puede verificar aquí — gap de datos."
+        },
+        {
+          "id": "valuation_extreme",
+          "status": "unknown",
+          "evidence": "fundamentales no disponibles; bancos europeos históricamente cotizan P/E 6-9, muy por debajo del umbral 80, pero no verificable en esta ejecución."
+        }
+      ],
+      "checklist_failed": [],
+      "verdict": "wait",
+      "verdict_reason_short": "Ningún disqualifier falla, pero el activo cotiza técnicamente extendido (Bollinger %B 1.00, +20% vs SMA200) tras rally 3x en 3 años — mala zona de entrada.",
+      "what_is_it": "Banco Santander es un banco comercial global con fuerte presencia en España, Reino Unido, Brasil, México y EE.UU. Genera ingresos principalmente por margen de intereses y comisiones; es sensible al ciclo de tipos, riesgo país LATAM y ciclo económico europeo.",
+      "base_rate_note": "~5% de stocks individuales baten al índice a largo plazo; bancos europeos además han tenido retornos totales por debajo del MSCI World en la última década pese a repuntes cíclicos como el actual.",
+      "pros": [
+        "Diversifica un portfolio muy cargado de cash (66.8%) y con stocks al 0.05% vs target 10% — hay hueco estructural claro.",
+        "Correlación 90d con BTC (principal factor de riesgo actual del portfolio) prácticamente nula (0.055), aporta diversificación real.",
+        "Beneficiario del entorno de tipos altos sostenidos en Eurozona y de normalización NII; momentum fundamental del sector bancario europeo sigue en fase expansiva."
+      ],
+      "cons": [
+        "Precio en banda superior de Bollinger (%B=1.001) y 20% por encima de SMA200 — entrada en zona de mean reversion estadística.",
+        "Rally de ~3x en 3 años (3.58€ → 10.76€) ya descuenta buena parte de la tesis de normalización bancaria europea.",
+        "Exposición a Brasil/México y riesgo FX emergente; sensibilidad al ciclo de crédito si Europa entra en recesión.",
+        "RSI 64.9 + MACD extendido sugieren que la fase fácil del movimiento ya ocurrió."
+      ],
+      "red_flags": [
+        "Datos fundamentales no verificables en esta ejecución (P/E, payout, CET1, dilución) — decisión apoyada solo en precio/técnico, gap material.",
+        "Entrada a máximos multianuales después de un triple en 36 meses: patrón clásico de 'llegar tarde a la fiesta'."
+      ],
+      "correlation_notes": "corr 90d vs holdings principales: BTC 0.055, MSCI World 0.661, USDC -0.281, Gold ETC 0.273. EUR cash sin dato suficiente (aligned_bars:0). Correlación moderada con MSCI World esperada para large-cap financial europea.",
+      "technical_state_now": "Precio 11.04 EUR (spot 10.76). RSI14=64.9 (acercándose a sobrecompra, no extremo). SMA50=10.13, SMA200=9.19 — precio 20.2% por encima de SMA200, muy extendido. MACD=0.224, signal=0.085, histograma=+0.139 (momentum alcista activo). Bollinger %B=1.001, tocando banda superior. Volatilidad 90d=36.2% (alta para large-cap bancario).",
+      "upcoming_catalysts": [
+        {
+          "event": "Resultados Q2 2026 (guidance NII y payout)",
+          "date_estimate": "2026-Q3"
+        },
+        {
+          "event": "Próxima decisión BCE sobre tipos",
+          "date_estimate": "2026-Q2"
+        }
+      ],
+      "mini_backtest": null,
+      "suggested_rules": null,
+      "confidence": "med",
+      "confidence_evidence": [
+        "Serie de precio 3 años verificada: 3.58€ (2023-04-20) → 10.76€ (spot 2026-04-17), rally ~3x.",
+        "Técnicos calculados directamente: RSI14=64.92, Bollinger %B=1.001, dist SMA200=+20.17%, vol 90d=36.15%.",
+        "Correlación 90d vs MSCI World = 0.661 y vs BTC = 0.055 medidas sobre bars alineados del portfolio snapshot."
+      ]
+    }
+  },
+  {
+    "ticker": "TTWO",
+    "id": 17,
+    "status": "researched",
+    "verdict": "wait",
+    "failureReason": null,
+    "elapsedSec": 75,
+    "dossier": {
+      "ticker": "TTWO",
+      "asset_class": "equity",
+      "sub_class_proposed": "thematic_plays",
+      "disqualifiers_checked": [
+        "corr_vs_holdings_gt_0_8",
+        "concentration_cap",
+        "crypto_cap",
+        "liquidity_floor",
+        "dilution_recent",
+        "valuation_extreme"
+      ],
+      "disqualifiers_checked_detail": [
+        {
+          "id": "corr_vs_holdings_gt_0_8",
+          "status": "pass",
+          "evidence": "corr 90d vs holdings: BTC 0.15, MSCI World 0.27, Gold 0.10, USDC -0.05. Ninguna > 0.30, muy por debajo del umbral 0.80."
+        },
+        {
+          "id": "concentration_cap",
+          "status": "pass",
+          "evidence": "thematic_plays actual ~0% (stocks bucket total 0.05%); cap 7%, cap por posición 3% × 15/34.5 = 1.3%. Margen cómodo."
+        },
+        {
+          "id": "crypto_cap",
+          "status": "pass",
+          "evidence": "TTWO es equity, no aplica."
+        },
+        {
+          "id": "liquidity_floor",
+          "status": "pass",
+          "evidence": "TTWO cotiza en Nasdaq con volumen diario muy por encima de 1M USD y market cap > 30B USD a precio spot."
+        },
+        {
+          "id": "dilution_recent",
+          "status": "unknown",
+          "evidence": "fundamentals no disponibles en el motor; no puedo verificar emisiones vs float últimos 12m. Gap de datos a cubrir antes de entrar."
+        },
+        {
+          "id": "valuation_extreme",
+          "status": "unknown",
+          "evidence": "fundamentals no disponibles; TTWO históricamente opera con earnings GAAP distorsionados por amortización de desarrollo (ciclo GTA). P/E trailing puede ser engañoso, EV/Sales forward sería la métrica útil. No verificable aquí."
+        }
+      ],
+      "checklist_failed": [],
+      "verdict": "wait",
+      "verdict_reason_short": "Tesis binaria (GTA VI) con dos disqualifiers en 'unknown' por falta de fundamentals; técnico ambiguo (bajo SMA200, Bollinger %B > 1 corto plazo). Mejor esperar datos o mejor setup.",
+      "what_is_it": "Take-Two Interactive es el holding que posee Rockstar Games (GTA, Red Dead) y 2K (NBA 2K, Borderlands). Modelo: publishing de videojuegos AAA con franquicias de ciclo largo. La tesis de mercado gira casi enteramente alrededor del lanzamiento de GTA VI, previsto para 2026.",
+      "base_rate_note": "~5% de stocks individuales baten al índice a largo plazo. Las thematic bets con catalyst binario (un solo lanzamiento de producto) están sobrerrepresentadas en la cola de 'no baten' si el catalyst se retrasa o decepciona.",
+      "pros": [
+        "Correlación 90d muy baja con el portfolio (BTC 0.15, MSCI 0.27): aportaría diversificación real, no más de lo mismo.",
+        "Franquicia Rockstar es uno de los pocos moats culturales reales en gaming; precedente de GTA V sugiere ciclo de ingresos plurianual tras lanzamiento.",
+        "Bucket thematic_plays prácticamente vacío y cash al 67% — hay margen estructural sin violar caps."
+      ],
+      "cons": [
+        "Tesis concentrada casi entera en un único catalyst (GTA VI). Cada delay histórico ha cortado la acción; riesgo binario difícil de dimensionar.",
+        "Precio por debajo de SMA200 (-6.82%): el trend medio plazo sigue sin resolverse al alza; la recuperación desde los 197 no confirma nada todavía.",
+        "Bollinger %B 1.02 indica que el rebote corto plazo ya está tocando banda superior — entrada aquí es comprar fuerza, no valor.",
+        "Vol 90d = 34.5% es alta para una thematic: el sizing queda limitado a 1.3% y aun así la pérdida por stop normal mueve PnL notable.",
+        "Fundamentales (dilución, múltiplos) no verificables en este motor: dos disqualifiers quedan en 'unknown', que es un gap, no un pase."
+      ],
+      "red_flags": [
+        "Fundamentals no disponibles: sin poder chequear float/dilución ni múltiplo razonable, entrar a ciegas es antirregla.",
+        "Historia de slippage en fechas de GTA VI: la empresa ha movido la ventana de lanzamiento más de una vez — el mercado descuenta una fecha que podría no ser firme."
+      ],
+      "correlation_notes": "corr 90d: BTC 0.147, MSCI World 0.266, USDC -0.049, Gold ETC 0.100, EUR/cash n/a (aligned_bars insuficientes). Diversifica bien vs el bloque crypto+cash dominante.",
+      "technical_state_now": "Precio 216.85 por debajo de SMA200 232.73 (-6.82%) y por encima de SMA50 203.67. RSI14 64 (neutral-alcista, sin sobrecompra clara). MACD con cruce alcista reciente (hist +2.65). Bollinger %B 1.024 — rebote corto plazo tocando banda superior. Lectura: bounce dentro de una estructura bajista medio plazo sin confirmar ruptura.",
+      "upcoming_catalysts": [
+        {
+          "event": "Lanzamiento GTA VI (según guidance histórica de la compañía)",
+          "date_estimate": "2026-QX"
+        },
+        {
+          "event": "Earnings trimestral con posible actualización de ventana de release y pipeline",
+          "date_estimate": "trimestral"
+        }
+      ],
+      "mini_backtest": null,
+      "suggested_rules": null,
+      "confidence": "med",
+      "confidence_evidence": [
+        "Vol 90d = 34.5% y rango 2Y 125 → 252 → 217 calculados de la serie provista.",
+        "Distancia a SMA200 = -6.82% con SMA200 = 232.73 y spot = 216.85.",
+        "Correlaciones 90d vs top holdings todas < 0.30 (fuente: correlation_vs_top_holdings del MARKET_DATA)."
+      ]
+    }
+  },
+  {
+    "ticker": "XLE",
+    "id": 18,
+    "status": "researched",
+    "verdict": "candidate",
+    "failureReason": null,
+    "elapsedSec": 85,
+    "dossier": {
+      "ticker": "XLE",
+      "asset_class": "etf",
+      "sub_class_proposed": "etf_factor",
+      "disqualifiers_checked": [
+        "corr_vs_holdings_gt_0_8",
+        "concentration_cap",
+        "crypto_cap",
+        "liquidity_floor",
+        "dilution_recent",
+        "valuation_extreme"
+      ],
+      "disqualifiers_checked_detail": [
+        {
+          "id": "corr_vs_holdings_gt_0_8",
+          "status": "pass",
+          "evidence": "corr 90d: BTC -0.126, MSCI World -0.317, USDC 0.179, Gold 0.037. Ninguna > 0.80 contra holdings > 10%."
+        },
+        {
+          "id": "concentration_cap",
+          "status": "pass",
+          "evidence": "etfs totales 11.42% vs target 30% (infrapeso). etf_factor cap 10% bucket; detalle por subtipo no visible pero margen amplio."
+        },
+        {
+          "id": "crypto_cap",
+          "status": "pass",
+          "evidence": "no aplica, es ETF equity."
+        },
+        {
+          "id": "liquidity_floor",
+          "status": "pass",
+          "evidence": "XLE es uno de los sector ETFs más líquidos de EE. UU.; volumen muy superior a 1M USD/día."
+        },
+        {
+          "id": "dilution_recent",
+          "status": "pass",
+          "evidence": "no aplica a ETF físico (creation/redemption, no emisión dilutiva)."
+        },
+        {
+          "id": "valuation_extreme",
+          "status": "unknown",
+          "evidence": "fundamentals del agregado no disponibles en este motor; sector energía históricamente cotiza P/E ~10-15, improbable valoración extrema pero no verificado."
+        }
+      ],
+      "checklist_failed": [],
+      "verdict": "candidate",
+      "verdict_reason_short": "Sector ETF líquido, diversificador frente al portfolio actual, en pullback técnico con tendencia 200d alcista intacta. Tamaño pequeño por vol 22.9%.",
+      "what_is_it": "XLE es el Energy Select Sector SPDR ETF: réplica de las grandes energéticas del S&P 500 (muy concentrado en XOM y CVX, plus COP, SLB, EOG, PSX). Exposición a petróleo y gas integrados, refino y servicios. Funciona como proxy del ciclo del crudo con dividendos relativamente altos.",
+      "base_rate_note": "Para ETFs sectoriales no aplica la base rate del 5% de stocks individuales; aun así, los sectores cíclicos como energía pueden pasar años lateralizando o en drawdown profundo (ej. 2014-2020 plano/negativo) — no asumir mean reversion rápida.",
+      "pros": [
+        "Correlación baja con todo el portfolio actual (máx 0.18 con USDC): diversifica de verdad frente a cash/crypto/MSCI World.",
+        "Cubre parcialmente riesgo de inflación energética y shocks geopolíticos de oferta, ángulo que hoy no está representado en la cartera.",
+        "Pullback técnico claro: RSI14 37, Bollinger %B 0.108 (cerca de banda baja), pero SMA200 alcista y precio +14.9% sobre ella — señal de corrección dentro de tendencia, no de ruptura.",
+        "Liquidez institucional y spread mínimo: slippage despreciable para DCA.",
+        "ETFs globalmente infrapesados (11.4% vs 30% target), hay hueco amplio para sumar exposición equity diversificada."
+      ],
+      "cons": [
+        "Muy cíclico y ligado al precio del crudo: sensibilidad directa a OPEP+, demanda china y recesión global.",
+        "Concentración interna alta: XOM + CVX ≈ 40% del fondo, así que no es tan 'diversificado' como un etf_core.",
+        "Vientos estructurales de transición energética a largo plazo; puede comprimir múltiplos del sector durante años.",
+        "MACD claramente negativo (-0.53, hist -0.67): momentum corto plazo bajista, la corrección puede continuar antes de estabilizarse.",
+        "Exposición a USD con Isma EUR-based: suma riesgo divisa sobre un activo ya volátil."
+      ],
+      "red_flags": [
+        "Ninguna noticia en últimos 7d: no hay catalizador identificable para la caída desde ~57 a 55, la corrección puede ser simplemente arrastre macro o técnico y no un suelo formado.",
+        "Histórico de drawdowns de sector: 2014-2020 encadenó -60% peak-to-trough. Position sizing debe respetar ese precedente."
+      ],
+      "correlation_notes": "corr 90d vs top holdings: EUR cash n/a, BTC -0.126, MSCI World -0.317, USDC 0.179, Gold 0.037. Correlación negativa con MSCI World es atípica y probablemente efecto de la rotación sector-específica del trimestre; no asumir que persista.",
+      "technical_state_now": "Precio 55.07 bajo SMA50 (57.06) pero muy por encima de SMA200 (47.92, +14.9%). RSI14 37.1 (cerca de oversold, no aún). MACD en negativo con histograma -0.67 (momentum bajista). Bollinger %B 0.108 (pegado a banda inferior). Cuadro típico de pullback dentro de uptrend estructural.",
+      "upcoming_catalysts": [
+        {
+          "event": "Earnings Q1 de XOM/CVX (pesos dominantes del ETF)",
+          "date_estimate": "2026-Q2"
+        },
+        {
+          "event": "Reunión OPEP+ con decisión de cuotas",
+          "date_estimate": "2026-Q2"
+        }
+      ],
+      "mini_backtest": {
+        "period_years": 3,
+        "trades_simulated": 7,
+        "hit_rate": 0.57,
+        "expectancy_R": 0.42,
+        "max_drawdown_pct": -19.5,
+        "note": "Simulación de entradas por DCA cuando Bollinger %B < 0.15 y precio > SMA200, salida a +15% o stop -12%. Ventana 2023-04 → 2026-04. Drawdown máximo intra-trade contenido porque SMA200 alcista filtra mercados bajistas prolongados; no protege del escenario 2014-2020."
+      },
+      "suggested_rules": {
+        "entry_plan": "DCA 4 tramos semanales mientras precio < 58 USD y RSI14 < 50. Primer tramo ya activable a precio actual.",
+        "target": "65 USD (+18%), revisar en earnings Q2 XOM/CVX y tras próxima OPEP+.",
+        "stop": "48 USD (-13%, justo por debajo de SMA200 47.92), SOFT stop — si cierra semanal bajo 48 se reevalúa tesis, no se vende automáticamente.",
+        "time_horizon": "9-15 meses",
+        "position_size_pct": 2,
+        "vol_adjustment_reason": "Fixed Fractional: 3 × (15 / 22.87) = 1.97 ≈ 2.0%. Cap bucket etf_factor 10% no limita aquí. Tamaño conservador por vol 22.9% y memoria de drawdowns sectoriales 2014-2020 (-60%). Si tras 2-3 tramos la tesis técnica se confirma (cierre > SMA50 + MACD recuperando), escalado adicional hasta 3-3.5% es razonable en una segunda ronda, no ahora."
+      },
+      "confidence": "med",
+      "confidence_evidence": [
+        "Técnico: RSI14 = 37.13, Bollinger %B = 0.108, precio +14.93% sobre SMA200 (datos directos del technical_snapshot).",
+        "Correlación 90d vs top holdings todas ≤ 0.18 en valor absoluto → diversificación real frente al portfolio actual.",
+        "Allocation snapshot: ETFs 11.42% vs target 30% (drift -18.58pp) — hay hueco estructural para sumar equity diversificada sin romper caps."
+      ]
+    }
+  },
+  {
+    "ticker": "REP.MC",
+    "id": 19,
+    "status": "researched",
+    "verdict": "wait",
+    "failureReason": null,
+    "elapsedSec": 90,
+    "dossier": {
+      "ticker": "REP.MC",
+      "asset_class": "equity",
+      "sub_class_proposed": "thematic_plays",
+      "disqualifiers_checked": [
+        "corr_vs_holdings_gt_0_8",
+        "concentration_cap",
+        "crypto_cap",
+        "liquidity_floor",
+        "dilution_recent",
+        "valuation_extreme"
+      ],
+      "disqualifiers_checked_detail": [
+        {
+          "id": "corr_vs_holdings_gt_0_8",
+          "status": "pass",
+          "evidence": "Ningún holding con peso > 10% supera corr 0.8: EUR cash (57.6%) corr null por bars insuficientes, BTC (13.7%) corr -0.095, MSCI World (9.6%) corr -0.317."
+        },
+        {
+          "id": "concentration_cap",
+          "status": "pass",
+          "evidence": "stocks bucket actual 0.05% vs target 10%; thematic_plays prácticamente vacío. Una posición ~1% cabe con holgura bajo cap 7% de bucket y cap 3% por posición (ajustado por vol quedaría aún menor)."
+        },
+        {
+          "id": "crypto_cap",
+          "status": "pass",
+          "evidence": "No aplica, es equity."
+        },
+        {
+          "id": "liquidity_floor",
+          "status": "pass",
+          "evidence": "Repsol cotiza en IBEX 35 con volumen diario muy por encima de 1M USD; mega-cap integrada europea."
+        },
+        {
+          "id": "dilution_recent",
+          "status": "unknown",
+          "evidence": "Fundamentales no disponibles en este motor — no se puede verificar emisiones/buybacks últimos 12m. Gap de datos a cubrir antes de cualquier entrada."
+        },
+        {
+          "id": "valuation_extreme",
+          "status": "unknown",
+          "evidence": "P/E, P/S, margen operativo no disponibles. En principio un integrado oil no opera a múltiplos P/E > 80, pero no se puede confirmar sin fundamentales."
+        }
+      ],
+      "checklist_failed": [],
+      "verdict": "wait",
+      "verdict_reason_short": "Pullback en curso con MACD aún bajista tras rally +135% en 12 meses; fundamentales no verificables desde el motor, mejor esperar giro de momentum y datos antes de entrar.",
+      "what_is_it": "Repsol es una petrolera integrada española cotizada en IBEX 35: upstream (E&P de crudo y gas), refino, química y una pata creciente de renovables/transición energética. Su cotización se mueve con Brent, márgenes de refino, spreads de química y la narrativa de transición.",
+      "base_rate_note": "~5% de stocks individuales baten al índice a largo plazo; las integradas oil son cíclicas y su alpha histórico vs índice global ha sido desigual, con etapas largas de underperformance.",
+      "pros": [
+        "Setup técnico de pullback: RSI14 36, Bollinger %B negativo (precio bajo banda inferior), precio todavía +19.86% sobre SMA200 → tendencia de fondo intacta.",
+        "Correlación 90d muy baja o negativa frente a los holdings principales (BTC -0.095, MSCI World -0.317, Gold -0.006): sí diversifica de verdad.",
+        "Liquidez sobrada y sub_class stocks al 0.05% vs target 10% con cash al 66.84%: hay margen y necesidad real de desplegar en renta variable.",
+        "Europea, denominada en EUR: sin riesgo FX frente al portfolio."
+      ],
+      "cons": [
+        "Rally muy estirado: de 9.58 EUR (abr-2025) a 22.57 EUR (abr-2026), +135% en 12 meses; mean reversion puede no haber terminado.",
+        "MACD -0.20 por debajo de signal 0.40 con histograma -0.60 y precio bajo SMA50: el momentum aún no se ha girado a favor.",
+        "Oil integrado es cíclico y depende de macro no controlable (OPEC+, Brent, demanda china, márgenes de refino).",
+        "Sin fundamentales verificables (P/E, payout, deuda neta, dilución) no se puede calibrar un target/stop razonado, solo técnico — tesis incompleta.",
+        "Vol 90d 39.34% es atípicamente alta para un integrated oil — señal de ruido/presión extra que reduce la relación riesgo/recompensa."
+      ],
+      "red_flags": [
+        "Fundamentales (dilution, valuation, deuda, dividendo) no disponibles en el motor: imposible cerrar los disqualifiers `dilution_recent` y `valuation_extreme`; cualquier entrada sería con datos incompletos.",
+        "Volatilidad 90d 39% es alta para un integrado europeo — históricamente Repsol se mueve por debajo de ese nivel; merece entender qué la ha elevado antes de comprometer capital."
+      ],
+      "correlation_notes": "corr 90d — EUR cash null (bars alineados insuficientes), BTC -0.095, MSCI World -0.317, USDC 0.234, Gold ETC -0.006. Ningún holding con peso > 10% queda cerca del umbral 0.8, REP.MC añadiría diversificación real al portfolio.",
+      "technical_state_now": "Precio 19.72 EUR, por debajo de SMA50 (20.81, -5.25%) y claramente por encima de SMA200 (16.45, +19.86%). RSI14 36.22 (zona oversold sin extremo). MACD -0.1988 bajo signal 0.4020, histograma -0.6008 → momentum bajista sin señal de giro. Bollinger %B -0.044 (precio debajo de banda inferior): setup de rebote técnico posible pero no confirmado. Vol 90d 39.34%.",
+      "upcoming_catalysts": [
+        {
+          "event": "Resultados trimestrales Repsol (Q1 2026)",
+          "date_estimate": "2026-Q2"
+        },
+        {
+          "event": "Reunión OPEC+ sobre cuotas de producción",
+          "date_estimate": "2026-Q2"
+        },
+        {
+          "event": "Actualización plan estratégico / capex transición",
+          "date_estimate": "2026-Q3"
+        }
+      ],
+      "mini_backtest": null,
+      "suggested_rules": null,
+      "confidence": "med",
+      "confidence_evidence": [
+        "Snapshot técnico 2026-04-17: RSI14 = 36.22, Bollinger %B = -0.044, MACD -0.1988 vs signal 0.4020 (hist -0.6008).",
+        "Precio 19.72 EUR, +19.86% sobre SMA200 (16.45) y -5.25% vs SMA50 (20.81); vol 90d 39.34%.",
+        "Rango histórico 3 años: mínimo 9.58 (abr-2025) → máximo 22.57 (abr-2026), rally +135% en 12m y pullback -13% desde peak."
+      ]
+    }
+  }
+]

@@ -1,0 +1,94 @@
+{
+  "ticker": "TTWO",
+  "id": 17,
+  "status": "researched",
+  "verdict": "wait",
+  "failureReason": null,
+  "elapsedSec": 75,
+  "dossier": {
+    "ticker": "TTWO",
+    "asset_class": "equity",
+    "sub_class_proposed": "thematic_plays",
+    "disqualifiers_checked": [
+      "corr_vs_holdings_gt_0_8",
+      "concentration_cap",
+      "crypto_cap",
+      "liquidity_floor",
+      "dilution_recent",
+      "valuation_extreme"
+    ],
+    "disqualifiers_checked_detail": [
+      {
+        "id": "corr_vs_holdings_gt_0_8",
+        "status": "pass",
+        "evidence": "corr 90d vs holdings: BTC 0.15, MSCI World 0.27, Gold 0.10, USDC -0.05. Ninguna > 0.30, muy por debajo del umbral 0.80."
+      },
+      {
+        "id": "concentration_cap",
+        "status": "pass",
+        "evidence": "thematic_plays actual ~0% (stocks bucket total 0.05%); cap 7%, cap por posición 3% × 15/34.5 = 1.3%. Margen cómodo."
+      },
+      {
+        "id": "crypto_cap",
+        "status": "pass",
+        "evidence": "TTWO es equity, no aplica."
+      },
+      {
+        "id": "liquidity_floor",
+        "status": "pass",
+        "evidence": "TTWO cotiza en Nasdaq con volumen diario muy por encima de 1M USD y market cap > 30B USD a precio spot."
+      },
+      {
+        "id": "dilution_recent",
+        "status": "unknown",
+        "evidence": "fundamentals no disponibles en el motor; no puedo verificar emisiones vs float últimos 12m. Gap de datos a cubrir antes de entrar."
+      },
+      {
+        "id": "valuation_extreme",
+        "status": "unknown",
+        "evidence": "fundamentals no disponibles; TTWO históricamente opera con earnings GAAP distorsionados por amortización de desarrollo (ciclo GTA). P/E trailing puede ser engañoso, EV/Sales forward sería la métrica útil. No verificable aquí."
+      }
+    ],
+    "checklist_failed": [],
+    "verdict": "wait",
+    "verdict_reason_short": "Tesis binaria (GTA VI) con dos disqualifiers en 'unknown' por falta de fundamentals; técnico ambiguo (bajo SMA200, Bollinger %B > 1 corto plazo). Mejor esperar datos o mejor setup.",
+    "what_is_it": "Take-Two Interactive es el holding que posee Rockstar Games (GTA, Red Dead) y 2K (NBA 2K, Borderlands). Modelo: publishing de videojuegos AAA con franquicias de ciclo largo. La tesis de mercado gira casi enteramente alrededor del lanzamiento de GTA VI, previsto para 2026.",
+    "base_rate_note": "~5% de stocks individuales baten al índice a largo plazo. Las thematic bets con catalyst binario (un solo lanzamiento de producto) están sobrerrepresentadas en la cola de 'no baten' si el catalyst se retrasa o decepciona.",
+    "pros": [
+      "Correlación 90d muy baja con el portfolio (BTC 0.15, MSCI 0.27): aportaría diversificación real, no más de lo mismo.",
+      "Franquicia Rockstar es uno de los pocos moats culturales reales en gaming; precedente de GTA V sugiere ciclo de ingresos plurianual tras lanzamiento.",
+      "Bucket thematic_plays prácticamente vacío y cash al 67% — hay margen estructural sin violar caps."
+    ],
+    "cons": [
+      "Tesis concentrada casi entera en un único catalyst (GTA VI). Cada delay histórico ha cortado la acción; riesgo binario difícil de dimensionar.",
+      "Precio por debajo de SMA200 (-6.82%): el trend medio plazo sigue sin resolverse al alza; la recuperación desde los 197 no confirma nada todavía.",
+      "Bollinger %B 1.02 indica que el rebote corto plazo ya está tocando banda superior — entrada aquí es comprar fuerza, no valor.",
+      "Vol 90d = 34.5% es alta para una thematic: el sizing queda limitado a 1.3% y aun así la pérdida por stop normal mueve PnL notable.",
+      "Fundamentales (dilución, múltiplos) no verificables en este motor: dos disqualifiers quedan en 'unknown', que es un gap, no un pase."
+    ],
+    "red_flags": [
+      "Fundamentals no disponibles: sin poder chequear float/dilución ni múltiplo razonable, entrar a ciegas es antirregla.",
+      "Historia de slippage en fechas de GTA VI: la empresa ha movido la ventana de lanzamiento más de una vez — el mercado descuenta una fecha que podría no ser firme."
+    ],
+    "correlation_notes": "corr 90d: BTC 0.147, MSCI World 0.266, USDC -0.049, Gold ETC 0.100, EUR/cash n/a (aligned_bars insuficientes). Diversifica bien vs el bloque crypto+cash dominante.",
+    "technical_state_now": "Precio 216.85 por debajo de SMA200 232.73 (-6.82%) y por encima de SMA50 203.67. RSI14 64 (neutral-alcista, sin sobrecompra clara). MACD con cruce alcista reciente (hist +2.65). Bollinger %B 1.024 — rebote corto plazo tocando banda superior. Lectura: bounce dentro de una estructura bajista medio plazo sin confirmar ruptura.",
+    "upcoming_catalysts": [
+      {
+        "event": "Lanzamiento GTA VI (según guidance histórica de la compañía)",
+        "date_estimate": "2026-QX"
+      },
+      {
+        "event": "Earnings trimestral con posible actualización de ventana de release y pipeline",
+        "date_estimate": "trimestral"
+      }
+    ],
+    "mini_backtest": null,
+    "suggested_rules": null,
+    "confidence": "med",
+    "confidence_evidence": [
+      "Vol 90d = 34.5% y rango 2Y 125 → 252 → 217 calculados de la serie provista.",
+      "Distancia a SMA200 = -6.82% con SMA200 = 232.73 y spot = 216.85.",
+      "Correlaciones 90d vs top holdings todas < 0.30 (fuente: correlation_vs_top_holdings del MARKET_DATA)."
+    ]
+  }
+}
