@@ -71,5 +71,53 @@ sqlite.exec(
   `CREATE INDEX IF NOT EXISTS idx_intel_rebalance_orders_signal ON intel_rebalance_orders(signal_id)`,
 );
 
+// Strategy V2 Fase 0 — Research Drawer (intel_assets_tracked).
+// Tabla unificada research + watchlist + theses con state machine.
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS intel_assets_tracked (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker TEXT NOT NULL,
+    name TEXT,
+    asset_class TEXT,
+    sub_class TEXT,
+    status TEXT NOT NULL DEFAULT 'researching',
+    note TEXT,
+    dossier_json TEXT,
+    verdict TEXT,
+    technical_snapshot_json TEXT,
+    fundamentals_json TEXT,
+    correlation_json TEXT,
+    news_preview_json TEXT,
+    dossier_ttl_at TEXT,
+    researched_at TEXT,
+    requested_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    failure_reason TEXT,
+    price_source TEXT,
+    interest_reason TEXT,
+    thesis TEXT,
+    entry_plan TEXT,
+    entry_price REAL,
+    entry_date TEXT,
+    target_price REAL,
+    stop_price REAL,
+    time_horizon_months INTEGER,
+    closed_at TEXT,
+    closed_reason TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  )
+`);
+// Idempotencia: solo un research activo por ticker a la vez.
+sqlite.exec(
+  `CREATE UNIQUE INDEX IF NOT EXISTS uq_intel_tracked_researching_per_ticker
+   ON intel_assets_tracked(ticker) WHERE status = 'researching'`,
+);
+sqlite.exec(
+  `CREATE INDEX IF NOT EXISTS idx_intel_tracked_status ON intel_assets_tracked(status)`,
+);
+sqlite.exec(
+  `CREATE INDEX IF NOT EXISTS idx_intel_tracked_ticker ON intel_assets_tracked(ticker)`,
+);
+
 export const db = drizzle(sqlite, { schema });
 export { schema };

@@ -283,6 +283,63 @@ export const intelRebalanceOrders = sqliteTable("intel_rebalance_orders", {
   updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
+// Strategy V2 Fase 0 — Research Drawer. Tabla unificada con máquina de estados
+// researching → {shortlisted | archived | failed} → {watching | open_position}
+// → closed. Sustituye tres tablas separadas (research + watchlist + theses)
+// que se fusionan aquí para evitar duplicación y joins.
+export const intelAssetsTracked = sqliteTable("intel_assets_tracked", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  ticker: text("ticker").notNull(),
+  name: text("name"),
+  assetClass: text("asset_class", {
+    enum: ["equity", "etf", "crypto", "bond", "commodity"],
+  }),
+  // Sub-clases V2 (strategy-v2.md §2). Tentativa hasta que el usuario confirme.
+  subClass: text("sub_class", {
+    enum: [
+      "cash_yield", "etf_core", "etf_factor", "bonds_infl", "gold",
+      "crypto_core", "crypto_alt", "thematic_plays", "legacy_hold",
+    ],
+  }),
+  status: text("status", {
+    enum: [
+      "researching", "shortlisted", "watching", "open_position",
+      "closed", "archived", "failed",
+    ],
+  }).notNull().default("researching"),
+
+  // Research stage
+  note: text("note"),
+  dossierJson: text("dossier_json"),
+  verdict: text("verdict", { enum: ["candidate", "wait", "pass"] }),
+  technicalSnapshotJson: text("technical_snapshot_json"),
+  fundamentalsJson: text("fundamentals_json"),
+  correlationJson: text("correlation_json"),
+  newsPreviewJson: text("news_preview_json"),
+  dossierTtlAt: text("dossier_ttl_at"),
+  researchedAt: text("researched_at"),
+  requestedAt: text("requested_at").notNull().$defaultFn(() => new Date().toISOString()),
+  failureReason: text("failure_reason"),
+  priceSource: text("price_source", { enum: ["yahoo", "stooq", "coingecko", "manual"] }),
+
+  // Shortlist stage
+  interestReason: text("interest_reason"),
+
+  // Thesis stage
+  thesis: text("thesis"),
+  entryPlan: text("entry_plan"),
+  entryPrice: real("entry_price"),
+  entryDate: text("entry_date"),
+  targetPrice: real("target_price"),
+  stopPrice: real("stop_price"),
+  timeHorizonMonths: integer("time_horizon_months"),
+  closedAt: text("closed_at"),
+  closedReason: text("closed_reason"),
+
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
 export type IntelSignal = typeof intelSignals.$inferSelect;
 export type NewIntelSignal = typeof intelSignals.$inferInsert;
 export type IntelNotification = typeof intelNotifications.$inferSelect;
@@ -292,3 +349,5 @@ export type IntelScopeCooldown = typeof intelScopeCooldowns.$inferSelect;
 export type IntelAllocationSnapshot = typeof intelAllocationSnapshots.$inferSelect;
 export type IntelRebalanceOrder = typeof intelRebalanceOrders.$inferSelect;
 export type NewIntelRebalanceOrder = typeof intelRebalanceOrders.$inferInsert;
+export type IntelAssetTracked = typeof intelAssetsTracked.$inferSelect;
+export type NewIntelAssetTracked = typeof intelAssetsTracked.$inferInsert;
