@@ -18,8 +18,7 @@ export function SignalActions({
     try {
       const body: Record<string, string> = { userStatus: status };
       if (status === "snoozed" && snoozeHours) {
-        const until = new Date(Date.now() + snoozeHours * 3600 * 1000).toISOString();
-        body.snoozeUntil = until;
+        body.snoozeUntil = new Date(Date.now() + snoozeHours * 3600 * 1000).toISOString();
       }
       await fetch(`/api/intel/${id}`, {
         method: "PATCH",
@@ -36,7 +35,6 @@ export function SignalActions({
     setPending(true);
     try {
       await fetch(`/api/intel/${id}/reanalyze`, { method: "POST" });
-      // Damos tiempo a Claude (30-60s) pero refrescamos rápido para mostrar el estado "procesando"
       setTimeout(() => router.refresh(), 1500);
     } finally {
       setPending(false);
@@ -49,31 +47,35 @@ export function SignalActions({
         <button
           onClick={() => update("read")}
           disabled={pending}
+          title="Marcar como leída (R). Quita la señal del buzón de no-leídas. No afecta a nada más."
           className="px-3 py-1.5 rounded-lg border border-border hover:bg-[var(--hover-bg)] text-sm disabled:opacity-50"
         >
-          Marcar leída
+          Marcar leída <kbd className="ml-1 text-[10px] opacity-60">R</kbd>
         </button>
       )}
       <button
         onClick={() => update("acted")}
         disabled={pending}
+        title="Marca la señal como actuada (E). Sirve como feedback: el sistema calcula hit-rate y ROI por scope a partir de las acted."
         className="px-3 py-1.5 rounded-lg bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 text-sm disabled:opacity-50"
       >
-        ✓ Ejecutada
+        ✓ Ejecutada <kbd className="ml-1 text-[10px] opacity-60">E</kbd>
       </button>
       <button
         onClick={() => update("snoozed", 24)}
         disabled={pending}
+        title="Pospón 24h (S). La saca del buzón. Las órdenes de rebalance no se auto-matchean mientras está snoozed."
         className="px-3 py-1.5 rounded-lg border border-border hover:bg-[var(--hover-bg)] text-sm disabled:opacity-50"
       >
-        Snooze 24h
+        Snooze 24h <kbd className="ml-1 text-[10px] opacity-60">S</kbd>
       </button>
       <button
         onClick={() => update("dismissed")}
         disabled={pending}
+        title="No me interesa ni hoy ni nunca (I). Si este scope acumula muchos dismissed, se activa un cooldown que silencia los pings de Telegram para ese scope durante varios días."
         className="px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-[var(--hover-bg)] text-sm disabled:opacity-50"
       >
-        Ignorar
+        Ignorar <kbd className="ml-1 text-[10px] opacity-60">I</kbd>
       </button>
       <button
         onClick={reanalyze}

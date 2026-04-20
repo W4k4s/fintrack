@@ -1,8 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { and, eq, ne, gt, lt, asc, desc, inArray, notInArray, or } from "drizzle-orm";
+
+const NOISE_SCOPES = ["news", "macro_event"] as const;
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+type FilterKey = "unread" | "noise" | "read" | "acted" | "dismissed" | "snoozed" | "all";
+const VALID_FILTERS: FilterKey[] = ["unread", "noise", "read", "acted", "dismissed", "snoozed", "all"];
 import { SignalActions } from "./actions";
+import { KeyboardNav } from "./keyboard-nav";
 import { AnalysisRenderer, parseHeadlineShort } from "./analysis";
 import { RebalancePlanCard } from "@/components/intel/rebalance-plan-card";
 import { computeAllocation } from "@/lib/intel/allocation/compute";
@@ -13,12 +20,18 @@ export const dynamic = "force-dynamic";
 
 export default async function SignalDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { id: idStr } = await params;
   const id = Number(idStr);
   if (!Number.isFinite(id)) notFound();
+  const sp = await searchParams;
+  const from: FilterKey = VALID_FILTERS.includes(sp.from as FilterKey)
+    ? (sp.from as FilterKey)
+    : "unread";
 
   const [row] = await db
     .select()
@@ -43,13 +56,66 @@ export default async function SignalDetailPage({
         .where(eq(schema.intelRebalanceOrders.signalId, id))
     : [];
 
+  // Prev/next signals constrained to the feed/buzón the user came from so the
+  // navigation stays within that inbox. Feed order is createdAt DESC, so:
+  //   "Anterior" (prev) = signal above = created AFTER this one.
+  //   "Siguiente" (next) = signal below = created BEFORE this one.
+  // "unread" = unread AND severity >= med; "noise" = unread AND severity = low.
+  const prevConditions = [gt(schema.intelSignals.createdAt, row.createdAt)];
+  const nextConditions = [lt(schema.intelSignals.createdAt, row.createdAt)];
+  if (from === "unread") {
+    const actionableFilter = or(
+      notInArray(schema.intelSignals.scope, NOISE_SCOPES),
+      ne(schema.intelSignals.severity, "low"),
+    );
+    prevConditions.push(eq(schema.intelSignals.userStatus, "unread"));
+    nextConditions.push(eq(schema.intelSignals.userStatus, "unread"));
+    if (actionableFilter) {
+      prevConditions.push(actionableFilter);
+      nextConditions.push(actionableFilter);
+    }
+  } else if (from === "noise") {
+    prevConditions.push(eq(schema.intelSignals.userStatus, "unread"));
+    nextConditions.push(eq(schema.intelSignals.userStatus, "unread"));
+    prevConditions.push(eq(schema.intelSignals.severity, "low"));
+    nextConditions.push(eq(schema.intelSignals.severity, "low"));
+    prevConditions.push(inArray(schema.intelSignals.scope, NOISE_SCOPES));
+    nextConditions.push(inArray(schema.intelSignals.scope, NOISE_SCOPES));
+  } else if (from !== "all") {
+    prevConditions.push(eq(schema.intelSignals.userStatus, from));
+    nextConditions.push(eq(schema.intelSignals.userStatus, from));
+  }
+  const [prevSignal] = await db
+    .select({ id: schema.intelSignals.id, title: schema.intelSignals.title })
+    .from(schema.intelSignals)
+    .where(and(...prevConditions))
+    .orderBy(asc(schema.intelSignals.createdAt))
+    .limit(1);
+  const [nextSignal] = await db
+    .select({ id: schema.intelSignals.id, title: schema.intelSignals.title })
+    .from(schema.intelSignals)
+    .where(and(...nextConditions))
+    .orderBy(desc(schema.intelSignals.createdAt))
+    .limit(1);
+
+  const linkTo = (targetId: number) =>
+    from === "unread" ? `/intel/${targetId}` : `/intel/${targetId}?from=${from}`;
+
   return (
     <div className="px-6 py-6 max-w-3xl mx-auto">
-      <Link href="/intel" className="text-sm text-muted-foreground hover:text-foreground">
-        ← Volver a Intel
-      </Link>
+      <KeyboardNav
+        id={id}
+        currentStatus={row.userStatus}
+        prevHref={prevSignal ? linkTo(prevSignal.id) : null}
+        nextHref={nextSignal ? linkTo(nextSignal.id) : null}
+      />
+      <NavRow prev={prevSignal} next={nextSignal} from={from} />
 
-      <header className="mt-4 mb-6">
+      <div className="mt-4 mb-6">
+        <SignalActions id={id} currentStatus={row.userStatus} />
+      </div>
+
+      <header className="mb-6">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="uppercase tracking-wide">{row.scope}</span>
           {row.asset && <><span>•</span><span>{row.asset}</span></>}
@@ -135,6 +201,75 @@ export default async function SignalDetailPage({
       </section>
 
       <SignalActions id={id} currentStatus={row.userStatus} />
+
+      <div className="mt-8 pt-4 border-t border-border">
+        <NavRow prev={prevSignal} next={nextSignal} from={from} />
+      </div>
+    </div>
+  );
+}
+
+function NavRow({
+  prev,
+  next,
+  from,
+}: {
+  prev?: { id: number; title: string };
+  next?: { id: number; title: string };
+  from: FilterKey;
+}) {
+  const backHref = from === "unread" ? "/intel" : `/intel?filter=${from}`;
+  const linkTo = (targetId: number) =>
+    from === "unread" ? `/intel/${targetId}` : `/intel/${targetId}?from=${from}`;
+  const FILTER_LABEL: Record<FilterKey, string> = {
+    unread: "Sin leer",
+    noise: "Ruido",
+    read: "Leídas",
+    acted: "Ejecutadas",
+    snoozed: "Snoozed",
+    dismissed: "Ignoradas",
+    all: "Todas",
+  };
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <Link
+        href={backHref}
+        className="text-muted-foreground hover:text-foreground transition-colors"
+      >
+        ← Volver a Intel · {FILTER_LABEL[from]}
+      </Link>
+      <div className="ml-auto flex items-center gap-1">
+        {prev ? (
+          <Link
+            href={linkTo(prev.id)}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-border bg-elevated hover:bg-[var(--hover-bg)] text-foreground transition-colors max-w-[200px]"
+            title={`← ${prev.title}`}
+          >
+            <ChevronLeft className="w-4 h-4 shrink-0" />
+            <span className="truncate text-xs">Anterior</span>
+          </Link>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-border bg-elevated/40 text-muted-foreground/50 cursor-not-allowed">
+            <ChevronLeft className="w-4 h-4" />
+            <span className="text-xs">Anterior</span>
+          </span>
+        )}
+        {next ? (
+          <Link
+            href={linkTo(next.id)}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-border bg-elevated hover:bg-[var(--hover-bg)] text-foreground transition-colors max-w-[200px]"
+            title={`→ ${next.title}`}
+          >
+            <span className="truncate text-xs">Siguiente</span>
+            <ChevronRight className="w-4 h-4 shrink-0" />
+          </Link>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-border bg-elevated/40 text-muted-foreground/50 cursor-not-allowed">
+            <span className="text-xs">Siguiente</span>
+            <ChevronRight className="w-4 h-4" />
+          </span>
+        )}
+      </div>
     </div>
   );
 }

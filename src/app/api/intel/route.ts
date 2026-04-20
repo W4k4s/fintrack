@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, notInArray, or } from "drizzle-orm";
+
+// Scopes that are purely informational — low severity in these is "ruido".
+// Keep in sync with src/app/intel/page.tsx.
+const NOISE_SCOPES = ["news", "macro_event"] as const;
 
 /**
  * GET /api/intel — list signals con filtros opcionales:
@@ -44,14 +48,38 @@ export async function GET(req: NextRequest) {
     payload: safeParse(r.payload),
   }));
 
-  const unreadCount = await db
-    .select({ count: schema.intelSignals.id })
+  // Split unread into actionable and noise. "Noise" = severity=low in purely
+  // informational scopes (news, macro_event). Low-severity signals in
+  // actionable scopes (dca_pending, drift, rebalance, …) keep implicit action,
+  // so they stay in the actionable bucket. `unreadCount` drives the top-bar
+  // badge; `noiseCount` exposes the other pile for the "Ruido" tab.
+  const actionable = await db
+    .select({ id: schema.intelSignals.id })
     .from(schema.intelSignals)
-    .where(eq(schema.intelSignals.userStatus, "unread"));
+    .where(
+      and(
+        eq(schema.intelSignals.userStatus, "unread"),
+        or(
+          notInArray(schema.intelSignals.scope, NOISE_SCOPES),
+          ne(schema.intelSignals.severity, "low"),
+        ),
+      ),
+    );
+  const noise = await db
+    .select({ id: schema.intelSignals.id })
+    .from(schema.intelSignals)
+    .where(
+      and(
+        eq(schema.intelSignals.userStatus, "unread"),
+        eq(schema.intelSignals.severity, "low"),
+        inArray(schema.intelSignals.scope, NOISE_SCOPES),
+      ),
+    );
 
   return NextResponse.json({
     signals: parsed,
-    unreadCount: unreadCount.length,
+    unreadCount: actionable.length,
+    noiseCount: noise.length,
   });
 }
 
