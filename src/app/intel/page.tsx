@@ -126,6 +126,12 @@ export default async function IntelPage({
           </div>
           <div className="flex gap-4">
             <Link
+              href="/intel/research"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              🔬 Research drawer →
+            </Link>
+            <Link
               href="/intel/news"
               className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
