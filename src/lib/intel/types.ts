@@ -12,6 +12,7 @@ export type IntelScope =
   | "profile_review"
   | "concentration_risk"
   | "correlation_risk"
+  | "opportunity"
   | "custom";
 
 export type Severity = "low" | "med" | "high" | "critical";

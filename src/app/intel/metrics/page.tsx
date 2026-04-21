@@ -22,6 +22,7 @@ const SCOPE_ICONS: Record<string, string> = {
   profile_review: "🧭",
   concentration_risk: "🎯",
   correlation_risk: "🔗",
+  opportunity: "⭐",
   custom: "⚙️",
 };
 

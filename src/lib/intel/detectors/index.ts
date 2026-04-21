@@ -10,6 +10,7 @@ import { taxHarvestWindowDetector } from "./tax-harvest-window";
 import { profileReviewDetector } from "./profile-review";
 import { concentrationRiskDetector } from "./concentration-risk";
 import { correlationRiskDetector } from "./correlation-risk";
+import { opportunityDetector } from "./opportunity";
 
 export const ALL_DETECTORS: Detector[] = [
   priceDipDetector,
@@ -23,6 +24,7 @@ export const ALL_DETECTORS: Detector[] = [
   profileReviewDetector,
   concentrationRiskDetector,
   correlationRiskDetector,
+  opportunityDetector,
 ];
 
 export function detectorsForScope(scope: IntelScope | "all"): Detector[] {

@@ -23,6 +23,7 @@ const SCOPE_ICONS: Record<string, string> = {
   tax_harvest: "🧾",
   rebalance: "🔄",
   dca_pending: "🔔",
+  opportunity: "⭐",
   custom: "⚙️",
 };
 
