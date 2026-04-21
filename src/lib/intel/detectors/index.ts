@@ -11,6 +11,7 @@ import { profileReviewDetector } from "./profile-review";
 import { concentrationRiskDetector } from "./concentration-risk";
 import { correlationRiskDetector } from "./correlation-risk";
 import { opportunityDetector } from "./opportunity";
+import { thesisWatchDetector } from "./thesis-watch";
 
 export const ALL_DETECTORS: Detector[] = [
   priceDipDetector,
@@ -25,9 +26,16 @@ export const ALL_DETECTORS: Detector[] = [
   concentrationRiskDetector,
   correlationRiskDetector,
   opportunityDetector,
+  thesisWatchDetector,
 ];
 
 export function detectorsForScope(scope: IntelScope | "all"): Detector[] {
   if (scope === "all") return ALL_DETECTORS;
+  // Fase 4: thesisWatchDetector engloba 4 sub-scopes thesis_* (target_hit,
+  // stop_hit, near_stop, expired). Un debug manual contra cualquiera de ellos
+  // debe ejecutar el mismo detector.
+  if (scope.startsWith("thesis_")) {
+    return ALL_DETECTORS.filter((d) => d.scope === "thesis_stop_hit");
+  }
   return ALL_DETECTORS.filter((d) => d.scope === scope);
 }

@@ -26,6 +26,22 @@ export interface SubTarget {
   targetPct: number;
 }
 
+/**
+ * Mapeo sub-clase V2 → parent AssetClass. Lo comparten los detectores
+ * `opportunity` y `thesis_watch`. Es la inversa colapsada de FALLBACK_SPLIT.
+ */
+export const SUB_TO_PARENT: Record<SubClass, AssetClass> = {
+  cash_yield: "cash",
+  etf_core: "etfs",
+  etf_factor: "etfs",
+  bonds_infl: "bonds",
+  gold: "gold",
+  crypto_core: "crypto",
+  crypto_alt: "crypto",
+  thematic_plays: "stocks",
+  legacy_hold: "crypto",
+};
+
 const FALLBACK_SPLIT: Record<AssetClass, Array<{ subClass: SubClass; share: number }>> = {
   cash: [{ subClass: "cash_yield", share: 1.0 }],
   etfs: [

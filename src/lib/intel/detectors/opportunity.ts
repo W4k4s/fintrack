@@ -2,7 +2,7 @@ import { db, schema } from "@/lib/db";
 import { inArray } from "drizzle-orm";
 import { fetchPriceHistory, resolveTicker } from "../research/fetcher";
 import { rsi } from "../research/indicators";
-import { getSubTargets, aggregateByParent, type SubClass } from "../allocation/sub-targets";
+import { getSubTargets, aggregateByParent, SUB_TO_PARENT, type SubClass } from "../allocation/sub-targets";
 import { computeAllocation } from "../allocation/compute";
 import { ASSET_CLASSES, type AssetClass } from "../allocation/classify";
 import { dedupKey, weekWindowKey } from "../dedup";
@@ -26,18 +26,6 @@ const RSI_THRESHOLD = 30;
 const ENTRY_WINDOW_PCT = 10;
 const UNDERWEIGHT_THRESHOLD_PP = 3;
 const CATALYST_HORIZON_DAYS = 30;
-
-const SUB_TO_PARENT: Record<SubClass, AssetClass> = {
-  cash_yield: "cash",
-  etf_core: "etfs",
-  etf_factor: "etfs",
-  bonds_infl: "bonds",
-  gold: "gold",
-  crypto_core: "crypto",
-  crypto_alt: "crypto",
-  thematic_plays: "stocks",
-  legacy_hold: "crypto",
-};
 
 type RuleKey = "entry_window" | "rsi_oversold" | "sub_underweight" | "catalyst_near";
 
@@ -286,7 +274,6 @@ export const __internal = {
   entryWindowPct,
   nearestUpcomingCatalyst,
   severityFromHits,
-  SUB_TO_PARENT,
   RSI_THRESHOLD,
   ENTRY_WINDOW_PCT,
   UNDERWEIGHT_THRESHOLD_PP,

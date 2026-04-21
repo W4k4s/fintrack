@@ -13,6 +13,10 @@ export type IntelScope =
   | "concentration_risk"
   | "correlation_risk"
   | "opportunity"
+  | "thesis_target_hit"
+  | "thesis_stop_hit"
+  | "thesis_near_stop"
+  | "thesis_expired"
   | "custom";
 
 export type Severity = "low" | "med" | "high" | "critical";

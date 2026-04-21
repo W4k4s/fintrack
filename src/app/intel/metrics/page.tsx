@@ -23,6 +23,10 @@ const SCOPE_ICONS: Record<string, string> = {
   concentration_risk: "🎯",
   correlation_risk: "🔗",
   opportunity: "⭐",
+  thesis_target_hit: "🎯",
+  thesis_stop_hit: "🛑",
+  thesis_near_stop: "⚠️",
+  thesis_expired: "⏳",
   custom: "⚙️",
 };
 
