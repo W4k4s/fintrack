@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import=tsx --test src/lib/intel/rebalance/*.test.ts src/lib/intel/*.test.ts src/lib/intel/detectors/*.test.ts src/lib/intel/allocation/*.test.ts src/lib/db/*.test.ts"
+    "test": "node --import=tsx --test src/lib/intel/rebalance/*.test.ts src/lib/intel/*.test.ts src/lib/intel/detectors/*.test.ts src/lib/intel/allocation/*.test.ts src/lib/db/*.test.ts src/lib/intel/news/*.test.ts src/lib/intel/research/*.test.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.6.2",

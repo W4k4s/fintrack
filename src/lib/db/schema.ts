@@ -359,6 +359,11 @@ export const intelAssetsTracked = sqliteTable("intel_assets_tracked", {
   closedAt: text("closed_at"),
   closedReason: text("closed_reason"),
 
+  // Strategy V2 Fase 2 — flag auditoría. true cuando el usuario forzó
+  // promote_watching/promote_open pese a que el guardrail de correlación
+  // detectó correlación > 0.8 con algún holding pesando > 10%.
+  overrideCorrWarning: integer("override_corr_warning", { mode: "boolean" }).notNull().default(false),
+
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
 });

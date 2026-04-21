@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import {
+  evaluateCorrelationGuardrail,
+  CORR_THRESHOLD,
+  WEIGHT_PCT_THRESHOLD,
+  type GuardrailDecision,
+} from "@/lib/intel/research/correlation-guardrail";
 
 /**
  * GET /api/intel/research/:id — dossier completo con JSON parseado.
@@ -47,6 +53,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const now = new Date().toISOString();
   let patch: Partial<typeof schema.intelAssetsTracked.$inferInsert> = { updatedAt: now };
+  let guardrail: GuardrailDecision | null = null;
 
   switch (action) {
     case "archive":
@@ -57,17 +64,41 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       if (typeof body.interestReason === "string") patch.interestReason = body.interestReason.slice(0, 500);
       break;
     case "promote_watching":
-      patch = { ...patch, status: "watching" };
-      if (typeof body.thesis === "string") patch.thesis = body.thesis.slice(0, 2000);
-      if (typeof body.entryPlan === "string") patch.entryPlan = body.entryPlan.slice(0, 500);
-      if (typeof body.targetPrice === "number") patch.targetPrice = body.targetPrice;
-      if (typeof body.stopPrice === "number") patch.stopPrice = body.stopPrice;
-      if (typeof body.timeHorizonMonths === "number") patch.timeHorizonMonths = body.timeHorizonMonths;
+    case "promote_open": {
+      // Strategy V2 Fase 2 — correlation guardrail pre-check.
+      // Bloquea si corr 90d > CORR_THRESHOLD con algún holding > WEIGHT_PCT_THRESHOLD.
+      // Override explícito: body.overrideCorrelationWarning = true.
+      guardrail = await evaluateCorrelationGuardrail(row.ticker, {
+        override: body.overrideCorrelationWarning === true,
+      });
+      if (guardrail.outcome === "blocked") {
+        return NextResponse.json(
+          {
+            error: "correlation_guardrail_blocked",
+            hits: guardrail.hits,
+            holdings: guardrail.holdings,
+            thresholds: { corr: CORR_THRESHOLD, weightPct: WEIGHT_PCT_THRESHOLD },
+            hint: "Para forzar, incluir overrideCorrelationWarning=true en el body",
+          },
+          { status: 409 },
+        );
+      }
+      if (action === "promote_watching") {
+        patch = { ...patch, status: "watching" };
+        if (typeof body.thesis === "string") patch.thesis = body.thesis.slice(0, 2000);
+        if (typeof body.entryPlan === "string") patch.entryPlan = body.entryPlan.slice(0, 500);
+        if (typeof body.targetPrice === "number") patch.targetPrice = body.targetPrice;
+        if (typeof body.stopPrice === "number") patch.stopPrice = body.stopPrice;
+        if (typeof body.timeHorizonMonths === "number") patch.timeHorizonMonths = body.timeHorizonMonths;
+      } else {
+        patch = { ...patch, status: "open_position", entryDate: now };
+        if (typeof body.entryPrice === "number") patch.entryPrice = body.entryPrice;
+      }
+      if (guardrail.outcome === "overridden") {
+        patch.overrideCorrWarning = true;
+      }
       break;
-    case "promote_open":
-      patch = { ...patch, status: "open_position", entryDate: now };
-      if (typeof body.entryPrice === "number") patch.entryPrice = body.entryPrice;
-      break;
+    }
     case "retry":
       if (row.status !== "failed") {
         return NextResponse.json({ error: "only failed rows can retry" }, { status: 400 });
@@ -92,7 +123,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     .from(schema.intelAssetsTracked)
     .where(eq(schema.intelAssetsTracked.id, id))
     .limit(1);
-  return NextResponse.json({ ok: true, row: updated });
+  return NextResponse.json({ ok: true, row: updated, guardrail });
 }
 
 function safeParse(s: string): unknown {

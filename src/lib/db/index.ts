@@ -146,6 +146,16 @@ sqlite.exec(
   `CREATE INDEX IF NOT EXISTS idx_intel_tracked_ticker ON intel_assets_tracked(ticker)`,
 );
 
+// Strategy V2 Fase 2 — flag auditoría para bypass del correlation guardrail
+// al promocionar research a watching/open_position. ensureColumn va DESPUÉS
+// del CREATE TABLE IF NOT EXISTS para cubrir tanto deploys nuevos como
+// existentes.
+ensureColumn(
+  "intel_assets_tracked",
+  "override_corr_warning",
+  "override_corr_warning INTEGER NOT NULL DEFAULT 0",
+);
+
 // Strategy V2 Fase 1 — seed idempotente. Solo inserta si el profile no tiene
 // ya filas en strategy_sub_targets, así no pisa ediciones del usuario.
 seedStrategySubTargetsFromFlat(sqlite);

@@ -6,6 +6,7 @@ import { FEEDS } from "../news/feeds";
 import { fetchAllFeeds } from "../news/fetcher";
 import { externalIdFor, persistNewsItems } from "../news/persist-news";
 import { buildAliases, scoreArticle, type ScoredItem } from "../news/score";
+import { collectTrackedAliasAssets } from "../news/tracked-aliases";
 import type { ParsedItem } from "../news/parser";
 
 const SIGNAL_THRESHOLD = 60;
@@ -32,7 +33,11 @@ export const newsFilterDetector: Detector = {
   async run(ctx: DetectorContext): Promise<DetectorSignal[]> {
     const plans = await db.select().from(schema.investmentPlans);
     const enabledAssets = plans.filter((p) => p.enabled).map((p) => p.asset);
-    const aliases = buildAliases(enabledAssets);
+    // Strategy V2 Fase 2 — news también surface para activos en research/
+    // shortlist/watching/open_position. Research en estado `researching`
+    // solo entra con TTL 7d desde requested_at.
+    const trackedTickers = await collectTrackedAliasAssets(ctx.now);
+    const aliases = buildAliases([...enabledAssets, ...trackedTickers]);
 
     const fetches = await fetchAllFeeds(FEEDS);
     const windowKey = dayWindowKey(ctx.now);
