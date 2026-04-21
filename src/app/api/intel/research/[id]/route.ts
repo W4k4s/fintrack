@@ -7,6 +7,7 @@ import {
   WEIGHT_PCT_THRESHOLD,
   type GuardrailDecision,
 } from "@/lib/intel/research/correlation-guardrail";
+import { applyThesisPatch, type ThesisPatch } from "@/lib/intel/research/thesis-patch";
 
 /**
  * GET /api/intel/research/:id — dossier completo con JSON parseado.
@@ -34,7 +35,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 
 /**
  * POST /api/intel/research/:id — acciones de transición de estado.
- * Body: { action: "archive" | "promote_shortlisted" | "promote_watching" | "promote_open" | "retry" }
+ * Body: { action: "archive" | "promote_shortlisted" | "promote_watching" | "promote_open" | "retry" | "close_position" }
  */
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id: idStr } = await ctx.params;
@@ -85,15 +86,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       }
       if (action === "promote_watching") {
         patch = { ...patch, status: "watching" };
-        if (typeof body.thesis === "string") patch.thesis = body.thesis.slice(0, 2000);
-        if (typeof body.entryPlan === "string") patch.entryPlan = body.entryPlan.slice(0, 500);
-        if (typeof body.targetPrice === "number") patch.targetPrice = body.targetPrice;
-        if (typeof body.stopPrice === "number") patch.stopPrice = body.stopPrice;
-        if (typeof body.timeHorizonMonths === "number") patch.timeHorizonMonths = body.timeHorizonMonths;
       } else {
         patch = { ...patch, status: "open_position", entryDate: now };
         if (typeof body.entryPrice === "number") patch.entryPrice = body.entryPrice;
       }
+      // Fase 4: thesis fields editables en ambas acciones para evitar pérdidas
+      // cuando se promociona directo research → open_position sin pasar por watching.
+      applyThesisPatch(patch, body);
       if (guardrail.outcome === "overridden") {
         patch.overrideCorrWarning = true;
       }
@@ -106,6 +105,19 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       patch = { ...patch, status: "researching", failureReason: null };
       // Re-spawn al final (tras actualizar).
       break;
+    case "close_position": {
+      if (row.status !== "open_position" && row.status !== "watching") {
+        return NextResponse.json(
+          { error: "only watching/open_position rows can be closed" },
+          { status: 400 },
+        );
+      }
+      const reason = typeof body.closedReason === "string"
+        ? body.closedReason.slice(0, 500)
+        : "closed_by_user";
+      patch = { ...patch, status: "closed", closedAt: now, closedReason: reason };
+      break;
+    }
     default:
       return NextResponse.json({ error: "invalid action" }, { status: 400 });
   }
@@ -128,4 +140,41 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
 function safeParse(s: string): unknown {
   try { return JSON.parse(s); } catch { return null; }
+}
+
+/**
+ * PATCH /api/intel/research/:id — editar campos de tesis sin cambio de status.
+ * Solo afecta a rows con status IN (watching, open_position). Útil para ajustar
+ * target/stop/horizon sobre una posición ya abierta.
+ */
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id: idStr } = await ctx.params;
+  const id = Number(idStr);
+  if (!Number.isFinite(id)) return NextResponse.json({ error: "invalid id" }, { status: 400 });
+
+  const [row] = await db
+    .select()
+    .from(schema.intelAssetsTracked)
+    .where(eq(schema.intelAssetsTracked.id, id))
+    .limit(1);
+  if (!row) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (row.status !== "watching" && row.status !== "open_position") {
+    return NextResponse.json(
+      { error: "thesis fields only editable for watching/open_position" },
+      { status: 400 },
+    );
+  }
+
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const patch: ThesisPatch = { updatedAt: new Date().toISOString() };
+  applyThesisPatch(patch, body);
+
+  await db.update(schema.intelAssetsTracked).set(patch).where(eq(schema.intelAssetsTracked.id, id));
+
+  const [updated] = await db
+    .select()
+    .from(schema.intelAssetsTracked)
+    .where(eq(schema.intelAssetsTracked.id, id))
+    .limit(1);
+  return NextResponse.json({ ok: true, row: updated });
 }

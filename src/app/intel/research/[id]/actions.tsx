@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -89,6 +90,14 @@ export function ResearchActions({ id, status }: Props) {
               {busy === "promote_open" ? "…" : "→ Posición abierta"}
             </button>
           </>
+        )}
+        {(status === "watching" || status === "open_position") && (
+          <Link
+            href={`/intel/tracked/${id}`}
+            className={`${btn} border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20`}
+          >
+            ✏️ Editar tesis
+          </Link>
         )}
         {status !== "archived" && status !== "closed" && status !== "failed" && (
           <button
