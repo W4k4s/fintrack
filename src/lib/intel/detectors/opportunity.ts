@@ -254,6 +254,7 @@ export const opportunityDetector: Detector = {
         payload: {
           trackedId: row.id,
           ticker: row.ticker,
+          name: row.name,
           subClass: row.subClass,
           status: row.status,
           hits,
@@ -263,6 +264,9 @@ export const opportunityDetector: Detector = {
           entryPrice: row.entryPrice,
           targetPrice: row.targetPrice,
           stopPrice: row.stopPrice,
+          entryPlan: row.entryPlan,
+          thesis: row.thesis,
+          timeHorizonMonths: row.timeHorizonMonths,
           weekKey: windowKey,
         },
         suggestedAction: "review",

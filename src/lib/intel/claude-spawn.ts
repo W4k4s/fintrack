@@ -101,6 +101,42 @@ function buildPrompt(sig: typeof schema.intelSignals.$inferSelect): string {
     );
   }
 
+  if (sig.scope === "opportunity") {
+    const hits = Array.isArray(payload.hits)
+      ? (payload.hits as Array<{ rule: string; detail: Record<string, unknown> }>)
+      : [];
+    const hitsPretty = hits.length > 0
+      ? hits.map((h) => `${h.rule} → ${JSON.stringify(h.detail)}`).join("\n  · ")
+      : "(ninguno)";
+    const thesis = String(payload.thesis ?? "").trim() || "(sin tesis escrita)";
+    const entryPlan = String(payload.entryPlan ?? "").trim() || "(sin entry plan)";
+    lines.push(
+      "",
+      "CONTEXTO OPORTUNIDAD (Strategy V2):",
+      `- ticker: ${payload.ticker ?? sig.asset ?? "-"}`,
+      `- nombre: ${payload.name ?? "-"}`,
+      `- sub-clase V2: ${payload.subClass ?? "?"} (status watching)`,
+      `- precio actual: ${payload.currentPrice ?? "-"} ${payload.priceCurrency ?? ""} (fuente ${payload.priceSource ?? "-"})`,
+      `- niveles tesis: entry ${payload.entryPrice ?? "-"} / target ${payload.targetPrice ?? "-"} / stop ${payload.stopPrice ?? "-"} (SOFT) / horizon ${payload.timeHorizonMonths ?? "-"}m`,
+      `- entry plan: ${entryPlan}`,
+      `- tesis original: ${thesis}`,
+      `- reglas disparadas (${hits.length}):`,
+      `  · ${hitsPretty}`,
+      "",
+      "INSTRUCCIONES ESPECÍFICAS OPPORTUNITY:",
+      "- Esto NO es una recomendación genérica: es un activo que Isma YA decidió vigilar (status=watching) con tesis escrita. Tu trabajo es validar si la ventana de entrada sigue viva o la tesis se ha roto.",
+      "- whats_happening: en 2 frases — qué ha cambiado en el mercado para que disparen estas reglas ahora (no repitas los datos crudos; resume la señal).",
+      "- what_it_means: ¿la tesis sigue vigente o hay red flag? Si el catalizador se ha movido o el contexto macro invalida la tesis, dilo. Si no, confirma.",
+      "- action.headline: decisivo y concreto. Ejemplos: 'Abrir 1er tramo DCA (25% del size)', 'Esperar confirmación cierre diario', 'Descartar: tesis rota, archivar'.",
+      "- action.amount_eur: usa position_size_pct del dossier si está disponible; cap duro 3% del neto por posición thematic_plays. Primer tramo = size/4 en DCA de 4 tramos.",
+      "- suggested_action OBLIGATORIO: buy_accelerate (abrir primer tramo), hold (esperar), review (confirmación adicional), ignore (tesis rota, archivar).",
+      "- Si solo disparó 1 regla y es 'catalyst_near' sin confirmación técnica: severity_adj=med, suggested_action=review.",
+      "- Si ≥2 reglas incluyendo RSI oversold + entry_window: severity_adj=high, suggested_action=buy_accelerate (1er tramo DCA).",
+      "- Si el precio actual está FUERA del rango del entry_plan original pero RSI<30: marca como review con nota 'reevaluar plan, no entrar mecánico'.",
+      "- Nunca recomendar 'all-in'. Siempre DCA en tramos.",
+    );
+  }
+
   lines.push(
     "",
     "Tu trabajo: convertir esta señal en un análisis accionable, que Isma lea y sepa qué hacer en 30 segundos.",
@@ -279,3 +315,5 @@ export async function spawnClaudeForSignal(signalId: number): Promise<void> {
     releaseSpawnSlot();
   }
 }
+
+export const __internal = { buildPrompt };
