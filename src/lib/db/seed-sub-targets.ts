@@ -56,6 +56,15 @@ type ProfileRow = {
   target_stocks: number;
 };
 
+const FLAT_COLUMN_BY_PARENT: Record<ParentClass, keyof Omit<ProfileRow, "id">> = {
+  cash: "target_cash",
+  etfs: "target_etfs",
+  crypto: "target_crypto",
+  gold: "target_gold",
+  bonds: "target_bonds",
+  stocks: "target_stocks",
+};
+
 function splitPreservingInvariant(
   flatPct: number,
   shares: SubShare[],
@@ -71,6 +80,57 @@ function splitPreservingInvariant(
     rounded[0].pct = Math.round((rounded[0].pct + residual) * 100) / 100;
   }
   return rounded;
+}
+
+/**
+ * F1b — inversión de dirección. Recalcula los 6 flat targets de
+ * strategy_profiles como suma de sub-targets por parent_class. Se llama
+ * tras cada PUT en /api/strategy/sub-targets para mantener invariante
+ * exacto. Idempotente.
+ */
+export function recalcFlatFromSubTargets(
+  sqlite: Database.Database,
+  profileId: number,
+): Record<ParentClass, number> {
+  const rows = sqlite
+    .prepare(
+      `SELECT parent_class, target_pct FROM strategy_sub_targets WHERE profile_id = ?`,
+    )
+    .all(profileId) as Array<{ parent_class: ParentClass; target_pct: number }>;
+
+  const byParent: Record<ParentClass, number> = {
+    cash: 0, etfs: 0, crypto: 0, gold: 0, bonds: 0, stocks: 0,
+  };
+  for (const row of rows) {
+    byParent[row.parent_class] = (byParent[row.parent_class] ?? 0) + row.target_pct;
+  }
+  for (const parent of Object.keys(byParent) as ParentClass[]) {
+    byParent[parent] = Math.round(byParent[parent] * 100) / 100;
+  }
+
+  sqlite
+    .prepare(
+      `UPDATE strategy_profiles
+         SET target_cash = ?,
+             target_etfs = ?,
+             target_crypto = ?,
+             target_gold = ?,
+             target_bonds = ?,
+             target_stocks = ?,
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+       WHERE id = ?`,
+    )
+    .run(
+      byParent.cash,
+      byParent.etfs,
+      byParent.crypto,
+      byParent.gold,
+      byParent.bonds,
+      byParent.stocks,
+      profileId,
+    );
+
+  return byParent;
 }
 
 export function seedStrategySubTargetsFromFlat(sqlite: Database.Database): void {
