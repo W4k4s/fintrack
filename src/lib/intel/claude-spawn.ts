@@ -101,6 +101,59 @@ function buildPrompt(sig: typeof schema.intelSignals.$inferSelect): string {
     );
   }
 
+  if (sig.scope.startsWith("thesis_")) {
+    const hitDetail = (payload.hit as Record<string, unknown>) ?? {};
+    const thesis = String(payload.thesis ?? "").trim() || "(sin tesis escrita)";
+    const entryPlan = String(payload.entryPlan ?? "").trim() || "(sin entry plan)";
+    lines.push(
+      "",
+      "CONTEXTO TESIS ABIERTA (Strategy V2):",
+      `- ticker: ${payload.ticker ?? sig.asset ?? "-"}`,
+      `- nombre: ${payload.name ?? "-"}`,
+      `- sub-clase V2: ${payload.subClass ?? "?"} (status open_position)`,
+      `- precio actual: ${payload.currentPrice ?? "-"} ${payload.priceCurrency ?? ""} (fuente ${payload.priceSource ?? "-"})`,
+      `- niveles: entry ${payload.entryPrice ?? "-"} (${payload.entryDate ?? "-"}) / target ${payload.targetPrice ?? "-"} / stop ${payload.stopPrice ?? "-"} (SOFT) / horizon ${payload.timeHorizonMonths ?? "-"}m`,
+      `- entry plan: ${entryPlan}`,
+      `- tesis original: ${thesis}`,
+      `- detalle del hit: ${JSON.stringify(hitDetail)}`,
+      "",
+      "INSTRUCCIONES ESPECÍFICAS TESIS (Strategy V2 SOFT stops):",
+      "- La señal se basa en un nivel que ISMA escribió en la tesis. Tu trabajo es decidir si ejecutar la regla o reevaluarla.",
+      "- Los stops son SOFT: NUNCA propongas ejecutar orden automática en broker. Sólo signal + acción manual.",
+      "- whats_happening: 2 frases cortas: qué nivel se ha cruzado y en qué contexto de mercado (si la info lo permite).",
+      "- what_it_means: ¿la tesis sigue vigente, necesita reescribirse o está rota? Apóyate en el detalle del hit y la tesis original.",
+    );
+
+    if (sig.scope === "thesis_stop_hit") {
+      lines.push(
+        "- action.headline: decisivo — ejemplos 'Cerrar 100% manual en Trade Republic', 'Cerrar 50% y reevaluar', 'Pause: el stop era demasiado cerca, revisar tesis'.",
+        "- suggested_action OBLIGATORIO: sell_partial (o ignore si detectas que el stop estaba mal puesto y la tesis sigue sana).",
+        "- severity_adj: critical si la tesis está rota, high si sólo pinchó por volatilidad y la tesis sobrevive.",
+        "- Recuerda SOFT stop: la señal es decisiva pero la ejecución es manual. NO inventes una orden broker.",
+      );
+    } else if (sig.scope === "thesis_target_hit") {
+      lines.push(
+        "- action.headline: ejemplos 'Cerrar parcial 33% y subir stop a break-even', 'Cerrar 100% — objetivo cumplido', 'Reescribir tesis con target más alto y trailing stop'.",
+        "- suggested_action OBLIGATORIO: sell_partial (por defecto: parcial profit) | hold (trailing) | review.",
+        "- severity_adj: high (default). Si el target era conservador y la tesis acelera, recomendar reescribir y severity=med.",
+      );
+    } else if (sig.scope === "thesis_near_stop") {
+      lines.push(
+        "- EARLY WARNING: el precio aún no ha pinchado el stop. El objetivo es que Isma revise la tesis ANTES de que se active, no cerrar.",
+        "- action.headline: ejemplos 'Revisar tesis este fin de semana', 'Si cierra diario bajo X, considerar cerrar manual'.",
+        "- suggested_action OBLIGATORIO: review | hold. No sell_partial todavía.",
+        "- severity_adj: med por defecto. high solo si el ajuste es inminente (p.ej. earnings en <3d y precio frágil).",
+      );
+    } else if (sig.scope === "thesis_expired") {
+      lines.push(
+        "- El horizonte temporal de la tesis expiró sin que target ni stop se disparasen. Hay que decidir: cerrar, reescribir o aceptar drift.",
+        "- action.headline: ejemplos 'Cerrar 100% — tesis no se materializó', 'Reescribir tesis con horizon +6m + nuevo target', 'Convertir en holding core (fuera de tracking de tesis)'.",
+        "- suggested_action OBLIGATORIO: review | sell_partial (si P&L sugiere cerrar) | ignore (si la pasamos a holding core).",
+        "- severity_adj: med por defecto; low si el P&L es neutro y tiene sentido mantener.",
+      );
+    }
+  }
+
   if (sig.scope === "opportunity") {
     const hits = Array.isArray(payload.hits)
       ? (payload.hits as Array<{ rule: string; detail: Record<string, unknown> }>)

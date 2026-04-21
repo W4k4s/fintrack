@@ -122,5 +122,95 @@ test("buildPrompt genérico (concentration_risk): sin bloque específico", () =>
   );
   assert.doesNotMatch(prompt, /CONTEXTO NOTICIA/);
   assert.doesNotMatch(prompt, /CONTEXTO OPORTUNIDAD/);
+  assert.doesNotMatch(prompt, /CONTEXTO TESIS ABIERTA/);
   assert.match(prompt, /FORMATO DE SALIDA/);
+});
+
+// ---------------------------------------------------------------------------
+// thesis_* — Strategy V2 Fase 4
+// ---------------------------------------------------------------------------
+
+function thesisPayload(overrides: Record<string, unknown> = {}): string {
+  return JSON.stringify({
+    trackedId: 11,
+    ticker: "TTWO",
+    name: "Take-Two Interactive",
+    subClass: "thematic_plays",
+    currentPrice: 85,
+    priceSource: "yahoo",
+    priceCurrency: "USD",
+    entryPrice: 110,
+    entryDate: "2026-01-15T00:00:00Z",
+    targetPrice: 155,
+    stopPrice: 92,
+    timeHorizonMonths: 12,
+    thesis: "GTA6 catalizador fuerte",
+    entryPlan: "DCA 4 tramos semanal < 115",
+    hit: { currentPrice: 85, stopPrice: 92, breachPct: -7.61 },
+    windowKey: "2026-04-21",
+    ...overrides,
+  });
+}
+
+test("buildPrompt thesis_stop_hit: incluye tesis, niveles y SOFT stop reminder", () => {
+  const prompt = buildPrompt(
+    mockSignal({ scope: "thesis_stop_hit", severity: "critical", payload: thesisPayload() }),
+  );
+  assert.match(prompt, /CONTEXTO TESIS ABIERTA/);
+  assert.match(prompt, /ticker: TTWO/);
+  assert.match(prompt, /stop 92/);
+  assert.match(prompt, /SOFT stop/i);
+  assert.match(prompt, /suggested_action OBLIGATORIO: sell_partial/);
+  // prohibición explícita de orden broker automática
+  assert.match(prompt, /NUNCA propongas.*orden automática/i);
+});
+
+test("buildPrompt thesis_target_hit: menciona parcial profit y reescribir", () => {
+  const prompt = buildPrompt(
+    mockSignal({
+      scope: "thesis_target_hit",
+      severity: "high",
+      payload: thesisPayload({ currentPrice: 160, hit: { currentPrice: 160, targetPrice: 155, overshootPct: 3.23 } }),
+    }),
+  );
+  assert.match(prompt, /CONTEXTO TESIS ABIERTA/);
+  assert.match(prompt, /parcial|reescribir/i);
+  assert.match(prompt, /sell_partial.*hold.*review/);
+});
+
+test("buildPrompt thesis_near_stop: marca como EARLY WARNING sin cerrar", () => {
+  const prompt = buildPrompt(
+    mockSignal({
+      scope: "thesis_near_stop",
+      severity: "med",
+      payload: thesisPayload({ currentPrice: 95, hit: { currentPrice: 95, stopPrice: 92, cushionPct: 3.26, thresholdPct: 5 } }),
+    }),
+  );
+  assert.match(prompt, /EARLY WARNING/);
+  assert.match(prompt, /suggested_action OBLIGATORIO: review \| hold/);
+  assert.doesNotMatch(prompt, /sell_partial.*default/);
+});
+
+test("buildPrompt thesis_expired: pide decidir cerrar/reescribir/convertir", () => {
+  const prompt = buildPrompt(
+    mockSignal({
+      scope: "thesis_expired",
+      severity: "med",
+      payload: thesisPayload({
+        hit: { entryDate: "2026-01-15", timeHorizonMonths: 3, deadline: "2026-04-15", daysOverdue: 6 },
+      }),
+    }),
+  );
+  assert.match(prompt, /horizonte temporal/);
+  assert.match(prompt, /cerrar.*reescribir|reescribir.*cerrar/i);
+  // tolera paréntesis explicativos entre las opciones
+  assert.match(prompt, /suggested_action OBLIGATORIO: review \| sell_partial/);
+  assert.match(prompt, /\| ignore/);
+});
+
+test("buildPrompt thesis_*: nunca mezcla con bloque opportunity", () => {
+  const prompt = buildPrompt(
+    mockSignal({ scope: "thesis_stop_hit", severity: "critical", payload: thesisPayload() }),
+  );
+  assert.doesNotMatch(prompt, /CONTEXTO OPORTUNIDAD/);
 });
