@@ -2,6 +2,7 @@ import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { computeAllocation } from "../allocation/compute";
 import { ASSET_CLASSES, type AssetClass } from "../allocation/classify";
+import { aggregateByParent, getSubTargets } from "../allocation/sub-targets";
 import { dedupKey, weekWindowKey } from "../dedup";
 import { estimateRealizedYtdEur } from "../tax/positions";
 import { getEurPerUsd } from "@/lib/currency-rates";
@@ -22,15 +23,6 @@ const CLASS_LABEL: Record<AssetClass, string> = {
   gold: "Gold",
   bonds: "Bonds",
   stocks: "Stocks",
-};
-
-const TARGET_COL: Record<AssetClass, keyof typeof schema.strategyProfiles.$inferSelect> = {
-  cash: "targetCash",
-  crypto: "targetCrypto",
-  etfs: "targetEtfs",
-  gold: "targetGold",
-  bonds: "targetBonds",
-  stocks: "targetStocks",
 };
 
 function severityFor(absDrift: number): Severity | null {
@@ -65,6 +57,23 @@ export const rebalanceDriftDetector: Detector = {
     const allocation = await computeAllocation();
     if (allocation.netWorth <= 0) return [];
 
+    // Strategy V2 Fase 1 — leemos targets vía sub-targets agregados por parent.
+    // Si no hay filas sub (edge case), cae al flat vía helper. Invariante
+    // sum(sub where parent=X) == target_X_flat garantiza comportamiento
+    // idéntico al pre-F1. Inyectamos los agregados en el profile para que el
+    // planner downstream los consuma sin tocar su API.
+    const subTargets = await getSubTargets(profile.id);
+    const flatFromSub = aggregateByParent(subTargets);
+    const effectiveProfile = {
+      ...profile,
+      targetCash: flatFromSub.cash,
+      targetEtfs: flatFromSub.etfs,
+      targetCrypto: flatFromSub.crypto,
+      targetGold: flatFromSub.gold,
+      targetBonds: flatFromSub.bonds,
+      targetStocks: flatFromSub.stocks,
+    };
+
     const windowKey = weekWindowKey(ctx.now);
     const signals: DetectorSignal[] = [];
     let maxSev: Severity = "low";
@@ -72,7 +81,7 @@ export const rebalanceDriftDetector: Detector = {
 
     // ── Signals por clase (granularidad mantenida).
     for (const cls of ASSET_CLASSES) {
-      const target = Number(profile[TARGET_COL[cls]] ?? 0);
+      const target = flatFromSub[cls];
       if (!Number.isFinite(target)) continue;
 
       const actual = allocation.byClass[cls].pct;
@@ -119,6 +128,8 @@ export const rebalanceDriftDetector: Detector = {
 
     if (!anyTriggered) return signals;
 
+
+
     // ── Signal agregado con plan ejecutable (Fase 5).
     try {
       const [assets, accounts, exchanges] = await Promise.all([
@@ -157,7 +168,7 @@ export const rebalanceDriftDetector: Detector = {
 
       const plan = buildRebalancePlan({
         allocation,
-        profile,
+        profile: effectiveProfile,
         positions,
         realizedYtd,
         realizedYtdTraditionalOverrideEur:

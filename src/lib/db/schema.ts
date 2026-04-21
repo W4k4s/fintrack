@@ -78,6 +78,29 @@ export const strategyProfiles = sqliteTable("strategy_profiles", {
   updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
+// Strategy V2 Fase 1 — sub-targets (allocation por sub-clase).
+// cash_yield, etf_core, etf_factor, bonds_infl, gold, crypto_core, crypto_alt,
+// thematic_plays, legacy_hold. parent_class mapea al legacy flat target
+// correspondiente en strategy_profiles para mantener invariante
+// sum(sub where parent=X) == target_X_flat ±0.001.
+export const strategySubTargets = sqliteTable("strategy_sub_targets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  profileId: integer("profile_id").notNull().references(() => strategyProfiles.id, { onDelete: "cascade" }),
+  subClass: text("sub_class", {
+    enum: [
+      "cash_yield", "etf_core", "etf_factor", "bonds_infl", "gold",
+      "crypto_core", "crypto_alt", "thematic_plays", "legacy_hold",
+    ],
+  }).notNull(),
+  parentClass: text("parent_class", {
+    enum: ["cash", "etfs", "crypto", "gold", "bonds", "stocks"],
+  }).notNull(),
+  targetPct: real("target_pct").notNull(),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
 // Strategy goals — financial targets to track
 export const strategyGoals = sqliteTable("strategy_goals", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -351,3 +374,5 @@ export type IntelRebalanceOrder = typeof intelRebalanceOrders.$inferSelect;
 export type NewIntelRebalanceOrder = typeof intelRebalanceOrders.$inferInsert;
 export type IntelAssetTracked = typeof intelAssetsTracked.$inferSelect;
 export type NewIntelAssetTracked = typeof intelAssetsTracked.$inferInsert;
+export type StrategySubTarget = typeof strategySubTargets.$inferSelect;
+export type NewStrategySubTarget = typeof strategySubTargets.$inferInsert;

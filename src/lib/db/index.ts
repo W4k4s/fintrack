@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
 import { mkdirSync } from "fs";
 import { dirname } from "path";
+import { seedStrategySubTargetsFromFlat } from "./seed-sub-targets";
 
 const dbPath = "./data/fintrack.db";
 mkdirSync(dirname(dbPath), { recursive: true });
@@ -71,6 +72,32 @@ sqlite.exec(
   `CREATE INDEX IF NOT EXISTS idx_intel_rebalance_orders_signal ON intel_rebalance_orders(signal_id)`,
 );
 
+// Strategy V2 Fase 1 — strategy_sub_targets.
+// Allocation por sub-clase (cash_yield, etf_core, etf_factor, bonds_infl, gold,
+// crypto_core, crypto_alt, thematic_plays, legacy_hold). Se añade sin tocar
+// strategy_profiles; los 6 targets flat (target_cash/etfs/crypto/gold/bonds/stocks)
+// siguen vivos y deben coincidir con sum(sub where parent=X) ±0.001.
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS strategy_sub_targets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    profile_id INTEGER NOT NULL REFERENCES strategy_profiles(id) ON DELETE CASCADE,
+    sub_class TEXT NOT NULL,
+    parent_class TEXT NOT NULL,
+    target_pct REAL NOT NULL,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  )
+`);
+sqlite.exec(
+  `CREATE UNIQUE INDEX IF NOT EXISTS uq_strategy_sub_targets_profile_sub
+   ON strategy_sub_targets(profile_id, sub_class)`,
+);
+sqlite.exec(
+  `CREATE INDEX IF NOT EXISTS idx_strategy_sub_targets_profile_parent
+   ON strategy_sub_targets(profile_id, parent_class)`,
+);
+
 // Strategy V2 Fase 0 — Research Drawer (intel_assets_tracked).
 // Tabla unificada research + watchlist + theses con state machine.
 sqlite.exec(`
@@ -118,6 +145,10 @@ sqlite.exec(
 sqlite.exec(
   `CREATE INDEX IF NOT EXISTS idx_intel_tracked_ticker ON intel_assets_tracked(ticker)`,
 );
+
+// Strategy V2 Fase 1 — seed idempotente. Solo inserta si el profile no tiene
+// ya filas en strategy_sub_targets, así no pisa ediciones del usuario.
+seedStrategySubTargetsFromFlat(sqlite);
 
 export const db = drizzle(sqlite, { schema });
 export { schema };
