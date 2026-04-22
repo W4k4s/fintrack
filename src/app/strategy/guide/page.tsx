@@ -5,6 +5,7 @@ import {
   ArrowLeft, Calendar, PiggyBank, BookOpen,
   Shield, Zap, AlertTriangle, XCircle, Info,
   Thermometer, Layers, ListChecks, Compass, Bot,
+  Eye, Target,
 } from "lucide-react";
 
 interface StrategyResp {
@@ -216,22 +217,74 @@ function Section({
   );
 }
 
+interface SubTargetRow {
+  subClass: string;
+  parentClass: string;
+  targetPct: number;
+}
+
+// R2-B: Agrupación Core / Satellite / Legacy sobre sub_targets.
+const SUB_GROUP: Record<string, "core" | "satellite" | "legacy"> = {
+  cash_yield: "core",
+  etf_core: "core",
+  etf_factor: "core",
+  bonds_infl: "core",
+  gold: "core",
+  crypto_core: "satellite",
+  crypto_alt: "satellite",
+  thematic_plays: "satellite",
+  legacy_hold: "legacy",
+};
+
+const SUB_LABEL_LONG: Record<string, string> = {
+  cash_yield: "Cash con rendimiento (stablecoin / MMF)",
+  etf_core: "ETF core (MSCI World)",
+  etf_factor: "ETF factor (Momentum / Value / EM)",
+  bonds_infl: "Bonos ligados a inflación",
+  gold: "Oro (ETC)",
+  crypto_core: "Crypto core (BTC)",
+  crypto_alt: "Crypto alt (ETH)",
+  thematic_plays: "Thematic plays (acciones con tesis)",
+  legacy_hold: "Legacy hold (SOL, PEPE — no aportar)",
+};
+
+const GROUP_META: Record<"core" | "satellite" | "legacy", { label: string; tagline: string; color: string }> = {
+  core: {
+    label: "Núcleo",
+    tagline: "Diversificado, mecánico, absorbe la mayor parte del capital.",
+    color: "#10b981",
+  },
+  satellite: {
+    label: "Satélite",
+    tagline: "Posiciones intencionales con tesis escrita y niveles de entrada/salida.",
+    color: "#f59e0b",
+  },
+  legacy: {
+    label: "Legacy",
+    tagline: "Posiciones heredadas que no se aportan; se dejan diluir por inflow.",
+    color: "#71717a",
+  },
+};
+
 // ========== MAIN PAGE ==========
 export default function GuidePage() {
   const [strategy, setStrategy] = useState<StrategyResp | null>(null);
   const [market, setMarket] = useState<Market | null>(null);
   const [health, setHealth] = useState<Health | null>(null);
+  const [subs, setSubs] = useState<SubTargetRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const [s, m, h] = await Promise.all([
+        const [s, m, h, sub] = await Promise.all([
           fetch("/api/strategy").then(r => r.json()),
           fetch("/api/strategy/market").then(r => r.json()),
           fetch("/api/strategy/health").then(r => r.json()),
+          fetch("/api/strategy/sub-targets").then(r => r.json()),
         ]);
         setStrategy(s); setMarket(m); setHealth(h);
+        setSubs(sub.subTargets ?? []);
       } catch (e) { console.error(e); }
       setLoading(false);
     })();
@@ -422,6 +475,50 @@ export default function GuidePage() {
         <div className="bg-zinc-800/30 rounded-xl p-5">
           <AllocationPie targets={targets} />
         </div>
+
+        {/* R2-B: breakdown Core / Satellite / Legacy desde sub-targets */}
+        {subs.length > 0 && (
+          <div className="space-y-3 mt-4">
+            <div className="text-xs uppercase tracking-wider text-zinc-500">Desglose Core + Satellite</div>
+            {(["core", "satellite", "legacy"] as const).map((grp) => {
+              const rows = subs
+                .filter((s) => SUB_GROUP[s.subClass] === grp)
+                .sort((a, b) => b.targetPct - a.targetPct);
+              if (rows.length === 0) return null;
+              const total = rows.reduce((a, r) => a + r.targetPct, 0);
+              const meta = GROUP_META[grp];
+              return (
+                <div key={grp} className="bg-zinc-800/30 rounded-xl p-4 border-l-4" style={{ borderColor: meta.color }}>
+                  <div className="flex items-baseline justify-between mb-1">
+                    <div>
+                      <span className="text-base font-bold text-zinc-100">{meta.label}</span>
+                      <span className="ml-2 text-sm font-semibold" style={{ color: meta.color }}>{total.toFixed(0)}%</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-zinc-400 mb-3">{meta.tagline}</p>
+                  <div className="space-y-1.5">
+                    {rows.map((r) => (
+                      <div key={r.subClass} className="flex items-center gap-2 text-sm">
+                        <div className="flex-1 text-zinc-300">{SUB_LABEL_LONG[r.subClass] ?? r.subClass}</div>
+                        <div className="w-32 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${Math.min(100, (r.targetPct / Math.max(1, total)) * 100)}%`,
+                              backgroundColor: meta.color,
+                            }}
+                          />
+                        </div>
+                        <div className="w-12 text-right font-mono tabular-nums text-zinc-200">{r.targetPct.toFixed(0)}%</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <p>
           Cada clase de activo hace algo distinto. No metas todo en una — si se cae, te arruinas.
           Mezclar te da crecimiento, protección y liquidez a la vez.
@@ -673,6 +770,71 @@ export default function GuidePage() {
         </div>
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-300 mt-4">
           <b>Importante:</b> esta guía es informativa. Para casos complejos (herencia, mudanza fiscal, grandes ventas), consulta un asesor fiscal.
+        </div>
+      </Section>
+
+      {/* R2-D: Sistema Intel */}
+      <Section
+        icon={<Eye className="w-5 h-5" />}
+        title="Sistema Intel — el vigía automático"
+        subtitle="Research, opportunity y thesis watch trabajan en background">
+        <p>
+          FinTrack incluye un sistema <b>Intel</b> que vigila tu cartera y el mercado
+          sin que tengas que mirar gráficos cada día. Tres motores trabajan en paralelo:
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+          <div className="bg-zinc-800/30 rounded-lg p-4 border-l-4 border-blue-500/60">
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen className="w-4 h-4 text-blue-400" />
+              <h3 className="font-semibold text-zinc-100">Research Drawer</h3>
+            </div>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Abres una ficha por ticker. Un agente Claude recoge datos (RSI, fundamentales, correlación con tu cartera, noticias) y emite un verdict: <span className="text-emerald-400">candidate</span>, <span className="text-amber-400">wait</span> o <span className="text-red-400">archive</span>. Lo usas para decidir si promover a watchlist.
+            </p>
+            <Link href="/intel/research" className="inline-block mt-3 text-xs text-blue-400 hover:underline">
+              Ir a /intel/research →
+            </Link>
+          </div>
+
+          <div className="bg-zinc-800/30 rounded-lg p-4 border-l-4 border-amber-500/60">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="w-4 h-4 text-amber-400" />
+              <h3 className="font-semibold text-zinc-100">Opportunity detector</h3>
+            </div>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Una vez que un ticker está en watchlist, el detector dispara señales cuando cumple reglas objetivas: precio dentro de la ventana de entrada, RSI sobrevendido, sub-clase infraponderada o catalizador próximo.
+            </p>
+            <p className="text-xs text-zinc-500 italic mt-2">
+              Severity <b>med</b> = 1 regla, <b>high</b> = 2+ reglas alineadas.
+            </p>
+          </div>
+
+          <div className="bg-zinc-800/30 rounded-lg p-4 border-l-4 border-red-500/60">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-4 h-4 text-red-400" />
+              <h3 className="font-semibold text-zinc-100">Thesis watch</h3>
+            </div>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Si tienes la posición abierta, Intel vigila los niveles escritos al abrirla:
+              <span className="text-red-400"> 🛑 stop hit</span>,
+              <span className="text-amber-400"> ⚠️ near stop</span>,
+              <span className="text-emerald-400"> 🎯 target hit</span>,
+              <span className="text-zinc-400"> ⏳ tesis caducada</span>.
+              Todos los stops son SOFT — emite señal, nunca lanza orden sola al broker.
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-zinc-800/30 rounded-xl p-4 mt-4 text-sm">
+          <div className="text-xs uppercase tracking-wider text-zinc-500 mb-2">Flujo típico</div>
+          <ol className="space-y-1.5 text-zinc-300 list-decimal list-inside">
+            <li>Se te ocurre un ticker → POST a <code className="text-xs bg-zinc-900 px-1 rounded">/intel/research</code>.</li>
+            <li>Claude rellena dossier en 1-2 min → revisas y promueves a <b>watching</b> con entry/target/stop/horizon.</li>
+            <li>Opportunity detector vigila precio y dispara señal cuando entre en la ventana.</li>
+            <li>Si abres la posición → <b>open_position</b>, y thesis_watch empieza a vigilar stops/target.</li>
+            <li>Cierre al hit, al stop, o al expirar → status <b>closed</b>, se archiva con el verdict final.</li>
+          </ol>
         </div>
       </Section>
 

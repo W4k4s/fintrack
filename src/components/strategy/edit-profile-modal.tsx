@@ -6,6 +6,82 @@ import {
   type ParentTab, type StrategyProfile, type SubTargetForm,
 } from "./types";
 
+// R2-A: edición estructurada de policies sin JSON raw.
+interface PoliciesForm {
+  cryptoPauseAbovePct: number;
+  cryptoBtcOnlyLow: number;
+  cryptoBtcOnlyHigh: number;
+  cryptoFullBelowPct: number;
+  multFgThreshold: number;
+  multAppliesTo: string; // CSV en UI ("BTC, ETH") — se splitea al guardar
+  multRequiresCryptoUnderPct: number;
+  themMaxPositionPct: number;
+  themMaxOpen: number;
+}
+
+const DEFAULT_POLICIES_FORM: PoliciesForm = {
+  cryptoPauseAbovePct: 17,
+  cryptoBtcOnlyLow: 15,
+  cryptoBtcOnlyHigh: 17,
+  cryptoFullBelowPct: 15,
+  multFgThreshold: 24,
+  multAppliesTo: "BTC",
+  multRequiresCryptoUnderPct: 17,
+  themMaxPositionPct: 3,
+  themMaxOpen: 4,
+};
+
+function parseExistingPolicies(raw: string | null): PoliciesForm {
+  if (!raw) return DEFAULT_POLICIES_FORM;
+  try {
+    const p = JSON.parse(raw);
+    return {
+      cryptoPauseAbovePct: p.crypto?.pauseAbovePct ?? 17,
+      cryptoBtcOnlyLow: p.crypto?.btcOnlyBetween?.[0] ?? 15,
+      cryptoBtcOnlyHigh: p.crypto?.btcOnlyBetween?.[1] ?? 17,
+      cryptoFullBelowPct: p.crypto?.fullBelowPct ?? 15,
+      multFgThreshold: p.multiplier?.fgThreshold ?? 24,
+      multAppliesTo: (p.multiplier?.appliesTo ?? ["BTC"]).join(", "),
+      multRequiresCryptoUnderPct: p.multiplier?.requiresCryptoUnderPct ?? 17,
+      themMaxPositionPct: p.thematic?.maxPositionPct ?? 3,
+      themMaxOpen: p.thematic?.maxOpen ?? 4,
+    };
+  } catch {
+    return DEFAULT_POLICIES_FORM;
+  }
+}
+
+function serializeFormPolicies(f: PoliciesForm): string {
+  return JSON.stringify({
+    crypto: {
+      pauseAbovePct: f.cryptoPauseAbovePct,
+      btcOnlyBetween: [f.cryptoBtcOnlyLow, f.cryptoBtcOnlyHigh],
+      fullBelowPct: f.cryptoFullBelowPct,
+    },
+    multiplier: {
+      fgThreshold: f.multFgThreshold,
+      appliesTo: f.multAppliesTo.split(",").map((s) => s.trim()).filter(Boolean),
+      requiresCryptoUnderPct: f.multRequiresCryptoUnderPct,
+    },
+    thematic: {
+      maxPositionPct: f.themMaxPositionPct,
+      maxOpen: f.themMaxOpen,
+      requireThesisFields: ["entryPrice", "targetPrice", "stopPrice", "timeHorizonMonths"],
+    },
+  });
+}
+
+function validateFormPolicies(f: PoliciesForm): string | null {
+  if (f.cryptoBtcOnlyLow >= f.cryptoBtcOnlyHigh) return "BTC-only: low debe ser < high";
+  if (f.multAppliesTo.trim().length === 0) return "multiplier.appliesTo: al menos 1 asset";
+  if (!Number.isInteger(f.themMaxOpen) || f.themMaxOpen < 0) return "thematic.maxOpen: entero >= 0";
+  for (const field of ["cryptoPauseAbovePct", "cryptoFullBelowPct", "multFgThreshold", "multRequiresCryptoUnderPct", "themMaxPositionPct"] as const) {
+    const v = f[field];
+    if (typeof v !== "number" || v < 0 || v > 100) return `${field} debe estar entre 0 y 100`;
+  }
+  return null;
+}
+
 export function EditProfileModal({
   profile, onClose, onSave,
 }: {
@@ -23,9 +99,11 @@ export function EditProfileModal({
     philosophy: profile.philosophy ?? "",
     monthlyFixedExpenses: profile.monthlyFixedExpenses ?? 0,
   });
+  const [policies, setPolicies] = useState<PoliciesForm>(() => parseExistingPolicies(profile.policiesJson));
   const [subTargets, setSubTargets] = useState<SubTargetForm[]>([]);
   const [activeTab, setActiveTab] = useState<ParentTab>("cash");
   const [loading, setLoading] = useState(true);
+  const [showPolicies, setShowPolicies] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -60,7 +138,11 @@ export function EditProfileModal({
     return placeholder;
   };
 
-  const canSave = Math.abs(total - 100) <= 0.01;
+  const policiesError = validateFormPolicies(policies);
+  const canSave = Math.abs(total - 100) <= 0.01 && policiesError == null;
+
+  const updatePolicy = <K extends keyof PoliciesForm>(key: K, value: PoliciesForm[K]) =>
+    setPolicies((prev) => ({ ...prev, [key]: value }));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
@@ -124,11 +206,76 @@ export function EditProfileModal({
             </div>
           </div>
 
+          {/* Policies (colapsable) */}
+          <div className="border border-border-strong rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowPolicies(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium bg-elevated hover:bg-elevated/70"
+            >
+              <span>Policies (crypto / multiplicador F&G / thematic plays)</span>
+              <span className="text-xs text-muted-foreground">{showPolicies ? "ocultar" : "mostrar"}</span>
+            </button>
+            {showPolicies && (
+              <div className="p-4 space-y-4 bg-card">
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Crypto transition</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <LabeledNumber label="Pausa total si ≥" suffix="%"
+                      value={policies.cryptoPauseAbovePct}
+                      onChange={(v) => updatePolicy("cryptoPauseAbovePct", v)} />
+                    <LabeledNumber label="BTC-only low ≥" suffix="%"
+                      value={policies.cryptoBtcOnlyLow}
+                      onChange={(v) => updatePolicy("cryptoBtcOnlyLow", v)} />
+                    <LabeledNumber label="BTC-only high <" suffix="%"
+                      value={policies.cryptoBtcOnlyHigh}
+                      onChange={(v) => updatePolicy("cryptoBtcOnlyHigh", v)} />
+                    <LabeledNumber label="Full-crypto si <" suffix="%"
+                      value={policies.cryptoFullBelowPct}
+                      onChange={(v) => updatePolicy("cryptoFullBelowPct", v)} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Multiplicador F&G</div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    <LabeledNumber label="FG threshold ≤" value={policies.multFgThreshold}
+                      onChange={(v) => updatePolicy("multFgThreshold", v)} />
+                    <LabeledNumber label="Requiere crypto <" suffix="%"
+                      value={policies.multRequiresCryptoUnderPct}
+                      onChange={(v) => updatePolicy("multRequiresCryptoUnderPct", v)} />
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Aplica a (CSV)</label>
+                      <input type="text" value={policies.multAppliesTo}
+                        onChange={(e) => updatePolicy("multAppliesTo", e.target.value)}
+                        placeholder="BTC, ETH"
+                        className="w-full px-3 py-2 bg-elevated border border-border-strong rounded-lg text-sm focus:outline-none focus:border-success/50" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Thematic plays</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <LabeledNumber label="Max position" suffix="%" value={policies.themMaxPositionPct}
+                      onChange={(v) => updatePolicy("themMaxPositionPct", v)} />
+                    <LabeledNumber label="Max abiertas" value={policies.themMaxOpen}
+                      onChange={(v) => updatePolicy("themMaxOpen", v)} />
+                  </div>
+                </div>
+
+                {policiesError && (
+                  <div className="text-xs text-danger">⚠ {policiesError}</div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs text-muted-foreground">Allocation por sub-clase (suma = 100%)</label>
-              <span className={`text-xs font-mono tabular-nums ${canSave ? "text-success" : "text-danger"}`}>
-                Total {total.toFixed(2)}% {canSave ? "✓" : "(debe ser 100 ±0.01)"}
+              <span className={`text-xs font-mono tabular-nums ${Math.abs(total - 100) <= 0.01 ? "text-success" : "text-danger"}`}>
+                Total {total.toFixed(2)}% {Math.abs(total - 100) <= 0.01 ? "✓" : "(debe ser 100 ±0.01)"}
               </span>
             </div>
 
@@ -191,6 +338,7 @@ export function EditProfileModal({
                   tagline: meta.tagline.trim() || null,
                   philosophy: meta.philosophy.trim() || null,
                   monthlyFixedExpenses: meta.monthlyFixedExpenses,
+                  policiesJson: serializeFormPolicies(policies),
                 },
                 subTargets,
               })
@@ -200,6 +348,28 @@ export function EditProfileModal({
             Guardar cambios
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function LabeledNumber({
+  label, value, onChange, suffix,
+}: {
+  label: string; value: number; onChange: (v: number) => void; suffix?: string;
+}) {
+  return (
+    <div>
+      <label className="text-xs text-muted-foreground mb-1 block">{label}</label>
+      <div className="flex items-center gap-1">
+        <input
+          type="number"
+          step="0.01"
+          value={value}
+          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          className="flex-1 px-3 py-2 bg-elevated border border-border-strong rounded-lg text-sm text-right tabular-nums font-mono focus:outline-none focus:border-success/50"
+        />
+        {suffix && <span className="text-xs text-muted-foreground w-4">{suffix}</span>}
       </div>
     </div>
   );

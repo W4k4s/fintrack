@@ -20,6 +20,7 @@ import { AutoPlanModal } from "@/components/strategy/auto-plan-modal";
 import { EditProfileModal } from "@/components/strategy/edit-profile-modal";
 import { AddGoalModal } from "@/components/strategy/add-goal-modal";
 import { StrategySkeleton } from "@/components/strategy/strategy-skeleton";
+import { WatchlistCard } from "@/components/strategy/watchlist-card";
 import type {
   DcaPlan, HealthData, MarketData, ScheduleData, StrategyData, StrategyProfile, SubTargetForm,
 } from "@/components/strategy/types";
@@ -177,6 +178,8 @@ export default function StrategyPage() {
         <GoalsStack goals={goalsWithProgress} onToggle={handleToggleGoal} onAdd={() => setShowAddGoal(true)} />
         <AllocationRing allocation={allocation} />
       </div>
+
+      <WatchlistCard />
 
       <Collapsible
         title="Planes DCA"
