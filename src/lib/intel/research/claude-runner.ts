@@ -11,7 +11,7 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { db, schema } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { buildResearchContext, formatMarketData } from "./context-builder";
 
 const CLAUDE_BIN = process.env.CLAUDE_BIN || "claude";
@@ -44,6 +44,36 @@ function loadSystemPrompt(): string {
   const p = path.join(process.cwd(), "src/lib/intel/research/prompts/research-system.txt");
   cachedSystemPrompt = fs.readFileSync(p, "utf8");
   return cachedSystemPrompt;
+}
+
+/**
+ * Finaliza un research: guarda campos derivados SIEMPRE y transiciona status solo
+ * si el row sigue en "researching". Evita revertir un promote_watching/open_position
+ * hecho por el usuario mientras Claude procesaba.
+ *
+ * Exportado solo para tests; producción lo usa via los call sites del runner.
+ */
+export async function finalizeResearch(
+  researchId: number,
+  fieldUpdates: Partial<typeof schema.intelAssetsTracked.$inferInsert>,
+  newStatus: "researched" | "failed",
+): Promise<void> {
+  const now = new Date().toISOString();
+  if (Object.keys(fieldUpdates).length > 0) {
+    await db
+      .update(schema.intelAssetsTracked)
+      .set({ ...fieldUpdates, updatedAt: now })
+      .where(eq(schema.intelAssetsTracked.id, researchId));
+  }
+  await db
+    .update(schema.intelAssetsTracked)
+    .set({ status: newStatus, updatedAt: now })
+    .where(
+      and(
+        eq(schema.intelAssetsTracked.id, researchId),
+        eq(schema.intelAssetsTracked.status, "researching"),
+      ),
+    );
 }
 
 function extractJson(raw: string): Record<string, unknown> | null {
@@ -92,10 +122,7 @@ async function runClaude(prompt: string): Promise<string> {
 export async function spawnClaudeForResearch(researchId: number): Promise<void> {
   if (Date.now() < circuitOpenUntil) {
     console.warn(`[research] circuit open, skip id=${researchId}`);
-    await db
-      .update(schema.intelAssetsTracked)
-      .set({ status: "failed", failureReason: "circuit_open", updatedAt: new Date().toISOString() })
-      .where(eq(schema.intelAssetsTracked.id, researchId));
+    await finalizeResearch(researchId, { failureReason: "circuit_open" }, "failed");
     return;
   }
 
@@ -111,14 +138,11 @@ export async function spawnClaudeForResearch(researchId: number): Promise<void> 
   try {
     const ctx = await buildResearchContext(row.ticker);
     if (!ctx.priceHistory || (ctx.priceHistory.points.length < 30)) {
-      await db
-        .update(schema.intelAssetsTracked)
-        .set({
-          status: "failed",
-          failureReason: `insufficient_price_data: ${ctx.fetchErrors.join("; ") || "unknown"}`,
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(schema.intelAssetsTracked.id, researchId));
+      await finalizeResearch(
+        researchId,
+        { failureReason: `insufficient_price_data: ${ctx.fetchErrors.join("; ") || "unknown"}` },
+        "failed",
+      );
       return;
     }
 
@@ -150,19 +174,18 @@ export async function spawnClaudeForResearch(researchId: number): Promise<void> 
       ? String(parsed.what_is_it).split(/[.!?]/)[0].slice(0, 120)
       : row.name;
 
-    await db
-      .update(schema.intelAssetsTracked)
-      .set({
+    await finalizeResearch(
+      researchId,
+      {
         dossierJson: JSON.stringify(parsed),
         technicalSnapshotJson: ctx.technical ? JSON.stringify(ctx.technical) : null,
         verdict,
         subClass,
         name,
         researchedAt: new Date().toISOString(),
-        status: "researched", // dossier listo, pendiente de decisión del usuario
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(schema.intelAssetsTracked.id, researchId));
+      },
+      "researched",
+    );
 
     consecutiveFailures = 0;
   } catch (err) {
@@ -172,10 +195,7 @@ export async function spawnClaudeForResearch(researchId: number): Promise<void> 
       console.error(`[research] circuit OPEN (30m) after ${consecutiveFailures} fails`);
     }
     const reason = (err as Error).message.slice(0, 500);
-    await db
-      .update(schema.intelAssetsTracked)
-      .set({ status: "failed", failureReason: reason, updatedAt: new Date().toISOString() })
-      .where(eq(schema.intelAssetsTracked.id, researchId));
+    await finalizeResearch(researchId, { failureReason: reason }, "failed");
     console.error(`[research] spawn failed for id=${researchId}:`, err);
   } finally {
     release();
