@@ -1,26 +1,28 @@
 import Link from "next/link";
 import { and, desc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
+import { Newspaper } from "lucide-react";
 import { db, schema } from "@/lib/db";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const dynamic = "force-dynamic";
 
-const TIER_ICON: Record<number, string> = { 1: "🏛️", 2: "📰", 3: "📡" };
+const TIER_LABEL: Record<number, string> = { 1: "Tier 1", 2: "Tier 2", 3: "Tier 3" };
+const TIER_STYLE: Record<number, string> = {
+  1: "bg-success-soft text-success border-success/30",
+  2: "bg-info-soft text-info border-info/30",
+  3: "bg-elevated text-muted-foreground border-border",
+};
 const SOURCE_TIER: Record<string, number> = {
-  ecb: 1,
-  fed: 1,
-  bloomberg: 1,
-  ft: 1,
-  coindesk: 2,
-  theblock: 2,
-  cointelegraph: 3,
-  decrypt: 3,
+  ecb: 1, fed: 1, bloomberg: 1, ft: 1,
+  coindesk: 2, theblock: 2,
+  cointelegraph: 3, decrypt: 3,
 };
 
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: "bg-red-500/15 text-red-400 border-red-500/30",
-  high: "bg-orange-500/15 text-orange-400 border-orange-500/30",
-  med: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
-  low: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
+const SEVERITY_BADGE: Record<string, string> = {
+  critical: "bg-danger-soft text-danger border-danger/30",
+  high: "bg-warn-soft text-warn border-warn/30",
+  med: "bg-info-soft text-info border-info/30",
+  low: "bg-elevated text-muted-foreground border-border",
 };
 
 interface SearchParams {
@@ -45,15 +47,9 @@ export default async function IntelNewsPage({
 
   const cutoff = new Date(Date.now() - days * 86_400_000).toISOString();
   const conditions = [gte(schema.intelNewsItems.publishedAt, cutoff)];
-  if (sources && sources.length > 0) {
-    conditions.push(inArray(schema.intelNewsItems.source, sources));
-  }
-  if (scoreMin != null && Number.isFinite(scoreMin)) {
-    conditions.push(gte(schema.intelNewsItems.rawScore, scoreMin));
-  }
-  if (onlyWithSignal) {
-    conditions.push(isNotNull(schema.intelNewsItems.signalId));
-  }
+  if (sources && sources.length > 0) conditions.push(inArray(schema.intelNewsItems.source, sources));
+  if (scoreMin != null && Number.isFinite(scoreMin)) conditions.push(gte(schema.intelNewsItems.rawScore, scoreMin));
+  if (onlyWithSignal) conditions.push(isNotNull(schema.intelNewsItems.signalId));
 
   const whereExpr = and(...conditions);
 
@@ -87,20 +83,18 @@ export default async function IntelNewsPage({
   const distinctSources = [...new Set(rowsRaw.map((r) => r.source))].sort();
 
   return (
-    <div className="px-6 py-6 max-w-6xl mx-auto">
+    <div className="px-4 md:px-6 py-6 max-w-6xl mx-auto">
       <div className="mb-4 flex items-center gap-3 text-sm">
-        <Link href="/intel" className="text-muted-foreground hover:text-foreground">
-          ← Intel
-        </Link>
+        <Link href="/intel" className="text-muted-foreground hover:text-foreground">← Intel</Link>
         <span className="text-muted-foreground">/</span>
         <span className="font-medium">Noticias</span>
       </div>
 
       <header className="mb-6 flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Noticias procesadas</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Noticias procesadas</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            RSS tier 1–3 • últimos {days} días • {rows.length} de {Number(totalAll)} items
+            RSS tier 1–3 · últimos {days} días · <span className="tabular-nums">{rows.length}</span> de <span className="tabular-nums">{Number(totalAll)}</span> items
           </p>
         </div>
       </header>
@@ -115,88 +109,97 @@ export default async function IntelNewsPage({
       />
 
       {rows.length === 0 ? (
-        <div className="border border-dashed border-border rounded-xl p-12 text-center mt-6">
-          <div className="text-sm text-muted-foreground">
-            Sin noticias que cumplan los filtros.
-          </div>
+        <div className="mt-6">
+          <EmptyState
+            icon={<Newspaper className="w-5 h-5" />}
+            title="Sin noticias con esos filtros"
+            description="Relaja el score mínimo, amplía la ventana de días o prueba otra fuente."
+          />
         </div>
       ) : (
-        <div className="mt-4 border border-border rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--hover-bg)] text-xs text-muted-foreground uppercase">
-              <tr>
-                <th className="text-left px-3 py-2 font-medium">Estado</th>
-                <th className="text-left px-3 py-2 font-medium">Fuente</th>
-                <th className="text-left px-3 py-2 font-medium">Título</th>
-                <th className="text-left px-3 py-2 font-medium">Assets</th>
-                <th className="text-right px-3 py-2 font-medium">Score</th>
-                <th className="text-right px-3 py-2 font-medium">Publicada</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {rows.map((r) => {
-                const tier = SOURCE_TIER[r.source] ?? 3;
-                return (
-                  <tr key={r.id} className="hover:bg-[var(--hover-bg)] transition-colors">
-                    <td className="px-3 py-2 align-top">
-                      {r.signalId ? (
-                        <Link
-                          href={`/intel/${r.signalId}`}
-                          className={`inline-block text-[10px] uppercase font-semibold px-2 py-0.5 rounded border ${
-                            SEVERITY_COLORS[r.signalSeverity ?? "low"]
-                          }`}
-                        >
-                          {r.signalSeverity ?? "signal"}
-                        </Link>
-                      ) : (
-                        <span className="text-[10px] uppercase text-muted-foreground">
-                          descartada
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 align-top whitespace-nowrap">
-                      <span>{TIER_ICON[tier] ?? "•"}</span>{" "}
-                      <span className="font-mono text-xs">{r.source}</span>
-                    </td>
-                    <td className="px-3 py-2 align-top">
-                      <a
-                        href={r.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        {r.title}
-                      </a>
-                    </td>
-                    <td className="px-3 py-2 align-top whitespace-nowrap">
-                      {r.assets.length === 0 ? (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      ) : (
-                        r.assets.slice(0, 3).map((a) => (
-                          <span
-                            key={a}
-                            className="inline-block text-[10px] mr-1 px-1.5 py-0.5 rounded bg-accent/10 text-accent"
-                          >
-                            {a}
-                          </span>
-                        ))
-                      )}
-                    </td>
-                    <td className="px-3 py-2 align-top text-right font-mono text-xs">
-                      {r.rawScore != null ? Math.round(r.rawScore) : "—"}
-                    </td>
-                    <td className="px-3 py-2 align-top text-right text-xs text-muted-foreground whitespace-nowrap">
-                      {relativeTime(r.publishedAt)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {rows.map((r) => {
+            const tier = SOURCE_TIER[r.source] ?? 3;
+            const faviconUrl = getFaviconUrl(r.url);
+            return (
+              <article
+                key={r.id}
+                className="group rounded-xl border border-border bg-card hover:border-border-strong transition-colors p-4 flex flex-col gap-3"
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`inline-flex items-center gap-1.5 text-[10px] uppercase font-semibold px-2 py-0.5 rounded border tabular-nums ${TIER_STYLE[tier]}`}>
+                    {TIER_LABEL[tier]}
+                  </span>
+                  {r.signalId && r.signalSeverity && (
+                    <Link
+                      href={`/intel/${r.signalId}`}
+                      className={`inline-flex items-center text-[10px] uppercase font-semibold px-2 py-0.5 rounded border ${SEVERITY_BADGE[r.signalSeverity]} hover:opacity-80 transition-opacity`}
+                    >
+                      signal · {r.signalSeverity}
+                    </Link>
+                  )}
+                  <span className="text-[11px] text-muted-foreground tabular-nums ml-auto">{relativeTime(r.publishedAt)}</span>
+                </div>
+
+                <a
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 group-hover:underline"
+                >
+                  <h2 className="font-display text-lg md:text-xl leading-snug text-foreground">
+                    {r.title}
+                  </h2>
+                </a>
+
+                <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {faviconUrl && (
+                      <span
+                        className="w-4 h-4 rounded shrink-0 bg-no-repeat bg-center bg-contain bg-elevated"
+                        style={{ backgroundImage: `url(${faviconUrl})` }}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <span className="font-mono text-[11px] text-muted-foreground truncate">{r.source}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {r.rawScore != null && (
+                      <span className="font-mono text-[10px] text-muted-foreground tabular-nums">score {Math.round(r.rawScore)}</span>
+                    )}
+                  </div>
+                </div>
+
+                {r.assets.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {r.assets.slice(0, 4).map((a) => (
+                      <span key={a} className="text-[10px] px-1.5 py-0.5 rounded bg-info-soft text-info font-medium">
+                        {a}
+                      </span>
+                    ))}
+                    {r.assets.length > 4 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-elevated text-muted-foreground">
+                        +{r.assets.length - 4}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
       )}
     </div>
   );
+}
+
+function getFaviconUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`;
+  } catch {
+    return null;
+  }
 }
 
 function parseAssets(raw: string | null): string[] {
@@ -239,11 +242,7 @@ function Filters({
     <form className="flex items-end gap-3 flex-wrap border border-border rounded-xl p-3 bg-card">
       <div className="flex flex-col gap-1">
         <label className="text-[10px] uppercase text-muted-foreground tracking-wide">Días</label>
-        <select
-          name="days"
-          defaultValue={days}
-          className="bg-[var(--hover-bg)] border border-border rounded px-2 py-1 text-sm"
-        >
+        <select name="days" defaultValue={days} className="bg-elevated border border-border rounded px-2 py-1 text-sm">
           <option value={1}>1</option>
           <option value={3}>3</option>
           <option value={7}>7</option>
@@ -251,73 +250,36 @@ function Filters({
           <option value={30}>30</option>
         </select>
       </div>
-
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] uppercase text-muted-foreground tracking-wide">
-          Score mín.
-        </label>
+        <label className="text-[10px] uppercase text-muted-foreground tracking-wide">Score mín.</label>
         <input
-          type="number"
-          name="score_min"
-          defaultValue={scoreMin ?? ""}
-          min={0}
-          max={100}
-          step={5}
-          placeholder="0"
-          className="bg-[var(--hover-bg)] border border-border rounded px-2 py-1 text-sm w-20"
+          type="number" name="score_min" defaultValue={scoreMin ?? ""}
+          min={0} max={100} step={5} placeholder="0"
+          className="bg-elevated border border-border rounded px-2 py-1 text-sm w-20 tabular-nums"
         />
       </div>
-
       <div className="flex flex-col gap-1">
         <label className="text-[10px] uppercase text-muted-foreground tracking-wide">Asset</label>
         <input
-          type="text"
-          name="asset"
-          defaultValue={asset}
-          placeholder="BTC, ETH..."
-          className="bg-[var(--hover-bg)] border border-border rounded px-2 py-1 text-sm w-24 uppercase"
+          type="text" name="asset" defaultValue={asset} placeholder="BTC, ETH..."
+          className="bg-elevated border border-border rounded px-2 py-1 text-sm w-24 uppercase"
         />
       </div>
-
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] uppercase text-muted-foreground tracking-wide">
-          Fuente
-        </label>
-        <select
-          name="source"
-          defaultValue={currentSources[0] ?? ""}
-          className="bg-[var(--hover-bg)] border border-border rounded px-2 py-1 text-sm"
-        >
+        <label className="text-[10px] uppercase text-muted-foreground tracking-wide">Fuente</label>
+        <select name="source" defaultValue={currentSources[0] ?? ""} className="bg-elevated border border-border rounded px-2 py-1 text-sm">
           <option value="">todas</option>
-          {availableSources.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
+          {availableSources.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
-
       <label className="flex items-center gap-2 text-xs text-muted-foreground mb-1 cursor-pointer">
-        <input
-          type="checkbox"
-          name="only_with_signal"
-          value="true"
-          defaultChecked={onlyWithSignal}
-          className="accent-accent"
-        />
+        <input type="checkbox" name="only_with_signal" value="true" defaultChecked={onlyWithSignal} className="accent-info" />
         Solo con signal
       </label>
-
-      <button
-        type="submit"
-        className="px-3 py-1.5 rounded bg-accent/15 text-accent text-sm font-medium hover:bg-accent/25 transition-colors"
-      >
+      <button type="submit" className="px-3 py-1.5 rounded bg-info-soft text-info text-sm font-medium hover:opacity-90 transition-opacity">
         Aplicar
       </button>
-      <Link
-        href="/intel/news"
-        className="px-3 py-1.5 rounded border border-border text-sm text-muted-foreground hover:text-foreground"
-      >
+      <Link href="/intel/news" className="px-3 py-1.5 rounded border border-border text-sm text-muted-foreground hover:text-foreground">
         Limpiar
       </Link>
     </form>
