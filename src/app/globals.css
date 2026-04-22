@@ -80,21 +80,22 @@
   --border-color: #23232b;
   --border-strong: #35353f;
   --muted-color: #a1a1aa;
-  --muted-fg: #71717a;
+  --muted-fg: #9090a0;
   --hover-bg: rgba(255,255,255,0.045);
 
-  /* Semantic (dark) */
+  /* Semantic (dark) — fg is the *text color when placed on the solid variant*.
+     Solid variants are bright for accent, so foregrounds must be dark to meet AA. */
   --success:      #34d399;
-  --success-fg:   #ecfdf5;
+  --success-fg:   #052e1c;
   --success-soft: rgba(52, 211, 153, 0.12);
   --warn:         #fbbf24;
-  --warn-fg:      #fffbeb;
+  --warn-fg:      #3a2a00;
   --warn-soft:    rgba(251, 191, 36, 0.13);
   --danger:       #f87171;
-  --danger-fg:    #fef2f2;
+  --danger-fg:    #450a0a;
   --danger-soft:  rgba(248, 113, 113, 0.14);
   --info:         #60a5fa;
-  --info-fg:      #eff6ff;
+  --info-fg:      #0a1e3f;
   --info-soft:    rgba(96, 165, 250, 0.13);
 
   /* Chart palette — legible on dark, semantic-neutral */
@@ -120,7 +121,7 @@
   --border-color: #e7e7e0;
   --border-strong: #d4d4cc;
   --muted-color: #52525b;
-  --muted-fg: #71717a;
+  --muted-fg: #5a5a63;
   --hover-bg: rgba(0,0,0,0.035);
 
   /* Semantic (light) — darkened for contrast on paper */

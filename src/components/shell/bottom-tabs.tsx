@@ -39,7 +39,7 @@ export function BottomTabs() {
                   <div className="relative">
                     <Icon className="w-[22px] h-[22px]" />
                     {badge > 0 && (
-                      <span className="absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-danger text-[9px] font-semibold leading-[16px] text-center text-white">
+                      <span aria-hidden="true" className="absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-danger text-[9px] font-semibold leading-[16px] text-center text-danger-foreground">
                         {badge > 99 ? "99+" : badge}
                       </span>
                     )}

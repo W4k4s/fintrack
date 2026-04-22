@@ -241,8 +241,8 @@ function Filters({
   return (
     <form className="flex items-end gap-3 flex-wrap border border-border rounded-xl p-3 bg-card">
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] uppercase text-muted-foreground tracking-wide">Días</label>
-        <select name="days" defaultValue={days} className="bg-elevated border border-border rounded px-2 py-1 text-sm">
+        <label htmlFor="news-f-days" className="text-[10px] uppercase text-muted-foreground tracking-wide">Días</label>
+        <select id="news-f-days" name="days" defaultValue={days} className="bg-elevated border border-border rounded px-2 py-1 text-sm">
           <option value={1}>1</option>
           <option value={3}>3</option>
           <option value={7}>7</option>
@@ -251,23 +251,23 @@ function Filters({
         </select>
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] uppercase text-muted-foreground tracking-wide">Score mín.</label>
+        <label htmlFor="news-f-score" className="text-[10px] uppercase text-muted-foreground tracking-wide">Score mín.</label>
         <input
-          type="number" name="score_min" defaultValue={scoreMin ?? ""}
+          id="news-f-score" type="number" name="score_min" defaultValue={scoreMin ?? ""}
           min={0} max={100} step={5} placeholder="0"
           className="bg-elevated border border-border rounded px-2 py-1 text-sm w-20 tabular-nums"
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] uppercase text-muted-foreground tracking-wide">Asset</label>
+        <label htmlFor="news-f-asset" className="text-[10px] uppercase text-muted-foreground tracking-wide">Asset</label>
         <input
-          type="text" name="asset" defaultValue={asset} placeholder="BTC, ETH..."
+          id="news-f-asset" type="text" name="asset" defaultValue={asset} placeholder="BTC, ETH..."
           className="bg-elevated border border-border rounded px-2 py-1 text-sm w-24 uppercase"
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] uppercase text-muted-foreground tracking-wide">Fuente</label>
-        <select name="source" defaultValue={currentSources[0] ?? ""} className="bg-elevated border border-border rounded px-2 py-1 text-sm">
+        <label htmlFor="news-f-source" className="text-[10px] uppercase text-muted-foreground tracking-wide">Fuente</label>
+        <select id="news-f-source" name="source" defaultValue={currentSources[0] ?? ""} className="bg-elevated border border-border rounded px-2 py-1 text-sm">
           <option value="">todas</option>
           {availableSources.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>

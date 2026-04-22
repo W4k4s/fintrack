@@ -51,12 +51,12 @@ function highIgnored(m: ScopeMetrics): boolean {
 }
 
 function heatmapCell(rate: number, total: number): string {
-  if (total === 0) return "bg-elevated/40 text-muted-foreground";
+  if (total === 0) return "bg-elevated text-muted-foreground";
   if (rate >= 0.7) return "bg-success text-success-foreground";
-  if (rate >= 0.5) return "bg-success-soft text-success";
-  if (rate >= 0.3) return "bg-warn-soft text-warn";
-  if (rate >= 0.1) return "bg-danger-soft text-danger";
-  return "bg-muted text-muted-foreground";
+  if (rate >= 0.5) return "bg-success/80 text-success-foreground";
+  if (rate >= 0.3) return "bg-warn/80 text-warn-foreground";
+  if (rate >= 0.1) return "bg-danger/80 text-danger-foreground";
+  return "bg-elevated text-muted-foreground";
 }
 
 export default async function IntelMetricsPage({
@@ -143,10 +143,10 @@ export default async function IntelMetricsPage({
               <div className="mt-4 pt-3 border-t border-border flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
                 <span>Leyenda:</span>
                 <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-success" /> ≥70%</span>
-                <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-success-soft" /> 50–70</span>
-                <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-warn-soft" /> 30–50</span>
-                <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-danger-soft" /> 10–30</span>
-                <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-muted" /> &lt;10%</span>
+                <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-success/80" /> 50–70</span>
+                <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-warn/80" /> 30–50</span>
+                <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-danger/80" /> 10–30</span>
+                <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-elevated" /> &lt;10%</span>
               </div>
             </div>
           </section>
@@ -193,7 +193,7 @@ export default async function IntelMetricsPage({
             </h2>
             <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-muted/30 text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="bg-elevated text-xs uppercase tracking-wide text-foreground/80">
                   <tr>
                     <th className="text-left px-4 py-3">Scope</th>
                     <th className="text-right px-3 py-3">Total</th>
@@ -316,12 +316,12 @@ function ScopeHeatRow({ m, maxTotal }: { m: ScopeMetrics; maxTotal: number }) {
         {pct(m.actedRate)}
       </div>
       <div className={`px-2 py-1 rounded text-[10px] tabular-nums text-center min-w-[44px] ${
-        m.dismissedRate > 0.4 ? "bg-danger-soft text-danger" : "bg-elevated text-muted-foreground"
+        m.dismissedRate > 0.4 ? "bg-danger/80 text-danger-foreground font-semibold" : "bg-elevated text-muted-foreground"
       }`}>
         {pct(m.dismissedRate)}
       </div>
       <div className={`px-2 py-1 rounded text-[10px] tabular-nums text-center min-w-[44px] ${
-        m.ignoredRate >= 0.5 ? "bg-warn-soft text-warn" : "bg-elevated text-muted-foreground"
+        m.ignoredRate >= 0.5 ? "bg-warn/80 text-warn-foreground font-semibold" : "bg-elevated text-muted-foreground"
       }`}>
         {pct(m.ignoredRate)}
       </div>

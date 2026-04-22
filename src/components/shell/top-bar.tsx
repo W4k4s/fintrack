@@ -68,9 +68,9 @@ export function TopBar() {
 
       {/* Mobile: brand left · compact search center · actions right */}
       <div className="md:hidden flex items-center gap-2 px-3 h-14">
-        <Link href="/" className="flex items-center gap-2 min-w-0 shrink-0">
+        <Link href="/" aria-label="FinTrack · dashboard" className="flex items-center gap-2 min-w-0 shrink-0">
           <div className="w-7 h-7 rounded-lg bg-accent/15 flex items-center justify-center shrink-0">
-            <TrendingUp className="w-4 h-4 text-accent" />
+            <TrendingUp className="w-4 h-4 text-accent" aria-hidden="true" />
           </div>
         </Link>
         <button

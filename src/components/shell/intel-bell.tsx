@@ -108,12 +108,12 @@ export function IntelBell({ className }: { className?: string }) {
       <button
         ref={btnRef}
         onClick={() => setOpen((v) => !v)}
-        aria-label="Intel notifications"
+        aria-label={count > 0 ? `Intel notifications (${count} unread)` : "Intel notifications"}
         className="relative inline-flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--hover-bg)] transition-colors"
       >
-        <Bell className="w-[18px] h-[18px]" />
+        <Bell className="w-[18px] h-[18px]" aria-hidden="true" />
         {count > 0 && (
-          <span className="absolute top-1.5 right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-danger text-[9px] font-semibold leading-[16px] text-center text-white">
+          <span aria-hidden="true" className="absolute top-1.5 right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-danger text-[9px] font-semibold leading-[16px] text-center text-danger-foreground">
             {count > 99 ? "99+" : count}
           </span>
         )}

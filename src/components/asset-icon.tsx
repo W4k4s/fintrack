@@ -3,10 +3,10 @@ import { useState } from "react";
 
 const COIN_CDN = "https://assets.coincap.io/assets/icons";
 
-// Color palette for fallback initials
+// Color palette for fallback initials — darkened to keep 4.5:1 vs white text.
 const COLORS = [
-  "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6",
-  "#ec4899", "#06b6d4", "#f97316", "#14b8a6", "#6366f1",
+  "#047857", "#1d4ed8", "#b45309", "#b91c1c", "#6d28d9",
+  "#be185d", "#0e7490", "#c2410c", "#0f766e", "#4338ca",
 ];
 
 function getColor(symbol: string) {

@@ -28,7 +28,7 @@ export function WeeklySchedule({
         </p>
       </div>
 
-      <div className="hidden md:block overflow-x-auto">
+      <div className="hidden lg:block overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border bg-muted/30">
@@ -55,7 +55,7 @@ export function WeeklySchedule({
         </table>
       </div>
 
-      <div className="md:hidden divide-y divide-border">
+      <div className="lg:hidden divide-y divide-border">
         {weekLabels.map((lbl, i) => {
           const weekData = schedule.schedule[0].weeks[i];
           return (

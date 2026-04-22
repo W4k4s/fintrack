@@ -173,7 +173,7 @@ export default function StrategyPage() {
         <EmergencyCard emergency={emergency} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <GoalsStack goals={goalsWithProgress} onToggle={handleToggleGoal} onAdd={() => setShowAddGoal(true)} />
         <AllocationRing allocation={allocation} />
       </div>

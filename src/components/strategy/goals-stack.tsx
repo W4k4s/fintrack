@@ -131,7 +131,7 @@ export function GoalsStack({
           {grouped.map((group) => (
             <div key={group.priority} className="mb-2 last:mb-0">
               <div className="px-3 pt-1 pb-1.5 text-[10px] uppercase tracking-widest font-mono text-muted-foreground">
-                {group.label} <span className="opacity-60">· {group.items.length}</span>
+                {group.label} <span className="text-foreground/60">· {group.items.length}</span>
               </div>
               <div>
                 {group.items.map((g) => (
@@ -144,7 +144,7 @@ export function GoalsStack({
           {done.length > 0 && (
             <div className="mt-3 pt-3 border-t border-border">
               <div className="px-3 pb-1.5 text-[10px] uppercase tracking-widest font-mono text-muted-foreground">
-                Completados <span className="opacity-60">· {done.length}</span>
+                Completados <span className="text-foreground/60">· {done.length}</span>
               </div>
               {done.map((g) => (
                 <GoalRow key={g.id} g={g} onToggle={onToggle} />

@@ -109,7 +109,7 @@ export function WeeklyShoppingList({
             </div>
             {!it.done && it.plan && (
               <button onClick={() => onExecute(it.plan!)}
-                className="px-4 py-2 bg-success hover:bg-success rounded-lg text-sm font-semibold shrink-0 shadow-sm transition-colors">
+                className="px-4 py-2 bg-success hover:opacity-90 rounded-lg text-sm font-semibold text-success-foreground shrink-0 shadow-sm transition-opacity">
                 Comprar
               </button>
             )}
