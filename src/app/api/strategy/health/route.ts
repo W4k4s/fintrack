@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { getEurPerUsd } from "@/lib/currency-rates";
+import { effectiveGoalTarget, emergencyTargetEur } from "@/lib/strategy/health-calc";
 
 // Asset class mapping
 const ASSET_CLASS_MAP: Record<string, string> = {
@@ -85,9 +86,11 @@ export async function GET() {
       }
     }
 
-    // Emergency fund check
-    const monthlyExpenses = 2214; // from expense analysis
-    const emergencyTarget = monthlyExpenses * profile.emergencyMonths;
+    // Emergency fund check — R1: usa profile.monthlyFixedExpenses (SSOT).
+    // emergencyTargetEur devuelve EUR (fixed expenses se guardan en EUR);
+    // el portfolio viene en USD y multiplica por eurRate al retornar.
+    const emergencyTargetValueEur = emergencyTargetEur(profile);
+    const emergencyTarget = emergencyTargetValueEur / (eurRate || 1); // a USD para comparar con cashValue USD
     const cashValue = classTotals.cash;
     const emergencyOk = cashValue >= emergencyTarget;
     const deployCash = cashValue - emergencyTarget;
@@ -145,8 +148,15 @@ export async function GET() {
           currentValue = g.targetUnit === "units" ? asset.amount : asset.value * eurRate;
         }
       }
-      const progress = g.targetValue > 0 ? Math.min((currentValue / g.targetValue) * 100, 100) : 0;
-      return { ...g, currentValue: Math.round(currentValue * 100) / 100, progress: Math.round(progress) };
+      // R1: emergency_fund usa target derivado (SSOT), resto usa goal.targetValue.
+      const effectiveTarget = effectiveGoalTarget(g, profile);
+      const progress = effectiveTarget > 0 ? Math.min((currentValue / effectiveTarget) * 100, 100) : 0;
+      return {
+        ...g,
+        targetValue: effectiveTarget,
+        currentValue: Math.round(currentValue * 100) / 100,
+        progress: Math.round(progress),
+      };
     });
 
     // Sort actions by priority

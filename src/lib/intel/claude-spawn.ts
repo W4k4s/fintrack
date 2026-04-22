@@ -55,12 +55,40 @@ function severityRank(s: string): number {
   return { low: 0, med: 1, high: 2, critical: 3 }[s] ?? 0;
 }
 
-function buildPrompt(sig: typeof schema.intelSignals.$inferSelect): string {
+async function fetchStrategyContext(): Promise<string> {
+  try {
+    const [profile] = await db
+      .select({
+        tagline: schema.strategyProfiles.tagline,
+        philosophy: schema.strategyProfiles.philosophy,
+        targetCash: schema.strategyProfiles.targetCash,
+        policiesJson: schema.strategyProfiles.policiesJson,
+      })
+      .from(schema.strategyProfiles)
+      .where(eq(schema.strategyProfiles.active, true))
+      .limit(1);
+    if (!profile) return "Contexto del usuario: sin estrategia configurada. EUR es moneda base.";
+    const tagline = profile.tagline ?? "Estrategia personal";
+    const philosophy = profile.philosophy ?? "";
+    const short = philosophy.replace(/\s+/g, " ").slice(0, 400);
+    return `Contexto del usuario: ${tagline}. ${short ? short + ". " : ""}Cash target ${profile.targetCash}%. Policies vigentes en policies_json. EUR es moneda base.`;
+  } catch {
+    return "Contexto del usuario: estrategia personal. EUR es moneda base.";
+  }
+}
+
+function buildPrompt(
+  sig: typeof schema.intelSignals.$inferSelect,
+  strategyContext?: string,
+): string {
   const payload = safeJson(sig.payload) as Record<string, unknown>;
+  const contextLine =
+    strategyContext ??
+    "Contexto del usuario: estrategia personal (ver profile.philosophy si falta aquí). EUR es la moneda base.";
   const lines = [
     "Eres el analista de inversiones de Isma. Él NO es trader profesional, es ingeniero. Explica en español llano, frases cortas, sin jerga.",
     "Si tienes que usar un término técnico (RSI, funding, volatilidad), añade una traducción breve en paréntesis la primera vez.",
-    "Contexto del usuario: estrategia Reset 2026 (perfil balanced, cash del 67% bajando a 25% en 6 meses, multiplicador ×2 automático en crypto cuando F&G ≤ 24). EUR es la moneda base.",
+    contextLine,
     "",
     "SEÑAL DETECTADA:",
     `- id: ${sig.id}`,
@@ -316,7 +344,7 @@ export async function spawnClaudeForSignal(signalId: number): Promise<void> {
 
   await acquireSpawnSlot();
   try {
-    const prompt = buildPrompt(row);
+    const prompt = buildPrompt(row, await fetchStrategyContext());
     const raw = await runClaude(prompt);
     const parsed = extractJson(raw);
     if (!parsed) throw new Error(`unparseable claude output: ${raw.slice(0, 200)}`);

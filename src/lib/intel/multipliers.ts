@@ -2,6 +2,7 @@ import { fetchFundingRates, type FundingRate } from "./market/funding";
 import { fetchVix, type VixSnapshot } from "./market/vix";
 import { fetchBasisBtc, type BasisSnapshot } from "./market/basis";
 import type { AssetClass } from "./allocation/classify";
+import type { StrategyPolicies } from "../strategy/policies";
 
 // ---------------------------------------------------------------------------
 // Crypto multiplier: F&G base + funding boost (ambas señales miran crypto).
@@ -88,16 +89,23 @@ export interface MultiplierContext {
   fundingByAsset: Map<string, FundingRate>;
   vix: VixSnapshot | null;
   basisBtc: BasisSnapshot | null;
+  // Refactor R1: allocation crypto actual (% de net worth). Policy-aware
+  // pause sólo puede gatear si sabe el estado; si no se provee, el gate no
+  // aplica y el comportamiento es idéntico al pre-R1.
+  cryptoAllocationPct?: number;
 }
 
-export async function loadMultiplierContext(fg: number): Promise<MultiplierContext> {
+export async function loadMultiplierContext(
+  fg: number,
+  opts: { cryptoAllocationPct?: number } = {},
+): Promise<MultiplierContext> {
   const [fundingRates, vix, basisBtc] = await Promise.all([
     fetchFundingRates(),
     fetchVix(),
     fetchBasisBtc(),
   ]);
   const fundingByAsset = new Map(fundingRates.map((r) => [r.asset, r]));
-  return { fg, fundingByAsset, vix, basisBtc };
+  return { fg, fundingByAsset, vix, basisBtc, cryptoAllocationPct: opts.cryptoAllocationPct };
 }
 
 export interface AppliedMultiplier {
@@ -110,6 +118,10 @@ export interface AppliedMultiplier {
     basisBoost?: number;
     basisPct?: number | null;
     vixLevel?: number | null;
+    // Refactor R1: si el gate de policy desactiva el multiplicador,
+    // marcamos el motivo para auditabilidad downstream (digest/schedule).
+    gated?: "crypto_paused" | "asset_not_in_scope";
+    gateContext?: Record<string, unknown>;
   };
 }
 
@@ -117,9 +129,43 @@ export function multiplierFor(
   cls: AssetClass,
   asset: string,
   ctx: MultiplierContext,
+  policies?: StrategyPolicies,
 ): AppliedMultiplier {
   const rule = ruleForClass(cls);
   if (rule === "crypto") {
+    // Refactor R1 gates: pausa total por allocation y scope por asset.
+    // Sólo aplican si `policies` se pasa explícitamente — sin policies el
+    // comportamiento es idéntico al pre-R1 (regression).
+    if (policies) {
+      const mp = policies.multiplier;
+      if (
+        typeof ctx.cryptoAllocationPct === "number" &&
+        ctx.cryptoAllocationPct >= mp.requiresCryptoUnderPct
+      ) {
+        return {
+          rule,
+          value: 1.0,
+          components: {
+            gated: "crypto_paused",
+            gateContext: {
+              cryptoAllocPct: ctx.cryptoAllocationPct,
+              threshold: mp.requiresCryptoUnderPct,
+            },
+          },
+        };
+      }
+      if (!mp.appliesTo.includes(asset)) {
+        return {
+          rule,
+          value: 1.0,
+          components: {
+            gated: "asset_not_in_scope",
+            gateContext: { asset, allowedAssets: mp.appliesTo },
+          },
+        };
+      }
+    }
+
     const funding = ctx.fundingByAsset.get(asset) ?? ctx.fundingByAsset.get("BTC") ?? null;
     const { value, fgMult, fundingBoost: fBoost, basisBoost: bBoost } = cryptoMultiplier(
       ctx.fg,

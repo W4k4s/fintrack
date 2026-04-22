@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { validateProfileUpdate } from "@/lib/strategy/profile-validation";
+import { emergencyTargetEur } from "@/lib/strategy/health-calc";
 
 // Seed default profile if none exists
 async function ensureProfile() {
@@ -44,8 +46,36 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const { id, ...data } = await req.json();
-  data.updatedAt = new Date().toISOString();
-  await db.update(schema.strategyProfiles).set(data).where(eq(schema.strategyProfiles.id, id));
+  const body = await req.json();
+  const validated = validateProfileUpdate(body);
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: 400 });
+  }
+  const { id, ...data } = validated.value;
+  if (!id) return NextResponse.json({ error: "id requerido" }, { status: 400 });
+
+  const updateData = { ...data, updatedAt: new Date().toISOString() };
+  await db.update(schema.strategyProfiles).set(updateData).where(eq(schema.strategyProfiles.id, id));
+
+  // R1: si cambian monthlyFixedExpenses o emergencyMonths, sincronizamos el
+  // target_value del goal emergency_fund para que tabla y UI estén alineadas.
+  if (data.monthlyFixedExpenses !== undefined || data.emergencyMonths !== undefined) {
+    const [current] = await db
+      .select()
+      .from(schema.strategyProfiles)
+      .where(eq(schema.strategyProfiles.id, id))
+      .limit(1);
+    if (current) {
+      const newTarget = emergencyTargetEur({
+        monthlyFixedExpenses: current.monthlyFixedExpenses,
+        emergencyMonths: current.emergencyMonths,
+      });
+      await db
+        .update(schema.strategyGoals)
+        .set({ targetValue: newTarget })
+        .where(and(eq(schema.strategyGoals.profileId, id), eq(schema.strategyGoals.type, "emergency_fund")));
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }

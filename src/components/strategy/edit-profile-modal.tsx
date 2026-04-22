@@ -19,6 +19,9 @@ export function EditProfileModal({
     monthlyInvest: profile.monthlyInvest,
     emergencyMonths: profile.emergencyMonths,
     riskProfile: profile.riskProfile,
+    tagline: profile.tagline ?? "",
+    philosophy: profile.philosophy ?? "",
+    monthlyFixedExpenses: profile.monthlyFixedExpenses ?? 0,
   });
   const [subTargets, setSubTargets] = useState<SubTargetForm[]>([]);
   const [activeTab, setActiveTab] = useState<ParentTab>("cash");
@@ -68,7 +71,29 @@ export function EditProfileModal({
         </div>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Tagline (titular de la estrategia)</label>
+            <input
+              type="text"
+              maxLength={300}
+              value={meta.tagline}
+              onChange={e => setMeta({ ...meta, tagline: e.target.value })}
+              placeholder="Ej. Core + Satellite 2026 — núcleo diversificado + satélites con tesis"
+              className="w-full px-3 py-2 bg-elevated border border-border-strong rounded-lg text-sm focus:outline-none focus:border-success/50" />
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Philosophy (se muestra en /strategy/guide)</label>
+            <textarea
+              rows={4}
+              maxLength={5000}
+              value={meta.philosophy}
+              onChange={e => setMeta({ ...meta, philosophy: e.target.value })}
+              placeholder="Filosofía de inversión en 2-4 párrafos. Se renderiza en la página educativa."
+              className="w-full px-3 py-2 bg-elevated border border-border-strong rounded-lg text-sm leading-relaxed focus:outline-none focus:border-success/50" />
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Perfil de riesgo</label>
               <select value={meta.riskProfile} onChange={e => setMeta({ ...meta, riskProfile: e.target.value })}
@@ -82,6 +107,14 @@ export function EditProfileModal({
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">DCA mensual (€)</label>
               <input type="number" value={meta.monthlyInvest} onChange={e => setMeta({ ...meta, monthlyInvest: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-2 bg-elevated border border-border-strong rounded-lg text-sm tabular-nums focus:outline-none focus:border-success/50" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Gastos fijos (€/mes)</label>
+              <input type="number"
+                value={meta.monthlyFixedExpenses}
+                onChange={e => setMeta({ ...meta, monthlyFixedExpenses: parseFloat(e.target.value) || 0 })}
+                title="Gastos obligatorios (alquiler, préstamos, suministros). Alimenta el fondo emergencia."
                 className="w-full px-3 py-2 bg-elevated border border-border-strong rounded-lg text-sm tabular-nums focus:outline-none focus:border-success/50" />
             </div>
             <div>
@@ -150,7 +183,15 @@ export function EditProfileModal({
             disabled={!canSave || loading}
             onClick={() =>
               onSave({
-                profileUpdate: { id: profile.id, ...meta },
+                profileUpdate: {
+                  id: profile.id,
+                  monthlyInvest: meta.monthlyInvest,
+                  emergencyMonths: meta.emergencyMonths,
+                  riskProfile: meta.riskProfile,
+                  tagline: meta.tagline.trim() || null,
+                  philosophy: meta.philosophy.trim() || null,
+                  monthlyFixedExpenses: meta.monthlyFixedExpenses,
+                },
                 subTargets,
               })
             }

@@ -4,6 +4,7 @@ import * as schema from "./schema";
 import { mkdirSync } from "fs";
 import { dirname } from "path";
 import { seedStrategySubTargetsFromFlat } from "./seed-sub-targets";
+import { backfillStrategyDefaults } from "./backfill-strategy-defaults";
 
 const dbPath = "./data/fintrack.db";
 mkdirSync(dirname(dbPath), { recursive: true });
@@ -29,6 +30,17 @@ ensureColumn(
   "strategy_profiles",
   "realized_ytd_traditional_override_eur",
   "realized_ytd_traditional_override_eur REAL",
+);
+
+// Strategy V2 Refactor R1 — narrative + policies + fixed expenses como SSOT.
+// Ver src/lib/strategy/policies.ts para el shape de policies_json.
+ensureColumn("strategy_profiles", "tagline", "tagline TEXT");
+ensureColumn("strategy_profiles", "philosophy", "philosophy TEXT");
+ensureColumn("strategy_profiles", "policies_json", "policies_json TEXT");
+ensureColumn(
+  "strategy_profiles",
+  "monthly_fixed_expenses",
+  "monthly_fixed_expenses REAL NOT NULL DEFAULT 1768",
 );
 
 // Phase 6.2 — intel_allocation_snapshots (1 row/día, UNIQUE date).
@@ -159,6 +171,10 @@ ensureColumn(
 // Strategy V2 Fase 1 — seed idempotente. Solo inserta si el profile no tiene
 // ya filas en strategy_sub_targets, así no pisa ediciones del usuario.
 seedStrategySubTargetsFromFlat(sqlite);
+
+// Strategy V2 Refactor R1 — backfill narrative/policies sólo si tagline IS NULL.
+// No pisa ediciones posteriores del usuario.
+backfillStrategyDefaults(sqlite);
 
 export const db = drizzle(sqlite, { schema });
 export { schema };

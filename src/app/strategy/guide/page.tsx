@@ -13,9 +13,20 @@ interface StrategyResp {
     targetCash: number; targetEtfs: number; targetCrypto: number;
     targetGold: number; targetBonds: number; targetStocks: number;
     monthlyInvest: number; emergencyMonths: number; notes: string | null;
+    tagline: string | null; philosophy: string | null;
+    policiesJson: string | null; monthlyFixedExpenses: number;
   };
   goals: Array<{ id: number; name: string; type: string; targetValue: number; targetAsset: string | null; targetUnit: string; priority: number; completed: boolean; notes: string | null }>;
   plans: Array<{ id: number; name: string; asset: string; amount: number; frequency: string; enabled: boolean; rationale: string | null }>;
+}
+interface GuidePolicies {
+  crypto: { pauseAbovePct: number; btcOnlyBetween: [number, number]; fullBelowPct: number };
+  multiplier: { fgThreshold: number; appliesTo: string[]; requiresCryptoUnderPct: number };
+  thematic: { maxPositionPct: number; maxOpen: number; requireThesisFields: string[] };
+}
+function parseGuidePolicies(raw: string | null): GuidePolicies | null {
+  if (!raw) return null;
+  try { return JSON.parse(raw) as GuidePolicies; } catch { return null; }
 }
 interface Market {
   fearGreed: { value: number; label: string };
@@ -63,9 +74,9 @@ const CLASS_DESCRIPTIONS: Record<string, { what: string; why: string; risk: stri
     risk: "Bajo. Perdida moderada si suben tipos de interés.",
   },
   stocks: {
-    what: "Acciones individuales (MSFT, etc.).",
-    why: "Apuesta en empresas concretas con convicción.",
-    risk: "Medio-alto. Más volátil que un ETF diversificado.",
+    what: "Plays temáticas: acciones con tesis (TTWO, NVDA, XLE, SAN, REP, AAPL…).",
+    why: "Posiciones intencionales con entry/target/stop escritos antes de abrir. Cap por posición y máximo de posiciones simultáneas marcados por la policy.",
+    risk: "Medio-alto. Más volátil que un ETF diversificado; cerrar si la tesis rompe el stop.",
   },
 };
 
@@ -243,7 +254,13 @@ export default function GuidePage() {
   const fg = market.fearGreed.value;
   const sortedGoals = [...goals].sort((a, b) => a.priority - b.priority);
   const currentCash = health.allocation.find(a => a.class === "cash");
-  const cashSurplus = health.emergency.surplus;
+  const currentCrypto = health.allocation.find(a => a.class === "crypto");
+  const policies = parseGuidePolicies(profile.policiesJson);
+  const cryptoPctNow = currentCrypto?.current ?? 0;
+  const cryptoPaused =
+    policies != null && cryptoPctNow >= policies.multiplier.requiresCryptoUnderPct;
+  // Suppress unused var lint.
+  void profile.monthlyFixedExpenses;
 
   return (
     <div className="max-w-3xl mx-auto space-y-5 pb-12">
@@ -260,13 +277,24 @@ export default function GuidePage() {
           <BookOpen className="w-4 h-4" /> Tu estrategia explicada
         </div>
         <h1 className="text-3xl md:text-4xl font-bold text-zinc-100 mb-3">
-          Aprende a invertir con tu propio plan
+          {profile.tagline ?? "Aprende a invertir con tu propio plan"}
         </h1>
         <p className="text-zinc-400 text-base leading-relaxed">
           Esta guía te explica en cristiano cómo funciona tu estrategia <b>{profile.name}</b>, por qué cada decisión,
           y qué hacer ahora mismo. Ningún tecnicismo sin traducir, ninguna recomendación ciega.
         </p>
       </div>
+
+      {profile.philosophy && (
+        <Section
+          icon={<Compass className="w-5 h-5" />}
+          title="Filosofía de tu estrategia"
+          subtitle="Por qué inviertes así">
+          {profile.philosophy.split(/\n{2,}/).map((para, i) => (
+            <p key={i}>{para}</p>
+          ))}
+        </Section>
+      )}
 
       {/* 1. RESUMEN 60 SEGUNDOS */}
       <Section
@@ -284,7 +312,11 @@ export default function GuidePage() {
             <div className="text-[10px] text-zinc-500 uppercase mb-1">Mercado ahora</div>
             <div className="text-sm">
               Termómetro del miedo: <b>{fg}/100</b> — <span className="text-red-400 font-medium">{market.fearGreed.label}</span>.
-              Para ti esto es <b>buena ventana de compra</b>.
+              {cryptoPaused ? (
+                <> Crypto <b>pausado</b> ({cryptoPctNow.toFixed(1)}% ≥ {policies?.multiplier.requiresCryptoUnderPct}% policy), DCA baseline ETFs/bonos/oro.</>
+              ) : (
+                <> Para ti esto es <b>buena ventana</b> — aplica el multiplicador del panel.</>
+              )}
             </div>
           </div>
           <div className="bg-zinc-800/40 rounded-lg p-4">
@@ -431,13 +463,24 @@ export default function GuidePage() {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-          {[
-            { range: "0-24", label: "Miedo extremo", action: "Doblar compras. Históricamente mejor suelo.", color: "text-red-400" },
-            { range: "25-44", label: "Miedo", action: "Aumentar DCA a ×1,5.", color: "text-orange-400" },
-            { range: "45-55", label: "Neutral", action: "Ritmo normal.", color: "text-zinc-300" },
-            { range: "56-74", label: "Codicia", action: "Reducir a ×0,75. Cuidado.", color: "text-emerald-400" },
-            { range: "75-100", label: "Codicia extrema", action: "Tomar beneficios, reducir compras.", color: "text-red-400" },
-          ].map(b => (
+          {(() => {
+            const thr = policies?.multiplier.fgThreshold ?? 24;
+            const assets = (policies?.multiplier.appliesTo ?? ["BTC"]).join(", ");
+            return [
+              {
+                range: `0-${thr}`,
+                label: "Miedo extremo",
+                action: cryptoPaused
+                  ? `Normalmente ×2 en ${assets}. Pausado ahora: crypto en ${cryptoPctNow.toFixed(1)}% ≥ ${policies?.multiplier.requiresCryptoUnderPct ?? 17}%.`
+                  : `Doblar compras en ${assets} (histórico mejor suelo).`,
+                color: "text-red-400",
+              },
+              { range: `${thr + 1}-44`, label: "Miedo", action: "Aumentar DCA a ×1,5.", color: "text-orange-400" },
+              { range: "45-55", label: "Neutral", action: "Ritmo normal.", color: "text-zinc-300" },
+              { range: "56-74", label: "Codicia", action: "Reducir a ×0,75. Cuidado.", color: "text-emerald-400" },
+              { range: "75-100", label: "Codicia extrema", action: "Tomar beneficios, reducir compras.", color: "text-red-400" },
+            ];
+          })().map(b => (
             <div key={b.range} className="bg-zinc-800/30 rounded-lg p-3">
               <div className={`text-xs font-semibold ${b.color}`}>{b.range} — {b.label}</div>
               <div className="text-xs text-zinc-400 mt-0.5">{b.action}</div>
@@ -516,10 +559,14 @@ export default function GuidePage() {
           {[
             "Primera vez — activa Planes de Ahorro (Sparplan) en Trade Republic para ETFs/acciones. Son gratis y lo hacen solo cada semana. Ver sección 'Plan de Ahorro' arriba.",
             "Después de activarlos en TR, vuelve a FinTrack, pulsa el rayo ⚡ de cada plan y marca 'Tengo este plan automatizado' con el día que configuraste.",
-            "Para crypto (BTC, ETH, SOL), en Binance puedes configurar su propio 'Plan de Compra Automática' igual que TR, o hacer compra manual cada semana.",
+            cryptoPaused
+              ? `Crypto pausado: la allocation actual (${cryptoPctNow.toFixed(1)}%) está por encima del umbral de policy (${policies?.multiplier.requiresCryptoUnderPct}%). No añadas a BTC/ETH/SOL hasta que baje el peso — DCA va a ETFs/bonos/oro.`
+              : "Para crypto, sigue las reglas de la policy: si hay ventana BTC-only, Binance puede configurar un Plan de Compra Automática sólo sobre BTC; el resto queda en hold.",
             "Cada semana entra en Estrategia y mira la lista 'Esta semana'. Lo que esté en azul es automático (ya pasó el día = hecho). Lo que esté en gris aún tienes que comprar manualmente.",
             "Para pendientes manuales, pulsa 'Comprar' → Sync desde exchange (si ya la hiciste) o Manual (si quieres meterla a mano).",
-            "Ojo al multiplicador: cuando el termómetro del miedo está bajo (como ahora, 21), las compras crypto se doblan automáticamente. La lista ya muestra el importe con ×2 aplicado — no multipliques tú nada.",
+            cryptoPaused
+              ? "Multiplicador F&G: está desactivado mientras crypto supere el umbral. El panel muestra el importe base, no se dobla nada."
+              : `Multiplicador F&G: el boost ×2 dispara cuando el índice ≤ ${policies?.multiplier.fgThreshold ?? 24} y sólo aplica a ${(policies?.multiplier.appliesTo ?? ["BTC"]).join(", ")}. La lista ya muestra el importe aplicado — no multipliques a mano.`,
             "Si te saltas una semana manual, no pasa nada. La siguiente dobla. Lo único que NO vale es olvidarse del mes entero.",
           ].map((step, i) => (
             <div key={i} className="flex items-start gap-3 p-3 bg-zinc-800/30 rounded-lg">

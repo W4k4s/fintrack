@@ -74,6 +74,15 @@ export const strategyProfiles = sqliteTable("strategy_profiles", {
   // Manual override del realized YTD bucket "traditional" (ETFs/acciones/oro/bonos).
   // Cubre ventas TR vía bank_transactions que no entran en `estimateRealizedYtdEur`.
   realizedYtdTraditionalOverrideEur: real("realized_ytd_traditional_override_eur"),
+  // Strategy V2 Refactor R1 — single source of truth para narrative y policies.
+  // Los textos del guide y los parámetros de política (crypto pausa >17%, F&G
+  // multiplier, thematic caps) viven aquí para que al editar la estrategia se
+  // refleje en UI + detectores sin tocar código. Shape de policies_json vive en
+  // src/lib/strategy/policies.ts (DEFAULT_POLICIES_V2 + parsePolicies fallback).
+  tagline: text("tagline"),
+  philosophy: text("philosophy"),
+  policiesJson: text("policies_json"),
+  monthlyFixedExpenses: real("monthly_fixed_expenses").notNull().default(1768),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
 });

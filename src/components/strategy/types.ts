@@ -3,6 +3,9 @@ export interface StrategyProfile {
   targetCash: number; targetEtfs: number; targetCrypto: number;
   targetGold: number; targetBonds: number; targetStocks: number;
   monthlyInvest: number; emergencyMonths: number; notes: string | null;
+  // R1 Refactor — SSOT para narrative + policies + fondo emergencia.
+  tagline: string | null; philosophy: string | null;
+  policiesJson: string | null; monthlyFixedExpenses: number;
 }
 
 export interface Goal {
