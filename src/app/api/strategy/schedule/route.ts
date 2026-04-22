@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
+import { eq } from "drizzle-orm";
 import { classifyAsset } from "@/lib/intel/allocation/classify";
 import { loadMultiplierContext, multiplierFor } from "@/lib/intel/multipliers";
+import { parsePolicies } from "@/lib/strategy/policies";
+import { computeCryptoAllocationPct } from "@/lib/strategy/market-multiplier";
 
 // Generate weekly schedule from monthly DCA plans.
 // Multiplicador adaptativo por clase (Phase 3.4):
@@ -61,7 +64,26 @@ export async function GET() {
     const executions = await db.select().from(schema.dcaExecutions);
 
     const fgValue = await getFgValue();
-    const mctx = await loadMultiplierContext(fgValue);
+
+    // R3: leer policies + allocation crypto actual para que multiplierFor
+    // aplique los gates (crypto_paused / asset_not_in_scope).
+    const [profile] = await db
+      .select({ policiesJson: schema.strategyProfiles.policiesJson })
+      .from(schema.strategyProfiles)
+      .where(eq(schema.strategyProfiles.active, true))
+      .limit(1);
+    const policies = parsePolicies(profile?.policiesJson ?? null);
+
+    let cryptoAllocationPct = 0;
+    try {
+      const dashRes = await fetch("http://localhost:3000/api/dashboard/summary", { cache: "no-store" });
+      const dash = await dashRes.json();
+      cryptoAllocationPct = computeCryptoAllocationPct(dash.portfolioAssets ?? [], dash.portfolio ?? 0);
+    } catch (e) {
+      console.warn("[schedule] crypto allocation fetch failed, assume 0:", e);
+    }
+
+    const mctx = await loadMultiplierContext(fgValue, { cryptoAllocationPct });
 
     const now = new Date();
     const { monday: thisMonday, sunday: thisSunday } = getWeekBounds(now);
@@ -72,7 +94,7 @@ export async function GET() {
 
     const schedule = activePlans.map((plan) => {
       const cls = (plan.assetClass as ReturnType<typeof classifyAsset>) || classifyAsset(plan.asset);
-      const applied = multiplierFor(cls, plan.asset, mctx);
+      const applied = multiplierFor(cls, plan.asset, mctx, policies);
 
       const effectiveMonthly = plan.amount * applied.value;
       const weeklyAmount = Math.round((effectiveMonthly / 4) * 100) / 100;

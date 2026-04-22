@@ -37,6 +37,13 @@ export interface WeekItem {
 export interface PlanSchedule {
   planId: number; asset: string; name: string;
   isCrypto?: boolean; baseMonthly?: number; appliedMultiplier?: number;
+  multiplierRule?: "crypto" | "equity" | "fixed";
+  multiplierComponents?: {
+    fgMult?: number; fundingBoost?: number; fundingRate?: number | null;
+    basisBoost?: number; basisPct?: number | null; vixLevel?: number | null;
+    gated?: "crypto_paused" | "asset_not_in_scope";
+    gateContext?: Record<string, unknown>;
+  };
   autoExecute?: boolean; autoDayOfWeek?: number | null; broker?: string | null;
   monthlyTarget: number; weeklyTarget: number;
   totalExecuted: number; remaining: number; onTrack: boolean;

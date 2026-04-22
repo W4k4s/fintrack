@@ -23,6 +23,7 @@ export function WeeklyShoppingList({
       monthExecuted: ps.totalExecuted,
       monthTarget: ps.monthlyTarget, baseMonthly: ps.baseMonthly || ps.monthlyTarget,
       multiplier: ps.appliedMultiplier || 1, isCrypto: !!ps.isCrypto,
+      gated: ps.multiplierComponents?.gated,
       autoExecute: !!ps.autoExecute, broker: ps.broker, plan,
     };
   });
@@ -83,12 +84,22 @@ export function WeeklyShoppingList({
                 <span className={`font-semibold ${it.done ? "text-muted-foreground line-through" : "text-foreground"}`}>
                   {it.asset}
                 </span>
-                {it.multiplier > 1 && !it.done && (
+                {it.gated === "crypto_paused" && !it.done && (
+                  <span className="text-[10px] px-1.5 py-0.5 bg-warn-soft text-warn rounded-full font-semibold">
+                    Pausado (policy crypto)
+                  </span>
+                )}
+                {it.gated === "asset_not_in_scope" && !it.done && (
+                  <span className="text-[10px] px-1.5 py-0.5 bg-warn-soft text-warn rounded-full font-semibold">
+                    Fuera de scope multiplier
+                  </span>
+                )}
+                {!it.gated && it.multiplier > 1 && !it.done && (
                   <span className="text-[10px] px-1.5 py-0.5 bg-success-soft text-success rounded-full font-semibold">
                     ×{it.multiplier} miedo extremo
                   </span>
                 )}
-                {it.multiplier < 1 && !it.done && (
+                {!it.gated && it.multiplier < 1 && !it.done && (
                   <span className="text-[10px] px-1.5 py-0.5 bg-warn-soft text-warn rounded-full font-semibold">
                     ×{it.multiplier} codicia
                   </span>

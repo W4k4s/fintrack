@@ -3,6 +3,7 @@ import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { ASSET_CLASSES, classifyAsset, type AssetClass } from "./allocation/classify";
 import { computeAllocation } from "./allocation/compute";
 import { loadMultiplierContext, multiplierFor, type MultiplierContext } from "./multipliers";
+import { parsePolicies, type StrategyPolicies } from "../strategy/policies";
 import type { Severity } from "./types";
 
 const CLASS_LABEL: Record<AssetClass, string> = {
@@ -112,10 +113,10 @@ async function fetchFgHistory(limit = 8): Promise<number[]> {
   }
 }
 
-function renderMultipliers(ctx: MultiplierContext) {
-  const cryptoMult = multiplierFor("crypto", "BTC", ctx).value;
-  const etfsMult = multiplierFor("etfs", "MSCI World", ctx).value;
-  const goldMult = multiplierFor("gold", "Gold ETC", ctx).value;
+function renderMultipliers(ctx: MultiplierContext, policies?: StrategyPolicies) {
+  const cryptoMult = multiplierFor("crypto", "BTC", ctx, policies).value;
+  const etfsMult = multiplierFor("etfs", "MSCI World", ctx, policies).value;
+  const goldMult = multiplierFor("gold", "Gold ETC", ctx, policies).value;
   return { crypto: cryptoMult, etfs: etfsMult, gold: goldMult };
 }
 
@@ -157,12 +158,15 @@ export async function buildWeeklyDigest(now: Date = new Date()): Promise<WeeklyD
     };
   }
 
-  // Market context y multipliers.
+  // Market context y multipliers — R3: con policies del profile + allocation
+  // crypto actual para que el gate policy-aware se active en el digest.
   const fgHistory = await fetchFgHistory(8);
   const fgNow = fgHistory[0] ?? 50;
   const fgPrev = fgHistory[7] ?? null;
-  const mctx = await loadMultiplierContext(fgNow);
-  const multipliers = renderMultipliers(mctx);
+  const policies = parsePolicies(profile?.policiesJson ?? null);
+  const cryptoAllocationPct = allocationOut.crypto?.actualPct ?? 0;
+  const mctx = await loadMultiplierContext(fgNow, { cryptoAllocationPct });
+  const multipliers = renderMultipliers(mctx, policies);
 
   // Signals últimos 7 días.
   const since = new Date(now.getTime() - 7 * 86_400_000).toISOString();
@@ -212,7 +216,7 @@ export async function buildWeeklyDigest(now: Date = new Date()): Promise<WeeklyD
   const activePlans = plans.filter((p) => p.enabled);
   const weeklyBudget = activePlans.reduce((acc, plan) => {
     const cls = (plan.assetClass as AssetClass | null) ?? classifyAsset(plan.asset);
-    const applied = multiplierFor(cls, plan.asset, mctx);
+    const applied = multiplierFor(cls, plan.asset, mctx, policies);
     const effectiveMonthly = Number(plan.amount ?? 0) * applied.value;
     return acc + effectiveMonthly / 4;
   }, 0);
