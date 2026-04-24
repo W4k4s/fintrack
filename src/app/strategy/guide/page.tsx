@@ -1,6 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  useStrategyFull,
+  useStrategyMarket,
+  useStrategyHealth,
+  useSubTargets,
+} from "@/lib/hooks/use-strategy-data";
 import {
   ArrowLeft, Calendar, PiggyBank, BookOpen,
   Shield, Zap, AlertTriangle, XCircle, Info,
@@ -268,27 +273,12 @@ const GROUP_META: Record<"core" | "satellite" | "legacy", { label: string; tagli
 
 // ========== MAIN PAGE ==========
 export default function GuidePage() {
-  const [strategy, setStrategy] = useState<StrategyResp | null>(null);
-  const [market, setMarket] = useState<Market | null>(null);
-  const [health, setHealth] = useState<Health | null>(null);
-  const [subs, setSubs] = useState<SubTargetRow[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const [s, m, h, sub] = await Promise.all([
-          fetch("/api/strategy").then(r => r.json()),
-          fetch("/api/strategy/market").then(r => r.json()),
-          fetch("/api/strategy/health").then(r => r.json()),
-          fetch("/api/strategy/sub-targets").then(r => r.json()),
-        ]);
-        setStrategy(s); setMarket(m); setHealth(h);
-        setSubs(sub.subTargets ?? []);
-      } catch (e) { console.error(e); }
-      setLoading(false);
-    })();
-  }, []);
+  const { data: strategy, isLoading: sL } = useStrategyFull<StrategyResp>();
+  const { data: market, isLoading: mL } = useStrategyMarket<Market>();
+  const { data: health, isLoading: hL } = useStrategyHealth<Health>();
+  const { data: subsResp } = useSubTargets<{ subTargets: SubTargetRow[] }>();
+  const subs = subsResp?.subTargets ?? [];
+  const loading = sL || mL || hL;
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">

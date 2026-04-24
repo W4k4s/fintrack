@@ -1,9 +1,16 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   Target, AlertTriangle, Clock, Edit3, Info, TrendingUp, BookOpen,
 } from "lucide-react";
+import {
+  useStrategyFull,
+  useStrategyHealth,
+  useSchedule,
+  useStrategyMarket,
+  useInvalidateStrategyViews,
+} from "@/lib/hooks/use-strategy-data";
 import { usePrivacy } from "@/components/privacy-provider";
 import { AllocationRing } from "@/components/strategy/allocation-ring";
 import { GoalsStack } from "@/components/strategy/goals-stack";
@@ -27,33 +34,16 @@ import type {
 
 export default function StrategyPage() {
   const { mask } = usePrivacy();
-  const [strategy, setStrategy] = useState<StrategyData | null>(null);
-  const [health, setHealth] = useState<HealthData | null>(null);
-  const [schedule, setSchedule] = useState<ScheduleData | null>(null);
-  const [market, setMarket] = useState<MarketData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: strategy, isLoading: strategyLoading } = useStrategyFull<StrategyData>();
+  const { data: health, isLoading: healthLoading } = useStrategyHealth<HealthData>();
+  const { data: schedule } = useSchedule();
+  const { data: market } = useStrategyMarket<MarketData>();
+  const invalidate = useInvalidateStrategyViews();
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [executingPlan, setExecutingPlan] = useState<DcaPlan | null>(null);
   const [configAutoPlan, setConfigAutoPlan] = useState<DcaPlan | null>(null);
-
-  const fetchAll = useCallback(async () => {
-    try {
-      const [stratRes, healthRes, schedRes, marketRes] = await Promise.all([
-        fetch("/api/strategy"),
-        fetch("/api/strategy/health"),
-        fetch("/api/strategy/schedule"),
-        fetch("/api/strategy/market"),
-      ]);
-      setStrategy(await stratRes.json());
-      setHealth(await healthRes.json());
-      setSchedule(await schedRes.json());
-      setMarket(await marketRes.json());
-    } catch (e) { console.error(e); }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  const loading = strategyLoading || healthLoading;
 
   const handleSaveProfile = async (payload: {
     profileUpdate: Partial<StrategyProfile>;
@@ -79,7 +69,7 @@ export default function StrategyPage() {
       body: JSON.stringify(payload.profileUpdate),
     });
     setShowEditProfile(false);
-    fetchAll();
+    invalidate();
   };
 
   const handleAddGoal = async (data: Record<string, unknown>) => {
@@ -89,7 +79,7 @@ export default function StrategyPage() {
       body: JSON.stringify(data),
     });
     setShowAddGoal(false);
-    fetchAll();
+    invalidate();
   };
 
   const handleToggleGoal = async (id: number, completed: boolean) => {
@@ -98,13 +88,10 @@ export default function StrategyPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, completed }),
     });
-    fetchAll();
+    invalidate();
   };
 
   const handleExecuteDCA = async (data: { planId: number; amount: number; price?: number; units?: number; notes?: string }) => {
-    // Optimistic close: hide drawer immediately; the UI shows stale totals until
-    // fetchAll resolves. The drawer's own submitting spinner keeps the button
-    // locked until the API responds, so we only close when we get a success.
     const res = await fetch("/api/strategy/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -112,7 +99,7 @@ export default function StrategyPage() {
     });
     if (res.ok) {
       setExecutingPlan(null);
-      fetchAll();
+      invalidate();
     } else {
       const err = await res.json().catch(() => ({}));
       alert(`Error: ${err.error ?? "no se pudo registrar la compra"}`);
@@ -127,7 +114,7 @@ export default function StrategyPage() {
       body: JSON.stringify({ id: configAutoPlan.id, ...data }),
     });
     setConfigAutoPlan(null);
-    fetchAll();
+    invalidate();
   };
 
   if (loading) return <StrategySkeleton />;
@@ -163,14 +150,14 @@ export default function StrategyPage() {
         </div>
       </div>
 
-      <MarketStrip market={market} netWorth={market?.finances.netWorth || 0} />
+      <MarketStrip market={market ?? null} netWorth={market?.finances.netWorth || 0} />
 
-      <WeeklyShoppingList schedule={schedule} plans={plans} onExecute={setExecutingPlan} />
+      <WeeklyShoppingList schedule={schedule ?? null} plans={plans} onExecute={setExecutingPlan} />
 
-      <WeeklySchedule schedule={schedule} plans={plans} onExecute={setExecutingPlan} />
+      <WeeklySchedule schedule={schedule ?? null} plans={plans} onExecute={setExecutingPlan} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <MonthProgress schedule={schedule} totalMonthly={dcaSummary.totalMonthly} />
+        <MonthProgress schedule={schedule ?? null} totalMonthly={dcaSummary.totalMonthly} />
         <EmergencyCard emergency={emergency} />
       </div>
 
@@ -209,7 +196,7 @@ export default function StrategyPage() {
 
       {showEditProfile && <EditProfileModal profile={profile} onClose={() => setShowEditProfile(false)} onSave={handleSaveProfile} />}
       {showAddGoal && <AddGoalModal profileId={profile.id} onClose={() => setShowAddGoal(false)} onSave={handleAddGoal} />}
-      <DcaExecuteDrawer plan={executingPlan} onClose={() => setExecutingPlan(null)} onSubmit={handleExecuteDCA} onSync={fetchAll} />
+      <DcaExecuteDrawer plan={executingPlan} onClose={() => setExecutingPlan(null)} onSubmit={handleExecuteDCA} onSync={invalidate} />
       {configAutoPlan && <AutoPlanModal plan={configAutoPlan} onClose={() => setConfigAutoPlan(null)} onSave={handleSaveAutoPlan} />}
     </div>
   );

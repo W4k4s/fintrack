@@ -1,28 +1,28 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CalendarClock, Plus, Trash2, Pause, Play } from "lucide-react";
+import { usePlans, useInvalidateStrategyViews } from "@/lib/hooks/use-strategy-data";
 
 interface Plan { id: number; name: string; asset: string; amount: number; frequency: string; nextExecution: string|null; enabled: boolean; }
 
 export default function PlansPage() {
-  const [plans, setPlans] = useState<Plan[]>([]);
+  const { data: plansData } = usePlans<Plan[]>();
+  const plans = plansData ?? [];
+  const invalidate = useInvalidateStrategyViews();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", asset: "", amount: "", frequency: "monthly" });
 
-  const fetchPlans = () => fetch("/api/plans").then(r=>r.json()).then(setPlans);
-  useEffect(() => { fetchPlans(); }, []);
-
   const handleCreate = async () => {
     await fetch("/api/plans", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ ...form, amount: parseFloat(form.amount) }) });
-    setForm({ name:"", asset:"", amount:"", frequency:"monthly" }); setShowForm(false); fetchPlans();
+    setForm({ name:"", asset:"", amount:"", frequency:"monthly" }); setShowForm(false); invalidate();
   };
   const handleToggle = async (plan: Plan) => {
     await fetch("/api/plans", { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ id: plan.id, enabled: !plan.enabled }) });
-    fetchPlans();
+    invalidate();
   };
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this plan?")) return;
-    await fetch("/api/plans", { method: "DELETE", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ id }) }); fetchPlans();
+    await fetch("/api/plans", { method: "DELETE", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ id }) }); invalidate();
   };
 
   return (

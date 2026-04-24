@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { db, schema } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
 import { validateProfileUpdate } from "@/lib/strategy/profile-validation";
@@ -77,5 +78,6 @@ export async function PUT(req: NextRequest) {
     }
   }
 
+  revalidateTag("strategy", "default");
   return NextResponse.json({ ok: true });
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { syncExchange } from "@/lib/exchanges";
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest) {
       dcaMatched = await matchTradesToDCA();
     } catch {}
 
+    revalidateTag("strategy", "default");
     return NextResponse.json({
       success: true,
       synced,

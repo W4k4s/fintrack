@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import Database from "better-sqlite3";
 import { db, schema } from "@/lib/db";
 import { eq, asc } from "drizzle-orm";
@@ -116,6 +117,7 @@ export async function PUT(req: NextRequest) {
       return recalcFlatFromSubTargets(sqlite, profileId);
     });
     const flat = tx();
+    revalidateTag("strategy", "default");
     return NextResponse.json({ ok: true, profileId, subTargets, flat });
   } finally {
     sqlite.close();

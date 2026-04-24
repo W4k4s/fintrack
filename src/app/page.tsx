@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import useSWR from "swr";
 import { useCurrency } from "@/components/currency-provider";
+import {
+  useDashboardSummary,
+  useSchedule,
+  useInvalidateStrategyViews,
+  KEYS,
+} from "@/lib/hooks/use-strategy-data";
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
   AreaChart, Area, Tooltip,
@@ -29,15 +36,6 @@ type IntelSignal = {
   asset?: string;
   createdAt?: string;
 };
-type ScheduleResponse = {
-  currentWeek: number;
-  totalWeeks: number;
-  weeklyBudget: number;
-  thisWeekExecuted: number;
-  thisWeekRemaining: number;
-  fgValue: number;
-};
-
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <div className={cn("bg-card border border-border rounded-xl", className)}>{children}</div>
@@ -121,52 +119,45 @@ function relativeTime(iso?: string): string {
   return `${Math.round(h / 24)}d`;
 }
 
+const fetcher = (url: string) => fetch(url).then(r => r.ok ? r.json() : null);
+
 export default function Dashboard() {
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
-  const [summary, setSummary] = useState<{ portfolio: number; banking: number; netWorth: number; portfolioAssets?: Asset[] } | null>(null);
-  const [intelUnread, setIntelUnread] = useState<{ count: number; signals: IntelSignal[] }>({ count: 0, signals: [] });
-  const [schedule, setSchedule] = useState<ScheduleResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: assetsData } = useSWR<{ assets: Asset[] }>(KEYS.assets, fetcher);
+  const { data: snapshotsData } = useSWR<Snapshot[]>(KEYS.portfolioSnapshot, fetcher);
+  const { data: summary } = useDashboardSummary();
+  const { data: intelData } = useSWR<{ signals: IntelSignal[]; unreadCount: number }>(
+    "/api/intel?status=unread&limit=100",
+    fetcher,
+  );
+  const { data: schedule, isLoading: scheduleLoading } = useSchedule();
+  const invalidate = useInvalidateStrategyViews();
   const [refreshing, setRefreshing] = useState(false);
   const [hoveredSlice, setHoveredSlice] = useState<number | null>(null);
   const { format, currency, setCurrency } = useCurrency();
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [a, s, sum, intel, sched] = await Promise.all([
-        fetch("/api/assets").then((r) => r.json()),
-        fetch("/api/portfolio/snapshot").then((r) => r.json()),
-        fetch("/api/dashboard/summary").then((r) => r.json()),
-        fetch("/api/intel?status=unread&limit=100").then((r) => (r.ok ? r.json() : { signals: [], unreadCount: 0 })),
-        fetch("/api/strategy/schedule").then((r) => (r.ok ? r.json() : null)),
-      ]);
-      setAssets(a.assets || []);
-      setSnapshots(Array.isArray(s) ? s : []);
-      setSummary(sum);
-      setIntelUnread({ count: Number(intel.unreadCount || 0), signals: intel.signals || [] });
-      setSchedule(sched);
-    } finally {
-      setLoading(false);
-    }
+  const assets = assetsData?.assets ?? [];
+  const snapshots = Array.isArray(snapshotsData) ? snapshotsData : [];
+  const intelUnread = {
+    count: Number(intelData?.unreadCount ?? 0),
+    signals: intelData?.signals ?? [],
   };
+  const loading = !summary && scheduleLoading;
 
   const refreshPrices = async () => {
     setRefreshing(true);
     try {
       const res = await fetch("/api/prices", { method: "POST" });
       const data = await res.json();
-      if (data.success) await fetchData();
+      if (data.success) invalidate();
     } finally {
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
     const interval = setInterval(refreshPrices, 5 * 60 * 1000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const portfolioAssets = summary?.portfolioAssets || [];

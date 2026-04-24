@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { db, schema } from "@/lib/db";
 import { eq, and, desc } from "drizzle-orm";
 import { getEurPerUsd } from "@/lib/currency-rates";
@@ -166,6 +167,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    revalidateTag("strategy", "default");
     return NextResponse.json({ success: true, ...summary });
   } catch (err: any) {
     console.error("strategy/execute error:", err);
