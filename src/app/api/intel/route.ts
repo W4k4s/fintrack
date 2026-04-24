@@ -11,6 +11,9 @@ const NOISE_SCOPES = ["news", "macro_event"] as const;
  *   ?severity=low,med,high,critical
  *   ?scope=<scope>
  *   ?status=unread,read,acted,dismissed,snoozed
+ *   ?kind=actionable|noise|all  (default: all)
+ *     - actionable: excluye news/macro_event low (mismos que unreadCount)
+ *     - noise: solo news/macro_event low
  *   ?limit=50
  */
 export async function GET(req: NextRequest) {
@@ -18,6 +21,7 @@ export async function GET(req: NextRequest) {
   const severity = qp.get("severity")?.split(",").filter(Boolean);
   const scope = qp.get("scope");
   const status = qp.get("status")?.split(",").filter(Boolean);
+  const kind = qp.get("kind") as "actionable" | "noise" | "all" | null;
   const limit = Math.min(200, Number(qp.get("limit") || 50));
 
   const conditions = [];
@@ -33,6 +37,21 @@ export async function GET(req: NextRequest) {
         schema.intelSignals.userStatus,
         status as ("unread" | "read" | "acted" | "dismissed" | "snoozed")[],
       ),
+    );
+  }
+  if (kind === "actionable") {
+    conditions.push(
+      or(
+        notInArray(schema.intelSignals.scope, [...NOISE_SCOPES]),
+        ne(schema.intelSignals.severity, "low"),
+      )!,
+    );
+  } else if (kind === "noise") {
+    conditions.push(
+      and(
+        eq(schema.intelSignals.severity, "low"),
+        inArray(schema.intelSignals.scope, [...NOISE_SCOPES]),
+      )!,
     );
   }
 
@@ -53,6 +72,9 @@ export async function GET(req: NextRequest) {
   // actionable scopes (dca_pending, drift, rebalance, …) keep implicit action,
   // so they stay in the actionable bucket. `unreadCount` drives the top-bar
   // badge; `noiseCount` exposes the other pile for the "Ruido" tab.
+  // Nota: actionable/noise se cuentan SIEMPRE globalmente (sin los filtros
+  // del listado) para que el badge sea estable aunque el cliente pida un
+  // subconjunto concreto.
   const actionable = await db
     .select({ id: schema.intelSignals.id })
     .from(schema.intelSignals)
@@ -60,7 +82,7 @@ export async function GET(req: NextRequest) {
       and(
         eq(schema.intelSignals.userStatus, "unread"),
         or(
-          notInArray(schema.intelSignals.scope, NOISE_SCOPES),
+          notInArray(schema.intelSignals.scope, [...NOISE_SCOPES]),
           ne(schema.intelSignals.severity, "low"),
         ),
       ),
@@ -72,7 +94,7 @@ export async function GET(req: NextRequest) {
       and(
         eq(schema.intelSignals.userStatus, "unread"),
         eq(schema.intelSignals.severity, "low"),
-        inArray(schema.intelSignals.scope, NOISE_SCOPES),
+        inArray(schema.intelSignals.scope, [...NOISE_SCOPES]),
       ),
     );
 

@@ -72,7 +72,8 @@ export function IntelBell({ className }: { className?: string }) {
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch("/api/intel?status=unread&limit=5", { cache: "no-store" });
+        // Panel alineado con el badge: sólo actionable (mismo filtro que unreadCount).
+        const res = await fetch("/api/intel?status=unread&kind=actionable&limit=10", { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
         if (alive) setSignals(Array.isArray(data.signals) ? data.signals : []);
@@ -84,18 +85,18 @@ export function IntelBell({ className }: { className?: string }) {
   }, [open]);
 
   const markAllRead = async () => {
-    if (!signals.length || marking) return;
+    if (marking) return;
     setMarking(true);
     try {
-      await Promise.all(
-        signals.map((s) =>
-          fetch(`/api/intel/${s.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userStatus: "read" }),
-          }),
-        ),
-      );
+      // Bulk endpoint: marca TODAS las unread actionable, no sólo las visibles.
+      // Antes hacía N PATCHs a las 5 signals del panel; si el badge contaba
+      // señales fuera de esas 5 (orden DESC puede dejar actionable antiguas
+      // abajo), el contador no bajaba.
+      await fetch("/api/intel/mark-all-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "actionable" }),
+      });
       setSignals([]);
       await refresh();
     } finally {

@@ -25,8 +25,18 @@ export function WeeklyShoppingList({
   const activeItems = items.filter(it => !it.pauseReason);
   const pausedItems = items.filter(it => !!it.pauseReason);
   const anyAutoPending = activeItems.some(it => it.autoPending);
-  const weekTotal = activeItems.reduce((s, it) => s + it.displayAmount, 0);
-  const weekDone = activeItems.reduce((s, it) => s + (it.done ? it.displayAmount : 0), 0);
+  // En modo mensual (autoPending) el progreso se calcula sobre monthlyTarget,
+  // no sobre displayAmount — displayAmount de un item done es 0 (resto del
+  // mes) y si lo usáramos como total, 3 done + 1 pendiente (€15) daría
+  // weekDone=0/weekTotal=15=0%, mostrando "Hechas €0" con todo hecho menos €15.
+  const weekTotal = activeItems.reduce(
+    (s, it) => s + (anyAutoPending ? it.monthlyTarget : it.weeklyTarget),
+    0,
+  );
+  const weekDone = activeItems.reduce((s, it) => {
+    if (anyAutoPending) return s + Math.min(it.totalExecuted, it.monthlyTarget);
+    return s + (it.done ? it.weeklyTarget : 0);
+  }, 0);
   const progressPct = weekTotal > 0 ? Math.round((weekDone / weekTotal) * 100) : 0;
   const remainingCount = activeItems.filter(it => !it.done).length;
 
@@ -45,7 +55,7 @@ export function WeeklyShoppingList({
             )}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {anyAutoPending ? "Total pendiente" : "Total esta semana"}: <span className="font-semibold text-foreground tabular-nums">{mask(`€${weekTotal.toFixed(2)}`)}</span>
+            {anyAutoPending ? "Total del mes" : "Total esta semana"}: <span className="font-semibold text-foreground tabular-nums">{mask(`€${weekTotal.toFixed(2)}`)}</span>
             {" · "}
             Hechas: <span className="text-success font-semibold tabular-nums">{mask(`€${weekDone.toFixed(2)}`)}</span>
           </p>
