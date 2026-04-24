@@ -12,6 +12,8 @@ import {
 } from "@/lib/intel/multipliers";
 import type { StrategyPolicies } from "@/lib/strategy/policies";
 import type {
+  EmergencyFundStatus,
+  PauseReason,
   ScheduleData,
   ScheduleItem,
   ScheduleMarketContext,
@@ -56,16 +58,23 @@ export function getMonthWeeks(year: number, month: number): { start: Date; end: 
 
 // -- Labels resueltas -------------------------------------------------------
 
-function pauseReasonFrom(applied: AppliedMultiplier): ScheduleItem["pauseReason"] {
+// Orden de prioridad si coinciden varios: survival first (fondo) > policy
+// crypto (allocation) > scope (asset individual).
+function resolvePauseReason(
+  applied: AppliedMultiplier,
+  emergencyFundOk: boolean,
+): PauseReason | null {
+  if (!emergencyFundOk) return "emergency_fund_incomplete";
   return applied.components.gated ?? null;
 }
 
 function actionLabelFor(opts: {
   displayAmount: number;
   done: boolean;
-  pauseReason: ScheduleItem["pauseReason"];
+  pauseReason: PauseReason | null;
   autoPending: boolean;
 }): string {
+  if (opts.pauseReason === "emergency_fund_incomplete") return "Pausado (fondo emergencia)";
   if (opts.pauseReason === "crypto_paused") return "Pausado (policy crypto)";
   if (opts.pauseReason === "asset_not_in_scope") return "Fuera de scope";
   if (opts.done) return "Hecho";
@@ -79,6 +88,7 @@ export interface DeriveDeps {
   mctx: MultiplierContext;
   policies: StrategyPolicies;
   now: Date;
+  emergencyFundOk: boolean;
 }
 
 export function deriveScheduleItem(
@@ -86,7 +96,7 @@ export function deriveScheduleItem(
   allExecutions: { planId: number; date: string; amount: number }[],
   deps: DeriveDeps,
 ): ScheduleItem {
-  const { mctx, policies, now } = deps;
+  const { mctx, policies, now, emergencyFundOk } = deps;
   const todayStr = now.toISOString().slice(0, 10);
 
   const cls = (plan.assetClass as AssetClass) || classifyAsset(plan.asset);
@@ -151,7 +161,7 @@ export function deriveScheduleItem(
   const monthRemaining = Math.round(remaining * 100) / 100;
   const displayAmount = autoPending ? monthRemaining : weeklyAmount;
   const done = autoPending ? monthRemaining === 0 : !!currentWeek?.done;
-  const pauseReason = pauseReasonFrom(applied);
+  const pauseReason = resolvePauseReason(applied, emergencyFundOk);
   const actionLabel = actionLabelFor({ displayAmount, done, pauseReason, autoPending });
 
   return {
@@ -187,6 +197,7 @@ export function deriveScheduleItem(
 
 export interface BuildScheduleDeps extends DeriveDeps {
   fgValue: number;
+  emergencyFund: EmergencyFundStatus;
 }
 
 export function buildSchedule(
@@ -194,7 +205,7 @@ export function buildSchedule(
   executions: { planId: number; date: string; amount: number }[],
   deps: BuildScheduleDeps,
 ): ScheduleData {
-  const { now, mctx, fgValue } = deps;
+  const { now, mctx, fgValue, emergencyFund } = deps;
   const { monday: thisMonday, sunday: thisSunday } = getWeekBounds(now);
   const weeks = getMonthWeeks(now.getFullYear(), now.getMonth());
   const currentWeekIdx = weeks.findIndex((w) => now >= w.start && now <= w.end);
@@ -228,6 +239,7 @@ export function buildSchedule(
     thisWeekRemaining: Math.round(Math.max(0, totalWeekly - thisWeekExecuted) * 100) / 100,
     fgValue,
     marketContext,
+    emergencyFund,
     schedule,
     weeks: weeks.map((w, i) => ({
       label: w.label,

@@ -12,12 +12,14 @@ export async function GET() {
     const activePlans = plans.filter((p) => p.enabled);
     const executions = await db.select().from(schema.dcaExecutions);
 
-    const { fgValue, policies, mctx } = await getStrategyContext();
+    const { fgValue, policies, mctx, emergencyFund } = await getStrategyContext();
 
     const payload = buildSchedule(activePlans, executions, {
       fgValue,
       policies,
       mctx,
+      emergencyFund,
+      emergencyFundOk: emergencyFund.ok,
       now: new Date(),
     });
 

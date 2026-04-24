@@ -48,7 +48,9 @@ export function WeeklyShoppingList({
             <ShoppingCart className="w-3.5 h-3.5" /> {anyAutoPending ? "Pendiente este mes" : "Esta semana"}
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-foreground">
-            {remainingCount === 0 ? (
+            {activeItems.length === 0 ? (
+              <>DCA pausado este ciclo</>
+            ) : remainingCount === 0 ? (
               <>¡Todo hecho este mes! <span className="text-success">✓</span></>
             ) : (
               <>Tienes {remainingCount} {remainingCount === 1 ? "compra pendiente" : "compras pendientes"}</>

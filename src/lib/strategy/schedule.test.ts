@@ -75,10 +75,29 @@ test("displayAmount = weeklyTarget si no hay autoPending", () => {
   const item = deriveScheduleItem(mkPlan(), [], {
     mctx: mkMctx(),
     policies: DEFAULT_POLICIES_V2,
-    now: NOW,
+    now: NOW, emergencyFundOk: true,
   });
   assert.equal(item.autoPending, false);
   assert.equal(item.displayAmount, item.weeklyTarget);
+});
+
+test("emergencyFundOk=false → pauseReason=emergency_fund_incomplete (prioridad sobre crypto)", () => {
+  const item = deriveScheduleItem(mkPlan({ asset: "BTC", assetClass: "crypto" }), [], {
+    mctx: mkMctx({ cryptoAllocationPct: 25 }), // normalmente crypto_paused
+    policies: DEFAULT_POLICIES_V2,
+    now: NOW, emergencyFundOk: false,
+  });
+  assert.equal(item.pauseReason, "emergency_fund_incomplete");
+  assert.equal(item.actionLabel, "Pausado (fondo emergencia)");
+});
+
+test("emergencyFundOk=false pausa ETFs también (survival first)", () => {
+  const item = deriveScheduleItem(
+    mkPlan({ asset: "MSCI World", assetClass: "etfs", amount: 405 }),
+    [],
+    { mctx: mkMctx(), policies: DEFAULT_POLICIES_V2, now: NOW, emergencyFundOk: false },
+  );
+  assert.equal(item.pauseReason, "emergency_fund_incomplete");
 });
 
 test("autoPending cuando autoStartDate es futuro → displayAmount = monthRemaining", () => {
@@ -89,7 +108,7 @@ test("autoPending cuando autoStartDate es futuro → displayAmount = monthRemain
       autoStartDate: "2026-05-01", // futuro respecto a NOW
     }),
     [],
-    { mctx: mkMctx(), policies: DEFAULT_POLICIES_V2, now: NOW },
+    { mctx: mkMctx(), policies: DEFAULT_POLICIES_V2, now: NOW, emergencyFundOk: true },
   );
   assert.equal(item.autoPending, true);
   assert.equal(item.displayAmount, item.monthRemaining);
@@ -104,7 +123,7 @@ test("autoStartDate pasado → NO autoPending (ya arrancó el plan)", () => {
       autoStartDate: "2026-01-01",
     }),
     [],
-    { mctx: mkMctx(), policies: DEFAULT_POLICIES_V2, now: NOW },
+    { mctx: mkMctx(), policies: DEFAULT_POLICIES_V2, now: NOW, emergencyFundOk: true },
   );
   assert.equal(item.autoPending, false);
 });
@@ -115,7 +134,7 @@ test("executedRatio ≥99% colapsa remaining a 0 (residuos TR)", () => {
   const item = deriveScheduleItem(plan, execs, {
     mctx: mkMctx(),
     policies: DEFAULT_POLICIES_V2,
-    now: NOW,
+    now: NOW, emergencyFundOk: true,
   });
   assert.equal(item.remaining, 0);
   assert.equal(item.monthRemaining, 0);
@@ -125,7 +144,7 @@ test("pauseReason=crypto_paused cuando allocation ≥ requiresCryptoUnderPct", (
   const item = deriveScheduleItem(mkPlan({ asset: "BTC", assetClass: "crypto" }), [], {
     mctx: mkMctx({ cryptoAllocationPct: 25 }),
     policies: DEFAULT_POLICIES_V2,
-    now: NOW,
+    now: NOW, emergencyFundOk: true,
   });
   assert.equal(item.pauseReason, "crypto_paused");
   assert.equal(item.actionLabel, "Pausado (policy crypto)");
@@ -143,7 +162,7 @@ test("pauseReason=asset_not_in_scope cuando crypto allocation ok pero asset no e
         appliesTo: ["BTC"],
       },
     },
-    now: NOW,
+    now: NOW, emergencyFundOk: true,
   });
   assert.equal(item.pauseReason, "asset_not_in_scope");
   assert.equal(item.actionLabel, "Fuera de scope");
@@ -160,7 +179,7 @@ test("actionLabel 'Hecho' cuando monthRemaining=0 y autoPending", () => {
   const item = deriveScheduleItem(plan, execs, {
     mctx: mkMctx(),
     policies: DEFAULT_POLICIES_V2,
-    now: NOW,
+    now: NOW, emergencyFundOk: true,
   });
   assert.equal(item.autoPending, true);
   assert.equal(item.monthRemaining, 0);
@@ -177,7 +196,7 @@ test("actionLabel 'Ejecutar ahora' cuando autoPending y no done", () => {
       amount: 100,
     }),
     [],
-    { mctx: mkMctx(), policies: DEFAULT_POLICIES_V2, now: NOW },
+    { mctx: mkMctx(), policies: DEFAULT_POLICIES_V2, now: NOW, emergencyFundOk: true },
   );
   assert.equal(item.autoPending, true);
   assert.ok(item.actionLabel.startsWith("Ejecutar ahora €"));

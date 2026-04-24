@@ -19,6 +19,7 @@ import { WeeklyShoppingList } from "@/components/strategy/weekly-shopping-list";
 import { WeeklySchedule } from "@/components/strategy/weekly-schedule";
 import { MonthProgress } from "@/components/strategy/month-progress";
 import { EmergencyCard } from "@/components/strategy/emergency-card";
+import { EmergencyPauseBanner } from "@/components/strategy/emergency-pause-banner";
 import { Collapsible } from "@/components/strategy/collapsible";
 import { DcaPlansList } from "@/components/strategy/dca-plans-list";
 import { HistoryTable } from "@/components/strategy/history-table";
@@ -149,6 +150,8 @@ export default function StrategyPage() {
           </button>
         </div>
       </div>
+
+      <EmergencyPauseBanner emergencyFund={schedule?.emergencyFund} />
 
       <MarketStrip market={market ?? null} netWorth={market?.finances.netWorth || 0} />
 

@@ -18,6 +18,11 @@ export interface WeekItem {
   isFuture: boolean;
 }
 
+export type PauseReason =
+  | "crypto_paused"
+  | "asset_not_in_scope"
+  | "emergency_fund_incomplete";
+
 export interface ScheduleMultiplierComponents {
   fgMult?: number;
   fundingBoost?: number;
@@ -27,6 +32,13 @@ export interface ScheduleMultiplierComponents {
   vixLevel?: number | null;
   gated?: "crypto_paused" | "asset_not_in_scope";
   gateContext?: Record<string, unknown>;
+}
+
+export interface EmergencyFundStatus {
+  targetEur: number;
+  currentEur: number;
+  ok: boolean;
+  shortfallEur: number;
 }
 
 // Un ScheduleItem lleva:
@@ -66,7 +78,7 @@ export interface ScheduleItem {
   autoPending: boolean;          // plan con autoExecute pero autoStartDate aún futuro: arranca en modo "manual hasta X"
   displayAmount: number;         // autoPending ? monthRemaining : weeklyTarget
   done: boolean;                 // autoPending ? monthRemaining === 0 : currentWeek.done
-  pauseReason: "crypto_paused" | "asset_not_in_scope" | null;
+  pauseReason: PauseReason | null;
   actionLabel: string;           // copy resuelto para el botón/etiqueta principal
 }
 
@@ -88,6 +100,7 @@ export interface ScheduleData {
   thisWeekRemaining: number;
   fgValue: number;
   marketContext: ScheduleMarketContext;
+  emergencyFund: EmergencyFundStatus;
   schedule: ScheduleItem[];
   weeks: { label: string; start: string; end: string; isCurrent: boolean }[];
 }

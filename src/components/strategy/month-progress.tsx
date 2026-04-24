@@ -15,12 +15,19 @@ export function MonthProgress({
 }) {
   const { mask } = usePrivacy();
   if (!schedule) return null;
-  const activeItems = schedule.schedule.filter(p => !p.pauseReason);
-  const totalMonthly = activeItems.reduce((s, p) => s + p.monthlyTarget, 0);
+  // Filtra solo pauses per-plan (crypto_paused, asset_not_in_scope) pero
+  // mantiene los pauses por fondo incompleto — ésos aplican a todo, y si
+  // los excluyéramos quedaría el mes en 0/0 aunque el user haya invertido.
+  // El banner de survival ya avisa que está pausado; este card enseña lo
+  // que se llegó a ejecutar antes del gate.
+  const countableItems = schedule.schedule.filter(
+    p => p.pauseReason === null || p.pauseReason === "emergency_fund_incomplete",
+  );
+  const totalMonthly = countableItems.reduce((s, p) => s + p.monthlyTarget, 0);
   // Capar el "hecho" de cada plan a su target: un plan que sobra-compra no
   // compensa a otro que está corto. Sin esto, EU Infl Bond 175/160 sumaba
   // los 175 y "tapaba" los €15 faltantes de Gold ETC → 100% falso.
-  const totalExecuted = activeItems.reduce(
+  const totalExecuted = countableItems.reduce(
     (s, p) => s + Math.min(p.totalExecuted, p.monthlyTarget),
     0,
   );
