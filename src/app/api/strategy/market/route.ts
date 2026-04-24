@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { getEurPerUsd } from "@/lib/currency-rates";
-import { db, schema } from "@/lib/db";
-import { eq } from "drizzle-orm";
-import { parsePolicies } from "@/lib/strategy/policies";
 import {
   applyPolicyGate,
-  computeCryptoAllocationPct,
   getRawDcaMultiplier,
 } from "@/lib/strategy/market-multiplier";
+import { getStrategyContext } from "@/lib/strategy/context";
 
 // Fetches live market context:
 // - Crypto Fear & Greed Index (alternative.me)
@@ -23,42 +20,10 @@ function getFgLabel(fg: number): string {
 }
 
 export async function GET() {
-  // Fear & Greed
-  let fgValue = 50;
-  let fgTimestamp: string | null = null;
-  try {
-    const fgRes = await fetch("https://api.alternative.me/fng/?limit=1", {
-      next: { revalidate: 600 }, // cache 10 min
-    });
-    const fgJson = await fgRes.json();
-    if (fgJson.data?.[0]) {
-      fgValue = parseInt(fgJson.data[0].value, 10);
-      fgTimestamp = fgJson.data[0].timestamp;
-    }
-  } catch (e) {
-    console.error("F&G fetch failed:", e);
-  }
+  const { fgValue, fgTimestamp, policies, cryptoAllocationPct, dashboard } =
+    await getStrategyContext();
 
   const fgLabel = getFgLabel(fgValue);
-
-  // R1: leer profile + policies + allocation crypto para gatear el multiplier.
-  const [profile] = await db
-    .select({
-      policiesJson: schema.strategyProfiles.policiesJson,
-    })
-    .from(schema.strategyProfiles)
-    .where(eq(schema.strategyProfiles.active, true))
-    .limit(1);
-  const policies = parsePolicies(profile?.policiesJson ?? null);
-
-  let cryptoAllocationPct = 0;
-  try {
-    const dashRes = await fetch("http://localhost:3000/api/dashboard/summary", { cache: "no-store" });
-    const dash = await dashRes.json();
-    cryptoAllocationPct = computeCryptoAllocationPct(dash.portfolioAssets ?? [], dash.portfolio ?? 0);
-  } catch (e) {
-    console.warn("[market] crypto allocation fetch failed, assume 0:", e);
-  }
 
   const raw = getRawDcaMultiplier(fgValue, policies.multiplier.fgThreshold);
   const { multiplier: dcaMultiplier, label: multiplierLabel } = applyPolicyGate(raw, policies, cryptoAllocationPct);
@@ -85,14 +50,10 @@ export async function GET() {
     monthlyIncome = Math.round((s.totalIncome || 0) / 3);
     monthlyExpenses = Math.round((s.totalExpenses || 0) / 3);
 
-    const dashRes = await fetch("http://localhost:3000/api/dashboard/summary", {
-      cache: "no-store",
-    });
-    const dash = await dashRes.json();
     const eurRate = await getEurPerUsd();
-    netWorth = Math.round((dash.netWorth || 0) * eurRate);
+    netWorth = Math.round((dashboard.netWorth || 0) * eurRate);
   } catch (e) {
-    console.error("Expenses/dashboard fetch failed:", e);
+    console.error("Expenses fetch failed:", e);
   }
 
   const monthlyInvestable = Math.max(0, monthlyIncome - monthlyExpenses);

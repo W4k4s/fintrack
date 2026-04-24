@@ -3,6 +3,7 @@ import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { getEurPerUsd } from "@/lib/currency-rates";
 import { effectiveGoalTarget, emergencyTargetEur } from "@/lib/strategy/health-calc";
+import { getDashboardSummary } from "@/lib/dashboard/summary";
 
 // Asset class mapping
 const ASSET_CLASS_MAP: Record<string, string> = {
@@ -23,9 +24,8 @@ export async function GET() {
     if (!profiles.length) return NextResponse.json({ score: 0, warnings: ["No strategy configured"] });
     const profile = profiles[0];
 
-    // Get portfolio from dashboard
-    const dashRes = await fetch("http://localhost:3000/api/dashboard/summary");
-    const dash = await dashRes.json();
+    // Get portfolio from dashboard (in-proc, no HTTP self-call)
+    const dash = await getDashboardSummary();
     const portfolioAssets = dash.portfolioAssets || [];
     const netWorth = dash.netWorth || 0;
     const eurRate = await getEurPerUsd();

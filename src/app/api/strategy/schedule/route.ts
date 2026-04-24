@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
-import { eq } from "drizzle-orm";
 import { classifyAsset } from "@/lib/intel/allocation/classify";
-import { loadMultiplierContext, multiplierFor } from "@/lib/intel/multipliers";
-import { parsePolicies } from "@/lib/strategy/policies";
-import { computeCryptoAllocationPct } from "@/lib/strategy/market-multiplier";
+import { multiplierFor } from "@/lib/intel/multipliers";
+import { getStrategyContext } from "@/lib/strategy/context";
 
 // Generate weekly schedule from monthly DCA plans.
 // Multiplicador adaptativo por clase (Phase 3.4):
@@ -46,44 +44,13 @@ function getMonthWeeks(year: number, month: number) {
   return weeks;
 }
 
-async function getFgValue(): Promise<number> {
-  try {
-    const r = await fetch("https://api.alternative.me/fng/?limit=1", {
-      next: { revalidate: 600 },
-    });
-    const j = await r.json();
-    if (j.data?.[0]) return parseInt(j.data[0].value, 10);
-  } catch {}
-  return 50;
-}
-
 export async function GET() {
   try {
     const plans = await db.select().from(schema.investmentPlans);
     const activePlans = plans.filter((p) => p.enabled);
     const executions = await db.select().from(schema.dcaExecutions);
 
-    const fgValue = await getFgValue();
-
-    // R3: leer policies + allocation crypto actual para que multiplierFor
-    // aplique los gates (crypto_paused / asset_not_in_scope).
-    const [profile] = await db
-      .select({ policiesJson: schema.strategyProfiles.policiesJson })
-      .from(schema.strategyProfiles)
-      .where(eq(schema.strategyProfiles.active, true))
-      .limit(1);
-    const policies = parsePolicies(profile?.policiesJson ?? null);
-
-    let cryptoAllocationPct = 0;
-    try {
-      const dashRes = await fetch("http://localhost:3000/api/dashboard/summary", { cache: "no-store" });
-      const dash = await dashRes.json();
-      cryptoAllocationPct = computeCryptoAllocationPct(dash.portfolioAssets ?? [], dash.portfolio ?? 0);
-    } catch (e) {
-      console.warn("[schedule] crypto allocation fetch failed, assume 0:", e);
-    }
-
-    const mctx = await loadMultiplierContext(fgValue, { cryptoAllocationPct });
+    const { fgValue, policies, mctx } = await getStrategyContext();
 
     const now = new Date();
     const { monday: thisMonday, sunday: thisSunday } = getWeekBounds(now);
