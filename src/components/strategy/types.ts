@@ -28,35 +28,15 @@ export interface DcaExecution {
   units: number | null; date: string; notes: string | null;
 }
 
-export interface WeekItem {
-  label: string; start: string; end: string; target: number;
-  executed: number; done: boolean; autoDone?: boolean;
-  isCurrent: boolean; isPast: boolean; isFuture: boolean;
-}
-
-export interface PlanSchedule {
-  planId: number; asset: string; name: string;
-  isCrypto?: boolean; baseMonthly?: number; appliedMultiplier?: number;
-  multiplierRule?: "crypto" | "equity" | "fixed";
-  multiplierComponents?: {
-    fgMult?: number; fundingBoost?: number; fundingRate?: number | null;
-    basisBoost?: number; basisPct?: number | null; vixLevel?: number | null;
-    gated?: "crypto_paused" | "asset_not_in_scope";
-    gateContext?: Record<string, unknown>;
-  };
-  autoExecute?: boolean; autoDayOfWeek?: number | null;
-  autoStartDate?: string | null; broker?: string | null;
-  monthlyTarget: number; weeklyTarget: number;
-  totalExecuted: number; remaining: number; onTrack: boolean;
-  weeks: WeekItem[];
-}
-
-export interface ScheduleData {
-  currentWeek: number; totalWeeks: number;
-  weeklyBudget: number; thisWeekExecuted: number; thisWeekRemaining: number;
-  fgValue?: number; fgMultiplier?: number;
-  schedule: PlanSchedule[];
-}
+// Re-export del payload de /api/strategy/schedule (SSOT en lib/strategy/types.ts)
+export type {
+  WeekItem,
+  ScheduleItem,
+  ScheduleItem as PlanSchedule, // alias retrocompat
+  ScheduleData,
+  ScheduleMarketContext,
+  ScheduleMultiplierComponents,
+} from "@/lib/strategy/types";
 
 export interface Allocation {
   class: string; current: number; target: number; drift: number;

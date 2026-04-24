@@ -3,6 +3,10 @@ import { Check, Info, ShoppingCart } from "lucide-react";
 import { usePrivacy } from "@/components/privacy-provider";
 import { ASSET_EMOJI, type DcaPlan, type ScheduleData } from "./types";
 
+// Todas las derivaciones (autoPending, displayAmount, done, pauseReason,
+// actionLabel) vienen del payload ya resueltas por buildSchedule.
+// Este componente es ahora puro renderizado.
+
 export function WeeklyShoppingList({
   schedule, plans, onExecute,
 }: {
@@ -12,39 +16,19 @@ export function WeeklyShoppingList({
   const { mask } = usePrivacy();
   if (!schedule) return null;
 
-  const today = new Date().toISOString().slice(0, 10);
-  const items = schedule.schedule.map(ps => {
-    const currentWeek = ps.weeks.find(w => w.isCurrent);
-    const plan = plans.find(p => p.id === ps.planId);
-    const autoPending = !!ps.autoExecute && !!ps.autoStartDate && ps.autoStartDate > today;
-    // Usar el remaining del server si viene (aplica umbral 99% para residuos
-    // de TR al ejecutar). Fallback al cálculo local si el payload es antiguo.
-    const monthRemaining = typeof ps.remaining === "number"
-      ? ps.remaining
-      : Math.max(0, ps.monthlyTarget - ps.totalExecuted);
-    const done = autoPending ? monthRemaining === 0 : (currentWeek?.done || false);
-    return {
-      planId: ps.planId, asset: ps.asset, name: ps.name,
-      weeklyTarget: ps.weeklyTarget, executed: currentWeek?.executed || 0,
-      done,
-      autoDone: currentWeek?.autoDone || false,
-      monthExecuted: ps.totalExecuted,
-      monthTarget: ps.monthlyTarget, baseMonthly: ps.baseMonthly || ps.monthlyTarget,
-      multiplier: ps.appliedMultiplier || 1, isCrypto: !!ps.isCrypto,
-      gated: ps.multiplierComponents?.gated,
-      autoExecute: !!ps.autoExecute, broker: ps.broker, plan,
-      autoPending, autoStartDate: ps.autoStartDate || null, monthRemaining,
-      displayAmount: autoPending ? monthRemaining : ps.weeklyTarget,
-    };
-  });
+  const items = schedule.schedule.map(ps => ({
+    ...ps,
+    plan: plans.find(p => p.id === ps.planId) ?? null,
+    currentWeek: ps.weeks.find(w => w.isCurrent),
+  }));
 
-  const activeItems = items.filter(it => !it.gated);
-  const pausedItems = items.filter(it => !!it.gated);
+  const activeItems = items.filter(it => !it.pauseReason);
+  const pausedItems = items.filter(it => !!it.pauseReason);
   const anyAutoPending = activeItems.some(it => it.autoPending);
   const weekTotal = activeItems.reduce((s, it) => s + it.displayAmount, 0);
   const weekDone = activeItems.reduce((s, it) => s + (it.done ? it.displayAmount : 0), 0);
   const progressPct = weekTotal > 0 ? Math.round((weekDone / weekTotal) * 100) : 0;
-  const remaining = activeItems.filter(it => !it.done).length;
+  const remainingCount = activeItems.filter(it => !it.done).length;
 
   return (
     <div className="bg-gradient-to-br from-success-soft via-card to-card border border-success/30 rounded-2xl p-5 md:p-6 shadow-lg">
@@ -54,10 +38,10 @@ export function WeeklyShoppingList({
             <ShoppingCart className="w-3.5 h-3.5" /> {anyAutoPending ? "Pendiente este mes" : "Esta semana"}
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-foreground">
-            {remaining === 0 ? (
+            {remainingCount === 0 ? (
               <>¡Todo hecho este mes! <span className="text-success">✓</span></>
             ) : (
-              <>Tienes {remaining} {remaining === 1 ? "compra pendiente" : "compras pendientes"}</>
+              <>Tienes {remainingCount} {remainingCount === 1 ? "compra pendiente" : "compras pendientes"}</>
             )}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -97,24 +81,14 @@ export function WeeklyShoppingList({
                 <span className={`font-semibold ${it.done ? "text-muted-foreground line-through" : "text-foreground"}`}>
                   {it.asset}
                 </span>
-                {it.gated === "crypto_paused" && !it.done && (
-                  <span className="text-[10px] px-1.5 py-0.5 bg-warn-soft text-warn rounded-full font-semibold">
-                    Pausado (policy crypto)
-                  </span>
-                )}
-                {it.gated === "asset_not_in_scope" && !it.done && (
-                  <span className="text-[10px] px-1.5 py-0.5 bg-warn-soft text-warn rounded-full font-semibold">
-                    Fuera de scope multiplier
-                  </span>
-                )}
-                {!it.gated && it.multiplier > 1 && !it.done && (
+                {!it.done && it.appliedMultiplier > 1 && (
                   <span className="text-[10px] px-1.5 py-0.5 bg-success-soft text-success rounded-full font-semibold">
-                    ×{it.multiplier} miedo extremo
+                    ×{it.appliedMultiplier} miedo extremo
                   </span>
                 )}
-                {!it.gated && it.multiplier < 1 && !it.done && (
+                {!it.done && it.appliedMultiplier < 1 && (
                   <span className="text-[10px] px-1.5 py-0.5 bg-warn-soft text-warn rounded-full font-semibold">
-                    ×{it.multiplier} codicia
+                    ×{it.appliedMultiplier} codicia
                   </span>
                 )}
                 {it.autoExecute && !it.autoPending && (
@@ -127,7 +101,7 @@ export function WeeklyShoppingList({
                     Manual hasta {it.autoStartDate?.slice(5) /* MM-DD */}
                   </span>
                 )}
-                <span className="text-xs text-muted-foreground tabular-nums">{mask(`€${it.monthExecuted.toFixed(0)}`)} / {mask(`€${it.monthTarget.toFixed(0)}`)} este mes</span>
+                <span className="text-xs text-muted-foreground tabular-nums">{mask(`€${it.totalExecuted.toFixed(0)}`)} / {mask(`€${it.monthlyTarget.toFixed(0)}`)} este mes</span>
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">{it.name}</div>
             </div>
@@ -145,10 +119,10 @@ export function WeeklyShoppingList({
                 Comprar
               </button>
             )}
-            {it.done && !it.autoDone && (
+            {it.done && !it.currentWeek?.autoDone && (
               <span className="px-3 py-1 text-xs text-success font-medium shrink-0">Hecho ✓</span>
             )}
-            {it.autoDone && (
+            {it.currentWeek?.autoDone && (
               <span className="px-3 py-1 text-xs text-info font-medium shrink-0">🤖 Hecho auto</span>
             )}
           </div>
@@ -171,10 +145,10 @@ export function WeeklyShoppingList({
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-muted-foreground text-sm">{it.asset}</span>
                     <span className="text-[10px] px-1.5 py-0.5 bg-warn-soft/60 text-warn/80 rounded-full font-medium">
-                      {it.gated === "crypto_paused" ? "Pausado (policy crypto)" : "Fuera de scope"}
+                      {it.actionLabel}
                     </span>
                     <span className="text-xs text-muted-foreground tabular-nums">
-                      {mask(`€${it.monthExecuted.toFixed(0)}`)} / {mask(`€${it.monthTarget.toFixed(0)}`)} este mes
+                      {mask(`€${it.totalExecuted.toFixed(0)}`)} / {mask(`€${it.monthlyTarget.toFixed(0)}`)} este mes
                     </span>
                   </div>
                   <div className="text-[11px] text-muted-foreground/80 mt-0.5">{it.name}</div>

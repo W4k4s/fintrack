@@ -36,7 +36,6 @@ type ScheduleResponse = {
   thisWeekExecuted: number;
   thisWeekRemaining: number;
   fgValue: number;
-  fgMultiplier: number;
 };
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -380,7 +379,7 @@ export default function Dashboard() {
                   style={{ width: `${Math.min(100, (schedule.thisWeekExecuted / Math.max(schedule.weeklyBudget, 1)) * 100)}%` }}
                 />
               </div>
-              <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border">
+              <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border">
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Week</div>
                   <div className="text-sm font-mono mt-0.5">
@@ -396,16 +395,6 @@ export default function Dashboard() {
                       schedule.fgValue < 30 ? "text-success" : schedule.fgValue > 70 ? "text-danger" : "text-warn",
                     )}>
                       {schedule.fgValue < 25 ? "Extreme fear" : schedule.fgValue < 45 ? "Fear" : schedule.fgValue < 55 ? "Neutral" : schedule.fgValue < 75 ? "Greed" : "Extreme greed"}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Multiplier</div>
-                  <div className="text-sm font-mono mt-0.5">
-                    <span className={cn(
-                      schedule.fgMultiplier > 1 ? "text-success" : schedule.fgMultiplier < 1 ? "text-danger" : "",
-                    )}>
-                      {schedule.fgMultiplier.toFixed(2)}×
                     </span>
                   </div>
                 </div>
