@@ -12,50 +12,63 @@ export function WeeklyShoppingList({
   const { mask } = usePrivacy();
   if (!schedule) return null;
 
+  const today = new Date().toISOString().slice(0, 10);
   const items = schedule.schedule.map(ps => {
     const currentWeek = ps.weeks.find(w => w.isCurrent);
     const plan = plans.find(p => p.id === ps.planId);
+    const autoPending = !!ps.autoExecute && !!ps.autoStartDate && ps.autoStartDate > today;
+    // Usar el remaining del server si viene (aplica umbral 99% para residuos
+    // de TR al ejecutar). Fallback al cálculo local si el payload es antiguo.
+    const monthRemaining = typeof ps.remaining === "number"
+      ? ps.remaining
+      : Math.max(0, ps.monthlyTarget - ps.totalExecuted);
+    const done = autoPending ? monthRemaining === 0 : (currentWeek?.done || false);
     return {
       planId: ps.planId, asset: ps.asset, name: ps.name,
       weeklyTarget: ps.weeklyTarget, executed: currentWeek?.executed || 0,
-      done: currentWeek?.done || false,
+      done,
       autoDone: currentWeek?.autoDone || false,
       monthExecuted: ps.totalExecuted,
       monthTarget: ps.monthlyTarget, baseMonthly: ps.baseMonthly || ps.monthlyTarget,
       multiplier: ps.appliedMultiplier || 1, isCrypto: !!ps.isCrypto,
       gated: ps.multiplierComponents?.gated,
       autoExecute: !!ps.autoExecute, broker: ps.broker, plan,
+      autoPending, autoStartDate: ps.autoStartDate || null, monthRemaining,
+      displayAmount: autoPending ? monthRemaining : ps.weeklyTarget,
     };
   });
 
-  const weekTotal = items.reduce((s, it) => s + it.weeklyTarget, 0);
-  const weekDone = items.reduce((s, it) => s + (it.done ? it.weeklyTarget : 0), 0);
+  const activeItems = items.filter(it => !it.gated);
+  const pausedItems = items.filter(it => !!it.gated);
+  const anyAutoPending = activeItems.some(it => it.autoPending);
+  const weekTotal = activeItems.reduce((s, it) => s + it.displayAmount, 0);
+  const weekDone = activeItems.reduce((s, it) => s + (it.done ? it.displayAmount : 0), 0);
   const progressPct = weekTotal > 0 ? Math.round((weekDone / weekTotal) * 100) : 0;
-  const remaining = items.filter(it => !it.done).length;
+  const remaining = activeItems.filter(it => !it.done).length;
 
   return (
     <div className="bg-gradient-to-br from-success-soft via-card to-card border border-success/30 rounded-2xl p-5 md:p-6 shadow-lg">
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <div className="flex items-center gap-2 text-xs text-success font-medium uppercase tracking-wider mb-1">
-            <ShoppingCart className="w-3.5 h-3.5" /> Esta semana
+            <ShoppingCart className="w-3.5 h-3.5" /> {anyAutoPending ? "Pendiente este mes" : "Esta semana"}
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-foreground">
             {remaining === 0 ? (
-              <>¡Todo hecho esta semana! <span className="text-success">✓</span></>
+              <>¡Todo hecho este mes! <span className="text-success">✓</span></>
             ) : (
               <>Tienes {remaining} {remaining === 1 ? "compra pendiente" : "compras pendientes"}</>
             )}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Total esta semana: <span className="font-semibold text-foreground tabular-nums">{mask(`€${weekTotal.toFixed(2)}`)}</span>
+            {anyAutoPending ? "Total pendiente" : "Total esta semana"}: <span className="font-semibold text-foreground tabular-nums">{mask(`€${weekTotal.toFixed(2)}`)}</span>
             {" · "}
             Hechas: <span className="text-success font-semibold tabular-nums">{mask(`€${weekDone.toFixed(2)}`)}</span>
           </p>
         </div>
         <div className="shrink-0 text-right">
           <div className="text-3xl md:text-4xl font-bold tabular-nums text-success">{progressPct}%</div>
-          <div className="text-[10px] text-muted-foreground uppercase">Semana</div>
+          <div className="text-[10px] text-muted-foreground uppercase">{anyAutoPending ? "Mes" : "Semana"}</div>
         </div>
       </div>
 
@@ -65,7 +78,7 @@ export function WeeklyShoppingList({
       </div>
 
       <div className="space-y-2">
-        {items.map(it => (
+        {activeItems.map(it => (
           <div key={it.planId}
             className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
               it.done
@@ -104,9 +117,14 @@ export function WeeklyShoppingList({
                     ×{it.multiplier} codicia
                   </span>
                 )}
-                {it.autoExecute && (
+                {it.autoExecute && !it.autoPending && (
                   <span className="text-[10px] px-1.5 py-0.5 bg-info-soft text-info rounded-full font-medium">
                     🤖 Plan {it.broker || "auto"}
+                  </span>
+                )}
+                {it.autoPending && (
+                  <span className="text-[10px] px-1.5 py-0.5 bg-warn-soft text-warn rounded-full font-medium">
+                    Manual hasta {it.autoStartDate?.slice(5) /* MM-DD */}
                   </span>
                 )}
                 <span className="text-xs text-muted-foreground tabular-nums">{mask(`€${it.monthExecuted.toFixed(0)}`)} / {mask(`€${it.monthTarget.toFixed(0)}`)} este mes</span>
@@ -115,8 +133,11 @@ export function WeeklyShoppingList({
             </div>
             <div className="text-right shrink-0">
               <div className={`text-lg font-bold tabular-nums ${it.done ? "text-success" : "text-foreground"}`}>
-                {mask(`€${it.weeklyTarget.toFixed(2)}`)}
+                {mask(`€${it.displayAmount.toFixed(2)}`)}
               </div>
+              {it.autoPending && !it.done && (
+                <div className="text-[10px] text-muted-foreground mt-0.5">resto del mes</div>
+              )}
             </div>
             {!it.done && it.plan && (
               <button onClick={() => onExecute(it.plan!)}
@@ -133,6 +154,41 @@ export function WeeklyShoppingList({
           </div>
         ))}
       </div>
+
+      {pausedItems.length > 0 && (
+        <div className="mt-5 pt-4 border-t border-border">
+          <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
+            Pausados ({pausedItems.length})
+          </div>
+          <div className="space-y-1.5">
+            {pausedItems.map(it => (
+              <div key={it.planId}
+                className="flex items-center gap-3 p-2.5 rounded-lg bg-elevated/40 border border-border/50 opacity-60">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0 bg-card grayscale">
+                  {ASSET_EMOJI[it.asset] || "💼"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-muted-foreground text-sm">{it.asset}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 bg-warn-soft/60 text-warn/80 rounded-full font-medium">
+                      {it.gated === "crypto_paused" ? "Pausado (policy crypto)" : "Fuera de scope"}
+                    </span>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {mask(`€${it.monthExecuted.toFixed(0)}`)} / {mask(`€${it.monthTarget.toFixed(0)}`)} este mes
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground/80 mt-0.5">{it.name}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-sm font-medium tabular-nums text-muted-foreground">
+                    {mask(`€${it.weeklyTarget.toFixed(2)}`)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 pt-4 border-t border-border flex items-start gap-2 text-xs text-muted-foreground">
         <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />

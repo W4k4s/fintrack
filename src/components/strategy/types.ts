@@ -44,7 +44,8 @@ export interface PlanSchedule {
     gated?: "crypto_paused" | "asset_not_in_scope";
     gateContext?: Record<string, unknown>;
   };
-  autoExecute?: boolean; autoDayOfWeek?: number | null; broker?: string | null;
+  autoExecute?: boolean; autoDayOfWeek?: number | null;
+  autoStartDate?: string | null; broker?: string | null;
   monthlyTarget: number; weeklyTarget: number;
   totalExecuted: number; remaining: number; onTrack: boolean;
   weeks: WeekItem[];

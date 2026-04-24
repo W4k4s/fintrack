@@ -105,7 +105,10 @@ export async function GET() {
         (e) => e.planId === plan.id && e.date >= monthStart && e.date <= monthEnd,
       );
       const totalExecuted = monthExecs.reduce((s, e) => s + e.amount, 0);
-      const remaining = Math.max(0, effectiveMonthly - totalExecuted);
+      // ≥99% ≈ redondeo de TR al ejecutar (units×price vs amount tecleado): el
+      // residuo de céntimos (ej. 335€ → 334,97€) no se considera pendiente.
+      const executedRatio = effectiveMonthly > 0 ? totalExecuted / effectiveMonthly : 1;
+      const remaining = executedRatio >= 0.99 ? 0 : Math.max(0, effectiveMonthly - totalExecuted);
 
       const autoEnabled = !!plan.autoExecute && plan.autoDayOfWeek != null;
       const autoStartDate = plan.autoStartDate || null;
