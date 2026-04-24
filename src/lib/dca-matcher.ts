@@ -1,5 +1,6 @@
 import { db, schema } from "@/lib/db";
 import { eq, and, gte, isNull } from "drizzle-orm";
+import { ISIN_MAP } from "@/lib/isin-map";
 
 /**
  * Auto-match exchange trades (buys) to DCA plans.
@@ -122,4 +123,158 @@ export async function matchTradesToDCA() {
   }
 
   return { matched, skipped };
+}
+
+/**
+ * Shape esperado por el matcher TR — cada trade viene con principal separado
+ * de fee para que imputemos correctamente al target del plan (450€/mes =
+ * principal, no principal+fees).
+ */
+export interface TrTradeForDca {
+  date: string;
+  side: "buy" | "sell";
+  symbol: string;
+  principalEur: number;
+  feeEur: number;
+  units: number;
+  priceEur: number;
+}
+
+/**
+ * Versión para Trade Republic: las compras TR entran por `bank_transactions`
+ * y (en el flujo CSV) con principal/fee separados. Agrupa por (plan_id, date)
+ * e inserta una dca_execution por grupo usando SOLO principal (sin fees).
+ *
+ * Dedup por (plan_id, date) — reimport idempotente.
+ */
+export async function matchTrTradesToDCA(trades: TrTradeForDca[]) {
+  if (!trades.length) return { matched: 0 };
+  const plans = await db.select().from(schema.investmentPlans);
+  const activePlans = plans.filter((p) => p.enabled);
+  if (activePlans.length === 0) return { matched: 0 };
+
+  const planBySymbol = new Map<string, (typeof activePlans)[number]>();
+  for (const p of activePlans) planBySymbol.set(p.asset, p);
+
+  const existing = await db.select().from(schema.dcaExecutions);
+  const existingKey = new Set(existing.map((e) => `${e.planId}:${e.date}`));
+
+  type Group = {
+    planId: number;
+    date: string;
+    principalEur: number;
+    units: number;
+    items: number;
+  };
+  const groups = new Map<string, Group>();
+
+  for (const t of trades) {
+    if (t.side !== "buy") continue;
+    const plan = planBySymbol.get(t.symbol);
+    if (!plan) continue;
+    const key = `${plan.id}:${t.date}`;
+    if (existingKey.has(key)) continue;
+    const prev = groups.get(key);
+    if (prev) {
+      prev.principalEur += t.principalEur;
+      prev.units += t.units;
+      prev.items += 1;
+    } else {
+      groups.set(key, {
+        planId: plan.id,
+        date: t.date,
+        principalEur: t.principalEur,
+        units: t.units,
+        items: 1,
+      });
+    }
+  }
+
+  let matched = 0;
+  for (const g of groups.values()) {
+    const avgPrice = g.units > 0 ? g.principalEur / g.units : null;
+    await db.insert(schema.dcaExecutions).values({
+      planId: g.planId,
+      date: g.date,
+      amount: Math.round(g.principalEur * 100) / 100,
+      price: avgPrice ? Math.round(avgPrice * 10000) / 10000 : null,
+      units: Math.round(g.units * 1e8) / 1e8,
+      notes: `Auto-TR: ${g.items} tx${g.items > 1 ? "s" : ""}`,
+    });
+    matched++;
+  }
+
+  return { matched };
+}
+
+/**
+ * Fallback para el flujo PDF: las bank_transactions antiguas tienen `debit`
+ * que incluye fees. Restamos un fee fijo de 1€ por compra (tarifa TR estándar
+ * a partir del 2025; antes era 0€ pero para operaciones >= 500€ ya aplicaba).
+ * No es perfecto, pero es mejor que contar fees como principal.
+ */
+export async function matchTrBankTxToDCA() {
+  const plans = await db.select().from(schema.investmentPlans);
+  const activePlans = plans.filter((p) => p.enabled);
+  if (activePlans.length === 0) return { matched: 0 };
+
+  const planBySymbol = new Map<string, (typeof activePlans)[number]>();
+  for (const p of activePlans) planBySymbol.set(p.asset, p);
+
+  const existing = await db.select().from(schema.dcaExecutions);
+  const existingKey = new Set(existing.map((e) => `${e.planId}:${e.date}`));
+
+  const trTrades = await db
+    .select()
+    .from(schema.bankTransactions)
+    .where(
+      and(
+        eq(schema.bankTransactions.source, "trade-republic"),
+        eq(schema.bankTransactions.type, "trade"),
+      ),
+    );
+
+  const isinRegex = /Buy\s+trade\s+([A-Z]{2}[A-Z0-9]{10})/i;
+  const TR_FEE_EUR = 1; // tarifa estándar plan Pro.
+  type Group = { planId: number; date: string; principalEur: number; items: number };
+  const groups = new Map<string, Group>();
+
+  for (const tx of trTrades) {
+    if (!tx.debit || tx.debit <= 0) continue;
+    const m = tx.description.match(isinRegex);
+    if (!m) continue;
+    const symbol = ISIN_MAP[m[1]];
+    if (!symbol) continue;
+    const plan = planBySymbol.get(symbol);
+    if (!plan) continue;
+    const key = `${plan.id}:${tx.date}`;
+    if (existingKey.has(key)) continue;
+    const prev = groups.get(key);
+    // Resta fee estimada por tx: la operación puede venir partida en varias
+    // filas (fraccional + entero), pero TR cobra un único fee por orden.
+    // Suma el debit completo y al final restamos 1 fee por grupo.
+    if (prev) {
+      prev.principalEur += tx.debit;
+      prev.items += 1;
+    } else {
+      groups.set(key, { planId: plan.id, date: tx.date, principalEur: tx.debit, items: 1 });
+    }
+  }
+
+  let matched = 0;
+  for (const g of groups.values()) {
+    // Un fee por grupo (TR cobra por orden, no por fila).
+    const principal = Math.max(0, g.principalEur - TR_FEE_EUR);
+    await db.insert(schema.dcaExecutions).values({
+      planId: g.planId,
+      date: g.date,
+      amount: Math.round(principal * 100) / 100,
+      price: null,
+      units: 0,
+      notes: `Auto-TR: ${g.items} tx${g.items > 1 ? "s" : ""}`,
+    });
+    matched++;
+  }
+
+  return { matched };
 }

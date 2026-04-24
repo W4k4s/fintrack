@@ -6,6 +6,7 @@ import { recomputeTrSecuritiesAvgBuy } from "@/lib/assets/cost-basis";
 import { ISIN_MAP } from "@/lib/isin-map";
 import { tryAutoMatchOrdersBatch, type MatchableTransaction } from "@/lib/intel/rebalance/order-matcher";
 import { notifyAutoMatched } from "@/lib/intel/rebalance/auto-match-notifier";
+import { matchTrBankTxToDCA } from "@/lib/dca-matcher";
 
 export async function POST(req: NextRequest) {
   try {
@@ -160,6 +161,14 @@ export async function POST(req: NextRequest) {
       await recomputeTrSecuritiesAvgBuy();
     } catch (err) {
       console.error("[tr-import] recomputeTrSecuritiesAvgBuy failed", err);
+    }
+
+    // TR → DCA executions: idem route CSV, para que el WeeklyShoppingList vea
+    // las compras TR como ejecutadas.
+    try {
+      await matchTrBankTxToDCA();
+    } catch (err) {
+      console.error("[tr-import] matchTrBankTxToDCA failed", err);
     }
 
     // Auto-match órdenes Fase 8: parsea los trades TR importados y busca matches

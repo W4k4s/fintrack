@@ -32,6 +32,14 @@ ensureColumn(
   "realized_ytd_traditional_override_eur REAL",
 );
 
+// TR CSV import: dedup key per source. UNIQUE parcial permite múltiples NULL
+// (imports PDF antiguos sin ID) pero bloquea duplicados cuando viene el UUID.
+ensureColumn("bank_transactions", "external_id", "external_id TEXT");
+sqlite.exec(
+  `CREATE UNIQUE INDEX IF NOT EXISTS uq_bank_tx_source_external
+   ON bank_transactions(source, external_id) WHERE external_id IS NOT NULL`,
+);
+
 // Strategy V2 Refactor R1 — narrative + policies + fixed expenses como SSOT.
 // Ver src/lib/strategy/policies.ts para el shape de policies_json.
 ensureColumn("strategy_profiles", "tagline", "tagline TEXT");

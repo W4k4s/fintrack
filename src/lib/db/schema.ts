@@ -177,6 +177,8 @@ export const bankTransactions = sqliteTable("bank_transactions", {
   // 'pending' = optimistic entry from /strategy execute, awaiting real import reconciliation.
   // 'confirmed' = authoritative data from an import.
   status: text("status", { enum: ["confirmed", "pending"] }).notNull().default("confirmed"),
+  // External dedup key. TR CSV brings a UUID per tx; PDF imports leave this null.
+  externalId: text("external_id"),
   planId: integer("plan_id").references(() => investmentPlans.id, { onDelete: "set null" }),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });

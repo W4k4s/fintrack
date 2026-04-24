@@ -275,15 +275,31 @@ export default function ExchangeDetailPage() {
     try {
       const res = await fetch("/api/import/trade-republic", { method: "POST", body: formData });
       const d = await res.json(); if (d.error) throw new Error(d.error);
-      setTrPreview(d);
+      setTrPreview({ ...d, origin: "pdf" });
+    } catch (err: any) { setTradeResult(`Error: ${err.message}`); }
+    finally { setTrParsing(false); }
+    e.target.value = "";
+  };
+  const handleTrCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files; if (!files?.length) return;
+    setTrParsing(true); setTradeResult(null); setTrPreview(null); setTrImported(null);
+    const formData = new FormData(); Array.from(files).forEach(f => formData.append("files", f));
+    try {
+      const res = await fetch("/api/import/trade-republic-csv", { method: "POST", body: formData });
+      const d = await res.json(); if (d.error) throw new Error(d.error);
+      setTrPreview({ ...d, origin: "csv" });
     } catch (err: any) { setTradeResult(`Error: ${err.message}`); }
     finally { setTrParsing(false); }
     e.target.value = "";
   };
   const handleTrConfirm = async () => {
+    if (!trPreview) return;
     setTrParsing(true);
+    const endpoint = trPreview.origin === "csv"
+      ? "/api/import/trade-republic-csv/confirm"
+      : "/api/import/trade-republic/confirm";
     try {
-      const res = await fetch("/api/import/trade-republic/confirm", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(trPreview) });
+      const res = await fetch(endpoint, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(trPreview) });
       const d = await res.json(); if (d.error) throw new Error(d.error);
       setTrImported(d.imported); setTrPreview(null); await fetchData();
     } catch (err: any) { setTradeResult(`Error: ${err.message}`); }
@@ -518,10 +534,16 @@ export default function ExchangeDetailPage() {
             </button>
           )}
           {isTR ? (
-            <label className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg text-sm font-medium transition-colors cursor-pointer">
-              <Upload className="w-4 h-4" /> {trParsing ? "Parsing PDFs..." : "Import PDFs"}
-              <input type="file" accept=".pdf" multiple onChange={handleTrUpload} className="hidden" disabled={trParsing} />
-            </label>
+            <>
+              <label className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg text-sm font-medium transition-colors cursor-pointer">
+                <Upload className="w-4 h-4" /> {trParsing ? "Parsing..." : "Import CSV"}
+                <input type="file" accept=".csv" onChange={handleTrCsvUpload} className="hidden" disabled={trParsing} />
+              </label>
+              <label className="flex items-center gap-2 px-4 py-2.5 bg-card hover:bg-[var(--hover-bg)] border border-border rounded-lg text-sm font-medium transition-colors cursor-pointer">
+                <Upload className="w-4 h-4" /> Import PDFs
+                <input type="file" accept=".pdf" multiple onChange={handleTrUpload} className="hidden" disabled={trParsing} />
+              </label>
+            </>
           ) : exchange.type === "auto" ? (
             <label className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg text-sm font-medium transition-colors cursor-pointer">
               <Upload className="w-4 h-4" /> Import CSV
@@ -534,7 +556,16 @@ export default function ExchangeDetailPage() {
       {/* TR Preview/Import */}
       {trPreview && (
         <Card className="p-5 space-y-4">
-          <h2 className="text-base font-semibold">Preview — Data found in PDFs</h2>
+          <h2 className="text-base font-semibold">
+            Preview — {trPreview.origin === "csv" ? `CSV (${trPreview.dateRange || ""})` : "PDFs"}
+          </h2>
+          {trPreview.dryRun && (
+            <div className="p-3 bg-accent/5 rounded-lg text-sm space-y-1">
+              <div className="flex justify-between"><span className="text-muted">Total transacciones en CSV</span><span className="font-medium">{trPreview.transactionCount}</span></div>
+              <div className="flex justify-between"><span className="text-muted">Ya existen (dedup por UUID)</span><span className="font-medium">{trPreview.dryRun.duplicates}</span></div>
+              <div className="flex justify-between"><span className="text-muted">Se insertarían</span><span className="font-medium text-emerald-400">{trPreview.dryRun.wouldInsert}</span></div>
+            </div>
+          )}
           {trPreview.securities?.length > 0 && (
             <div>
               <h3 className="text-sm font-medium text-muted mb-2">Securities ({trPreview.securities.length})</h3>
