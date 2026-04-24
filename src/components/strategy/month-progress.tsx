@@ -3,14 +3,21 @@ import { Activity } from "lucide-react";
 import { usePrivacy } from "@/components/privacy-provider";
 import type { ScheduleData } from "./types";
 
+// Progreso del mes alineado con WeeklyShoppingList: sólo items activos
+// (sin pauseReason) y usando monthlyTarget (multiplicador aplicado).
+// Antes el total venía de dcaSummary.totalMonthly (baseMonthly de TODOS
+// los planes, pausados incluidos) y el ejecutado sumaba TODO → dos
+// componentes en la misma página mostraban porcentajes distintos.
 export function MonthProgress({
-  schedule, totalMonthly,
+  schedule,
 }: {
-  schedule: ScheduleData | null; totalMonthly: number;
+  schedule: ScheduleData | null;
 }) {
   const { mask } = usePrivacy();
   if (!schedule) return null;
-  const totalExecuted = schedule.schedule.reduce((s, p) => s + p.totalExecuted, 0);
+  const activeItems = schedule.schedule.filter(p => !p.pauseReason);
+  const totalMonthly = activeItems.reduce((s, p) => s + p.monthlyTarget, 0);
+  const totalExecuted = activeItems.reduce((s, p) => s + p.totalExecuted, 0);
   const pct = totalMonthly > 0 ? Math.min(100, Math.round((totalExecuted / totalMonthly) * 100)) : 0;
   const now = new Date();
   const monthName = now.toLocaleString("es-ES", { month: "long" });
@@ -25,7 +32,7 @@ export function MonthProgress({
       </div>
       <div className="flex items-baseline gap-2 mb-2">
         <span className="text-3xl font-bold tabular-nums text-foreground">{mask(`€${totalExecuted.toFixed(0)}`)}</span>
-        <span className="text-muted-foreground tabular-nums">/ {mask(`€${totalMonthly}`)}</span>
+        <span className="text-muted-foreground tabular-nums">/ {mask(`€${totalMonthly.toFixed(0)}`)}</span>
         <span className="ml-auto text-lg font-semibold tabular-nums text-info">{pct}%</span>
       </div>
       <div className="h-2.5 bg-elevated rounded-full overflow-hidden">

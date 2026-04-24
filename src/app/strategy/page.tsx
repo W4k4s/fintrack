@@ -157,7 +157,7 @@ export default function StrategyPage() {
       <WeeklySchedule schedule={schedule ?? null} plans={plans} onExecute={setExecutingPlan} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <MonthProgress schedule={schedule ?? null} totalMonthly={dcaSummary.totalMonthly} />
+        <MonthProgress schedule={schedule ?? null} />
         <EmergencyCard emergency={emergency} />
       </div>
 
