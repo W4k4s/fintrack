@@ -17,7 +17,13 @@ export function MonthProgress({
   if (!schedule) return null;
   const activeItems = schedule.schedule.filter(p => !p.pauseReason);
   const totalMonthly = activeItems.reduce((s, p) => s + p.monthlyTarget, 0);
-  const totalExecuted = activeItems.reduce((s, p) => s + p.totalExecuted, 0);
+  // Capar el "hecho" de cada plan a su target: un plan que sobra-compra no
+  // compensa a otro que está corto. Sin esto, EU Infl Bond 175/160 sumaba
+  // los 175 y "tapaba" los €15 faltantes de Gold ETC → 100% falso.
+  const totalExecuted = activeItems.reduce(
+    (s, p) => s + Math.min(p.totalExecuted, p.monthlyTarget),
+    0,
+  );
   const pct = totalMonthly > 0 ? Math.min(100, Math.round((totalExecuted / totalMonthly) * 100)) : 0;
   const now = new Date();
   const monthName = now.toLocaleString("es-ES", { month: "long" });
