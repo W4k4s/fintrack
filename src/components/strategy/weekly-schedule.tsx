@@ -84,23 +84,29 @@ function PlanRow({
   const { mask } = usePrivacy();
   const plan = plans.find(p => p.id === ps.planId);
   const mult = ps.appliedMultiplier || 1;
+  const paused = !!ps.pauseReason;
   return (
-    <tr className="hover:bg-elevated/40 transition-colors">
+    <tr className={`hover:bg-elevated/40 transition-colors ${paused ? "opacity-60" : ""}`}>
       <td className="py-3 px-4 sticky left-0 bg-card">
         <div className="flex items-center gap-2">
-          <span className="w-7 h-7 rounded-lg bg-elevated flex items-center justify-center text-sm shrink-0">
+          <span className={`w-7 h-7 rounded-lg bg-elevated flex items-center justify-center text-sm shrink-0 ${paused ? "grayscale" : ""}`}>
             {ASSET_EMOJI[ps.asset] || "💼"}
           </span>
           <div className="min-w-0">
             <div className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
               {ps.asset}
-              {mult > 1 && (
+              {paused && (
+                <span className="text-[9px] px-1.5 py-0.5 bg-warn-soft text-warn rounded-full font-semibold">
+                  {pauseLabelShort(ps.pauseReason)}
+                </span>
+              )}
+              {!paused && mult > 1 && (
                 <span className="text-[9px] px-1.5 py-0.5 bg-success-soft text-success rounded-full font-semibold tabular-nums">×{mult}</span>
               )}
-              {mult < 1 && (
+              {!paused && mult < 1 && (
                 <span className="text-[9px] px-1.5 py-0.5 bg-warn-soft text-warn rounded-full font-semibold tabular-nums">×{mult}</span>
               )}
-              {ps.autoExecute && (
+              {!paused && ps.autoExecute && (
                 <span className="text-[9px] px-1.5 py-0.5 bg-info-soft text-info rounded-full font-medium">🤖</span>
               )}
             </div>
@@ -110,7 +116,7 @@ function PlanRow({
       </td>
       {ps.weeks.map((w, i) => (
         <td key={i} className="py-3 px-3 text-center">
-          <WeekCell week={w} plan={plan} onExecute={onExecute} />
+          <WeekCell week={w} plan={plan} onExecute={onExecute} disabled={paused} />
         </td>
       ))}
       <td className="py-3 px-4 text-right">
@@ -121,11 +127,19 @@ function PlanRow({
   );
 }
 
+function pauseLabelShort(reason: PlanSchedule["pauseReason"]): string {
+  if (reason === "emergency_fund_incomplete") return "Pausado (fondo)";
+  if (reason === "crypto_paused") return "Pausado (crypto)";
+  if (reason === "asset_not_in_scope") return "Fuera scope";
+  return "Pausado";
+}
+
 function WeekCell({
-  week, plan, onExecute,
+  week, plan, onExecute, disabled = false,
 }: {
   week: WeekItem; plan?: DcaPlan;
   onExecute: (plan: DcaPlan) => void;
+  disabled?: boolean;
 }) {
   const { mask } = usePrivacy();
   if (week.isPast) {
@@ -150,9 +164,9 @@ function WeekCell({
     return (
       <button
         onClick={() => plan && onExecute(plan)}
-        disabled={!plan}
+        disabled={!plan || disabled}
         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold tabular-nums bg-success-soft text-success border border-success/50 hover:bg-success hover:text-success-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        title="Comprar ahora"
+        title={disabled ? "Plan pausado" : "Comprar ahora"}
       >
         {mask(`€${week.target.toFixed(0)}`)}
       </button>

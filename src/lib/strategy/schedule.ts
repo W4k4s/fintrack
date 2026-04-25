@@ -124,6 +124,14 @@ export function deriveScheduleItem(
   const currentWeekIdx = weeks.findIndex((w) => now >= w.start && now <= w.end);
   const todayDow = ((now.getDay() + 6) % 7) + 1;
 
+  // Si el mes ya está cubierto en agregado (ratio ≥99%) significa que el
+  // batch real (típicamente TR mensual) cayó concentrado en una semana y
+  // las pasadas no tienen ejecuciones individualmente, pero sí están
+  // "cubiertas por el mes". Marcamos esas como done para que el timeline
+  // refleje la realidad y no muestre S1-S3 grises con S4 verde aunque el
+  // total sea 100%.
+  const monthCovered = executedRatio >= 0.99;
+
   const weeklySchedule: WeekItem[] = weeks.map((week, i) => {
     const weekStart = week.start.toISOString().split("T")[0];
     const weekEnd = week.end.toISOString().split("T")[0];
@@ -140,13 +148,14 @@ export function deriveScheduleItem(
       else if (isCurrent && plan.autoDayOfWeek! <= todayDow) autoDone = true;
     }
 
+    const coveredByMonth = monthCovered && (isPast || isCurrent);
     return {
       label: week.label,
       start: weekStart,
       end: weekEnd,
       target: weeklyAmount,
       executed: Math.round(weekExecuted * 100) / 100,
-      done: realDone || autoDone,
+      done: realDone || autoDone || coveredByMonth,
       autoDone: autoDone && !realDone,
       isCurrent,
       isPast,

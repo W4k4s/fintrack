@@ -91,6 +91,26 @@ test("emergencyFundOk=false → pauseReason=emergency_fund_incomplete (prioridad
   assert.equal(item.actionLabel, "Pausado (fondo emergencia)");
 });
 
+test("monthCovered → weeks pasadas/actual marcadas como done aunque no tengan execs propias", () => {
+  // Plan €100/mes con UNA ejecución de €100 en S2. S1 (pasada) y S3 (actual)
+  // no tienen execs propias pero el mes está cubierto al 100%.
+  const plan = mkPlan({ amount: 100 });
+  const execs = [{ planId: plan.id, date: "2026-04-08", amount: 100 }]; // S2
+  const item = deriveScheduleItem(plan, execs, {
+    mctx: mkMctx(),
+    policies: DEFAULT_POLICIES_V2,
+    now: NOW, emergencyFundOk: true,
+  });
+  // S1 (pasada), S2 (pasada con exec), S3 (actual): todas done
+  const past = item.weeks.filter(w => w.isPast);
+  assert.ok(past.every(w => w.done), "todas las pasadas done");
+  const current = item.weeks.find(w => w.isCurrent);
+  assert.equal(current?.done, true, "actual también done");
+  // Las futuras no se marcan
+  const future = item.weeks.filter(w => w.isFuture);
+  assert.ok(future.every(w => !w.done), "futuras NO done");
+});
+
 test("emergencyFundOk=false pausa ETFs también (survival first)", () => {
   const item = deriveScheduleItem(
     mkPlan({ asset: "MSCI World", assetClass: "etfs", amount: 405 }),
