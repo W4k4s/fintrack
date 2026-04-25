@@ -32,6 +32,10 @@ ensureColumn(
   "realized_ytd_traditional_override_eur REAL",
 );
 
+// dca_executions.fee_eur: comisión asociada a la ejecución (TR cobra ~1€
+// fuera del Plan de Ahorro). amount sigue siendo principal sin fees.
+ensureColumn("dca_executions", "fee_eur", "fee_eur REAL");
+
 // TR CSV import: dedup key per source. UNIQUE parcial permite múltiples NULL
 // (imports PDF antiguos sin ID) pero bloquea duplicados cuando viene el UUID.
 ensureColumn("bank_transactions", "external_id", "external_id TEXT");

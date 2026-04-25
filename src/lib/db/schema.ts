@@ -130,9 +130,10 @@ export const strategyGoals = sqliteTable("strategy_goals", {
 export const dcaExecutions = sqliteTable("dca_executions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   planId: integer("plan_id").notNull().references(() => investmentPlans.id, { onDelete: "cascade" }),
-  amount: real("amount").notNull(), // EUR spent
+  amount: real("amount").notNull(), // EUR spent (principal, sin fees)
   price: real("price"), // price at execution
   units: real("units"), // units bought
+  feeEur: real("fee_eur"), // fee/comisión en EUR (TR cobra ~1€ por trade no-PdA)
   date: text("date").notNull(),
   notes: text("notes"),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),

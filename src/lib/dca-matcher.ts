@@ -163,6 +163,7 @@ export async function matchTrTradesToDCA(trades: TrTradeForDca[]) {
     planId: number;
     date: string;
     principalEur: number;
+    feeEur: number;
     units: number;
     items: number;
   };
@@ -177,6 +178,7 @@ export async function matchTrTradesToDCA(trades: TrTradeForDca[]) {
     const prev = groups.get(key);
     if (prev) {
       prev.principalEur += t.principalEur;
+      prev.feeEur += t.feeEur;
       prev.units += t.units;
       prev.items += 1;
     } else {
@@ -184,6 +186,7 @@ export async function matchTrTradesToDCA(trades: TrTradeForDca[]) {
         planId: plan.id,
         date: t.date,
         principalEur: t.principalEur,
+        feeEur: t.feeEur,
         units: t.units,
         items: 1,
       });
@@ -199,6 +202,7 @@ export async function matchTrTradesToDCA(trades: TrTradeForDca[]) {
       amount: Math.round(g.principalEur * 100) / 100,
       price: avgPrice ? Math.round(avgPrice * 10000) / 10000 : null,
       units: Math.round(g.units * 1e8) / 1e8,
+      feeEur: g.feeEur > 0 ? Math.round(g.feeEur * 100) / 100 : null,
       notes: `Auto-TR: ${g.items} tx${g.items > 1 ? "s" : ""}`,
     });
     matched++;
@@ -271,6 +275,7 @@ export async function matchTrBankTxToDCA() {
       amount: Math.round(principal * 100) / 100,
       price: null,
       units: 0,
+      feeEur: TR_FEE_EUR,
       notes: `Auto-TR: ${g.items} tx${g.items > 1 ? "s" : ""}`,
     });
     matched++;
