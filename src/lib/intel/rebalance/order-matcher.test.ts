@@ -51,19 +51,50 @@ test("amount en tolerancia (±20%) → match", () => {
   assert.equal(inRange.length, 1);
 });
 
-test("amount fuera de tolerancia → no match", () => {
+test("amount pequeño (DCA mensual ~10-15% del plan) → SÍ match (acumulable)", () => {
   const orders = [mkOrder({ amountEur: 500 })];
   const out = findMatchingOrders(
     {
       symbol: "BTC",
       venue: "binance",
       type: "buy",
-      amountEur: 350, // -30%, fuera ±20%
+      amountEur: 75, // 15% del plan (DCA mensual)
+      date: "2026-04-20T00:00:00.000Z",
+    },
+    orders,
+  );
+  assert.equal(out.length, 1);
+});
+
+test("amount excede tope superior (>120%) → no match", () => {
+  const orders = [mkOrder({ amountEur: 500 })];
+  const out = findMatchingOrders(
+    {
+      symbol: "BTC",
+      venue: "binance",
+      type: "buy",
+      amountEur: 700, // 140%, excede +20%
       date: "2026-04-20T00:00:00.000Z",
     },
     orders,
   );
   assert.equal(out.length, 0);
+});
+
+test("acumulado previo + tx > 120% → no match (no doble-rellenas)", () => {
+  // Order ya con 480€ acumulados (96% de 500). Un nuevo tx de 100 dejaría
+  // 580 (116% antes del cap, OK) — pero un tx de 200 dejaría 680 (136%) → no.
+  const orders = [mkOrder({ amountEur: 500, actualAmountEur: 480, status: "pending" })];
+  const ok = findMatchingOrders(
+    { symbol: "BTC", venue: "binance", type: "buy", amountEur: 100, date: "2026-04-20T00:00:00.000Z" },
+    orders,
+  );
+  assert.equal(ok.length, 1);
+  const tooMuch = findMatchingOrders(
+    { symbol: "BTC", venue: "binance", type: "buy", amountEur: 200, date: "2026-04-20T00:00:00.000Z" },
+    orders,
+  );
+  assert.equal(tooMuch.length, 0);
 });
 
 test("symbol distinto → no match", () => {

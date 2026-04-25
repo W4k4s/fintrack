@@ -37,12 +37,16 @@ export function toEurAmount(
   if (STABLE_USD_CURRENCIES.has(c)) return total * eurPerUsd;
   return null;
 }
-/** Tolerancia relativa del importe (±20%). El redondeo a 10€ del plan + slippage pequeños caben aquí. */
+/** Tope superior del importe (≤120% del plan). Por debajo no hay floor: los
+ * trades pequeños se acumulan en `actualAmountEur` hasta superar el umbral
+ * de PARTIAL_THRESHOLD_RATIO (80% del plan) y la order pasa a "executed".
+ * Antes el min era 80% del plan → los DCA mensuales (10-15% del plan) nunca
+ * matcheaban un rebalance manual. */
 export const AMOUNT_TOLERANCE = 0.2;
 
 /**
  * Pura, sin IO. Filtra órdenes candidatas que matchean `tx` aplicando criterios
- * exactos (symbol, venue, type) + tolerancia en importe y ventana temporal.
+ * exactos (symbol, venue, type) + tope superior de importe y ventana temporal.
  *
  * Si devuelve >1, el caller DEBE considerarlo ambiguo y NO auto-marcar
  * (feedback staff P0.3: no auto-dismiss silencioso).
@@ -53,6 +57,7 @@ export function findMatchingOrders(
 ): IntelRebalanceOrder[] {
   const txTime = Date.parse(tx.date);
   if (!Number.isFinite(txTime)) return [];
+  if (!Number.isFinite(tx.amountEur) || tx.amountEur <= 0) return [];
 
   return pendingOrders.filter((o) => {
     if (o.status !== "pending") return false;
@@ -66,9 +71,12 @@ export function findMatchingOrders(
     // y dentro de la ventana. No matcheamos una order futura con un tx viejo.
     if (Math.abs(txTime - orderTime) > MATCH_WINDOW_MS) return false;
 
-    const minAmt = o.amountEur * (1 - AMOUNT_TOLERANCE);
+    // Lo que ya está contabilizado en la order (parciales previos) + este tx
+    // no debe pasarse del 120%. Así un trade de €5000 sobre una order de €1000
+    // sigue rechazándose como improbable.
+    const accumulated = (o.actualAmountEur ?? 0) + tx.amountEur;
     const maxAmt = o.amountEur * (1 + AMOUNT_TOLERANCE);
-    if (tx.amountEur < minAmt || tx.amountEur > maxAmt) return false;
+    if (accumulated > maxAmt) return false;
 
     return true;
   });
@@ -113,19 +121,27 @@ export async function tryAutoMatchOrder(
 
   const order = candidates[0];
   const nowIso = new Date().toISOString();
-  // Fase 8.6 — clasificación partial vs executed según ratio actual/planned.
-  // Si el tx real está por debajo del 80% del plan, se marca partial.
-  const classification = classifyExecution(tx.amountEur, order.amountEur);
+  // Acumulador (#1): un DCA mensual del 10-15% del plan suma sobre los
+  // parciales previos y solo escala a "executed" cuando el agregado pasa
+  // del 80% del plan. Antes pasaba a executed con el primer trade que
+  // entrara en ±20% del plan exacto, lo que dejaba pendings huérfanos
+  // siempre que la cobertura fuera progresiva.
+  const previousActual = order.actualAmountEur ?? 0;
+  const accumulated = previousActual + tx.amountEur;
+  const classification = classifyExecution(accumulated, order.amountEur);
   const newStatus: IntelRebalanceOrder["status"] =
     classification === "dismissed" ? "executed" : classification;
+  const noteSuffix = previousActual > 0
+    ? ` (accum: €${accumulated.toFixed(0)}/€${order.amountEur.toFixed(0)})`
+    : "";
   await db
     .update(schema.intelRebalanceOrders)
     .set({
       status: newStatus,
-      executedAt: nowIso,
-      actualAmountEur: tx.amountEur,
+      executedAt: classification === "executed" ? nowIso : order.executedAt,
+      actualAmountEur: Math.round(accumulated * 100) / 100,
       updatedAt: nowIso,
-      notes: `auto-match ${tx.symbol} ${tx.amountEur.toFixed(0)}€ @ ${tx.venue} ${tx.date}`,
+      notes: `auto-match ${tx.symbol} ${tx.amountEur.toFixed(0)}€ @ ${tx.venue} ${tx.date}${noteSuffix}`,
     })
     .where(eq(schema.intelRebalanceOrders.id, order.id));
 
@@ -137,7 +153,12 @@ export async function tryAutoMatchOrder(
   }
 
   return {
-    matched: { ...order, status: newStatus, executedAt: nowIso, actualAmountEur: tx.amountEur },
+    matched: {
+      ...order,
+      status: newStatus,
+      executedAt: classification === "executed" ? nowIso : order.executedAt,
+      actualAmountEur: Math.round(accumulated * 100) / 100,
+    },
     ambiguousCandidates: [],
   };
 }
