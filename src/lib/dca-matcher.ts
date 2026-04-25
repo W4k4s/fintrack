@@ -1,5 +1,5 @@
 import { db, schema } from "@/lib/db";
-import { eq, and, gte, isNull } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { ISIN_MAP } from "@/lib/isin-map";
 
 /**
@@ -14,6 +14,126 @@ import { ISIN_MAP } from "@/lib/isin-map";
  * Amounts in dca_executions are stored in EUR. Trades come in quote currency
  * (USDC, USDT, USD, EUR, ...) — convert to EUR using current rates.
  */
+
+// -- Shape unificado --------------------------------------------------------
+// Los 3 entrypoints (matchTradesToDCA, matchTrTradesToDCA, matchTrBankTxToDCA)
+// normalizan a este shape antes de llamar al helper común.
+export interface TradeForDca {
+  date: string;             // YYYY-MM-DD
+  symbol: string;           // resuelto (BTC, MSCI World, ...)
+  side: "buy" | "sell";
+  amountEur: number;        // principal (sin fees) en EUR
+  feeEur: number;           // 0 si no se conoce
+  units: number;
+  priceEur: number | null;
+  source: string;           // notes hint ("exchange trade" / "TR CSV" / "TR PDF")
+}
+
+interface InsertOpts {
+  /** Etiqueta usada en el campo notes ("Auto-sync", "Auto-TR", ...). */
+  notesLabel: string;
+  /** Si true, actualiza investment_plans.next_execution tras matchear. */
+  updateNextExecution?: boolean;
+}
+
+// Helper común. Agrupa trades por (planId, date) — el target del plan está
+// definido por mes y los DCA caen en una sola fecha — inserta principal en
+// dca_executions.amount, fee aparte en fee_eur.
+async function insertDcaExecutionsFromTrades(
+  trades: TradeForDca[],
+  opts: InsertOpts,
+): Promise<{ matched: number; skipped: number }> {
+  if (!trades.length) return { matched: 0, skipped: 0 };
+  const plans = await db.select().from(schema.investmentPlans);
+  const activePlans = plans.filter((p) => p.enabled);
+  if (activePlans.length === 0) return { matched: 0, skipped: 0 };
+
+  const planBySymbol = new Map<string, (typeof activePlans)[number]>();
+  for (const p of activePlans) planBySymbol.set(p.asset, p);
+
+  const existing = await db.select().from(schema.dcaExecutions);
+  const existingKey = new Set(existing.map((e) => `${e.planId}:${e.date}`));
+
+  type Group = {
+    planId: number;
+    date: string;
+    amountEur: number;
+    feeEur: number;
+    units: number;
+    items: number;
+    sources: Set<string>;
+  };
+  const groups = new Map<string, Group>();
+  let skipped = 0;
+
+  for (const t of trades) {
+    if (t.side !== "buy") continue;
+    const plan = planBySymbol.get(t.symbol);
+    if (!plan) continue;
+    const key = `${plan.id}:${t.date}`;
+    if (existingKey.has(key)) {
+      skipped++;
+      continue;
+    }
+    const prev = groups.get(key);
+    if (prev) {
+      prev.amountEur += t.amountEur;
+      prev.feeEur += t.feeEur;
+      prev.units += t.units;
+      prev.items += 1;
+      if (t.source) prev.sources.add(t.source);
+    } else {
+      groups.set(key, {
+        planId: plan.id,
+        date: t.date,
+        amountEur: t.amountEur,
+        feeEur: t.feeEur,
+        units: t.units,
+        items: 1,
+        sources: new Set(t.source ? [t.source] : []),
+      });
+    }
+  }
+
+  let matched = 0;
+  for (const g of groups.values()) {
+    const avgPrice = g.units > 0 ? g.amountEur / g.units : null;
+    const sourceTag = [...g.sources][0];
+    await db.insert(schema.dcaExecutions).values({
+      planId: g.planId,
+      date: g.date,
+      amount: Math.round(g.amountEur * 100) / 100,
+      price: avgPrice ? Math.round(avgPrice * 10000) / 10000 : null,
+      units: Math.round(g.units * 1e8) / 1e8,
+      feeEur: g.feeEur > 0 ? Math.round(g.feeEur * 100) / 100 : null,
+      notes: `${opts.notesLabel}: ${g.items} tx${g.items > 1 ? "s" : ""}${sourceTag ? ` (${sourceTag})` : ""}`,
+    });
+    matched++;
+  }
+
+  if (opts.updateNextExecution && matched > 0) {
+    const lastDateByPlan = new Map<number, string>();
+    for (const g of groups.values()) {
+      const prev = lastDateByPlan.get(g.planId);
+      if (!prev || g.date > prev) lastDateByPlan.set(g.planId, g.date);
+    }
+    for (const [planId, lastDate] of lastDateByPlan) {
+      const plan = activePlans.find((p) => p.id === planId);
+      if (!plan) continue;
+      const next = new Date(lastDate);
+      if (plan.frequency === "daily") next.setDate(next.getDate() + 1);
+      else if (plan.frequency === "weekly") next.setDate(next.getDate() + 7);
+      else if (plan.frequency === "biweekly") next.setDate(next.getDate() + 14);
+      else next.setMonth(next.getMonth() + 1);
+      await db
+        .update(schema.investmentPlans)
+        .set({ nextExecution: next.toISOString().split("T")[0] })
+        .where(eq(schema.investmentPlans.id, planId));
+    }
+  }
+
+  return { matched, skipped };
+}
 
 const USD_STABLECOINS = new Set(["USDT", "USDC", "BUSD", "FDUSD", "TUSD", "DAI", "USD"]);
 
@@ -40,89 +160,29 @@ export function toEur(amount: number, quoteCurrency: string, rates: Record<strin
 }
 
 export async function matchTradesToDCA() {
-  const plans = await db.select().from(schema.investmentPlans);
-  const activePlans = plans.filter(p => p.enabled);
-  if (activePlans.length === 0) return { matched: 0, skipped: 0 };
-
-  // Get all existing executions to avoid duplicates
-  const existingExecs = await db.select().from(schema.dcaExecutions);
-  const existingDates = new Set(
-    existingExecs.map(e => `${e.planId}:${e.date}`)
-  );
-
-  // Get all buy transactions (from synced exchanges)
   const allTx = await db.select().from(schema.transactions);
-  const buys = allTx.filter(t => t.type === "buy");
+  const buys = allTx.filter((t) => t.type === "buy");
+  if (buys.length === 0) return { matched: 0, skipped: 0 };
 
   const rates = await fetchRates();
 
-  let matched = 0;
-  let skipped = 0;
+  // Normaliza transactions → TradeForDca. Sin fees explícitos del exchange:
+  // los trades sintetizados ya vienen en quoteCurrency convertido a EUR.
+  const trades: TradeForDca[] = buys.map((t) => ({
+    date: t.date.split("T")[0],
+    symbol: t.symbol,
+    side: "buy" as const,
+    amountEur: toEur(t.total || 0, t.quoteCurrency || "USD", rates),
+    feeEur: 0,
+    units: t.amount,
+    priceEur: null, // calculado por el helper como amount/units
+    source: t.notes || "exchange trade",
+  }));
 
-  for (const plan of activePlans) {
-    // Find buy transactions for this asset
-    const assetBuys = buys.filter(t => t.symbol === plan.asset);
-    if (assetBuys.length === 0) continue;
-
-    // Group by date (one execution per day max)
-    const byDate = new Map<string, typeof assetBuys>();
-    for (const tx of assetBuys) {
-      const date = tx.date.split("T")[0]; // normalize to YYYY-MM-DD
-      const existing = byDate.get(date) || [];
-      existing.push(tx);
-      byDate.set(date, existing);
-    }
-
-    for (const [date, trades] of byDate) {
-      // Skip if already have execution for this plan+date
-      const key = `${plan.id}:${date}`;
-      if (existingDates.has(key)) {
-        skipped++;
-        continue;
-      }
-
-      // Aggregate trades for this day — convert each trade's total to EUR
-      // using its own quote currency so mixed-quote days (USDC + EUR) sum correctly.
-      const totalAmountEur = trades.reduce(
-        (s, t) => s + toEur(t.total || 0, t.quoteCurrency || "USD", rates),
-        0,
-      );
-      const totalUnits = trades.reduce((s, t) => s + t.amount, 0);
-      const avgPriceEur = totalUnits > 0 ? totalAmountEur / totalUnits : null;
-      const sources = [...new Set(trades.map(t => t.notes).filter(Boolean))];
-
-      // Create execution (amount + price stored in EUR)
-      await db.insert(schema.dcaExecutions).values({
-        planId: plan.id,
-        amount: Math.round(totalAmountEur * 100) / 100,
-        price: avgPriceEur ? Math.round(avgPriceEur * 100) / 100 : null,
-        units: Math.round(totalUnits * 1e8) / 1e8,
-        date,
-        notes: `Auto-sync: ${sources[0] || "exchange trade"}`,
-      });
-
-      existingDates.add(key);
-      matched++;
-    }
-
-    // Update nextExecution based on frequency
-    if (matched > 0) {
-      const latestExec = [...byDate.keys()].sort().pop();
-      if (latestExec) {
-        const next = new Date(latestExec);
-        if (plan.frequency === "daily") next.setDate(next.getDate() + 1);
-        else if (plan.frequency === "weekly") next.setDate(next.getDate() + 7);
-        else if (plan.frequency === "biweekly") next.setDate(next.getDate() + 14);
-        else next.setMonth(next.getMonth() + 1);
-
-        await db.update(schema.investmentPlans)
-          .set({ nextExecution: next.toISOString().split("T")[0] })
-          .where(eq(schema.investmentPlans.id, plan.id));
-      }
-    }
-  }
-
-  return { matched, skipped };
+  return insertDcaExecutionsFromTrades(trades, {
+    notesLabel: "Auto-sync",
+    updateNextExecution: true,
+  });
 }
 
 /**
@@ -141,93 +201,33 @@ export interface TrTradeForDca {
 }
 
 /**
- * Versión para Trade Republic: las compras TR entran por `bank_transactions`
- * y (en el flujo CSV) con principal/fee separados. Agrupa por (plan_id, date)
- * e inserta una dca_execution por grupo usando SOLO principal (sin fees).
- *
- * Dedup por (plan_id, date) — reimport idempotente.
+ * Versión para Trade Republic CSV: las compras TR vienen del parser con
+ * principal/fee separados. Agrupa por (plan_id, date) y delega en el helper
+ * común. Dedup por (plan_id, date) — reimport idempotente.
  */
 export async function matchTrTradesToDCA(trades: TrTradeForDca[]) {
-  if (!trades.length) return { matched: 0 };
-  const plans = await db.select().from(schema.investmentPlans);
-  const activePlans = plans.filter((p) => p.enabled);
-  if (activePlans.length === 0) return { matched: 0 };
-
-  const planBySymbol = new Map<string, (typeof activePlans)[number]>();
-  for (const p of activePlans) planBySymbol.set(p.asset, p);
-
-  const existing = await db.select().from(schema.dcaExecutions);
-  const existingKey = new Set(existing.map((e) => `${e.planId}:${e.date}`));
-
-  type Group = {
-    planId: number;
-    date: string;
-    principalEur: number;
-    feeEur: number;
-    units: number;
-    items: number;
-  };
-  const groups = new Map<string, Group>();
-
-  for (const t of trades) {
-    if (t.side !== "buy") continue;
-    const plan = planBySymbol.get(t.symbol);
-    if (!plan) continue;
-    const key = `${plan.id}:${t.date}`;
-    if (existingKey.has(key)) continue;
-    const prev = groups.get(key);
-    if (prev) {
-      prev.principalEur += t.principalEur;
-      prev.feeEur += t.feeEur;
-      prev.units += t.units;
-      prev.items += 1;
-    } else {
-      groups.set(key, {
-        planId: plan.id,
-        date: t.date,
-        principalEur: t.principalEur,
-        feeEur: t.feeEur,
-        units: t.units,
-        items: 1,
-      });
-    }
-  }
-
-  let matched = 0;
-  for (const g of groups.values()) {
-    const avgPrice = g.units > 0 ? g.principalEur / g.units : null;
-    await db.insert(schema.dcaExecutions).values({
-      planId: g.planId,
-      date: g.date,
-      amount: Math.round(g.principalEur * 100) / 100,
-      price: avgPrice ? Math.round(avgPrice * 10000) / 10000 : null,
-      units: Math.round(g.units * 1e8) / 1e8,
-      feeEur: g.feeEur > 0 ? Math.round(g.feeEur * 100) / 100 : null,
-      notes: `Auto-TR: ${g.items} tx${g.items > 1 ? "s" : ""}`,
-    });
-    matched++;
-  }
-
-  return { matched };
+  if (!trades.length) return { matched: 0, skipped: 0 };
+  const normalized: TradeForDca[] = trades.map((t) => ({
+    date: t.date,
+    symbol: t.symbol,
+    side: t.side,
+    amountEur: t.principalEur,
+    feeEur: t.feeEur,
+    units: t.units,
+    priceEur: t.priceEur || null,
+    source: "TR CSV",
+  }));
+  return insertDcaExecutionsFromTrades(normalized, { notesLabel: "Auto-TR" });
 }
 
 /**
- * Fallback para el flujo PDF: las bank_transactions antiguas tienen `debit`
- * que incluye fees. Restamos un fee fijo de 1€ por compra (tarifa TR estándar
- * a partir del 2025; antes era 0€ pero para operaciones >= 500€ ya aplicaba).
- * No es perfecto, pero es mejor que contar fees como principal.
+ * @deprecated Fallback legacy del flujo PDF. Cuando todo TR pase por el CSV
+ * canónico (UNIQUE source+external_id en bank_transactions), eliminar este
+ * matcher. Mientras tanto: lee bank_transactions TR antiguas (sin
+ * external_id), resuelve ISIN→symbol y delega en el helper común. El fee
+ * fijo TR_FEE_EUR=1 se resta del debit (debit incluía principal+fee).
  */
 export async function matchTrBankTxToDCA() {
-  const plans = await db.select().from(schema.investmentPlans);
-  const activePlans = plans.filter((p) => p.enabled);
-  if (activePlans.length === 0) return { matched: 0 };
-
-  const planBySymbol = new Map<string, (typeof activePlans)[number]>();
-  for (const p of activePlans) planBySymbol.set(p.asset, p);
-
-  const existing = await db.select().from(schema.dcaExecutions);
-  const existingKey = new Set(existing.map((e) => `${e.planId}:${e.date}`));
-
   const trTrades = await db
     .select()
     .from(schema.bankTransactions)
@@ -239,9 +239,16 @@ export async function matchTrBankTxToDCA() {
     );
 
   const isinRegex = /Buy\s+trade\s+([A-Z]{2}[A-Z0-9]{10})/i;
-  const TR_FEE_EUR = 1; // tarifa estándar plan Pro.
-  type Group = { planId: number; date: string; principalEur: number; items: number };
-  const groups = new Map<string, Group>();
+  const TR_FEE_EUR = 1;
+
+  // Una "trade" sintética por bank_tx: el debit ya incluye el fee de la orden,
+  // pero hay órdenes partidas en varias rows. Repartimos el fee SOLO en una
+  // de cada grupo (la primera que se procese por orden) para evitar duplicar.
+  // Truco: emitimos cada row con feeEur=0 y un fee adicional una sola vez por
+  // grupo. Como el helper agrupa por (planId, date), inyectamos el fee sólo
+  // a la primera tx con esa key vista en este recorrido.
+  const seenKeys = new Set<string>();
+  const trades: TradeForDca[] = [];
 
   for (const tx of trTrades) {
     if (!tx.debit || tx.debit <= 0) continue;
@@ -249,37 +256,25 @@ export async function matchTrBankTxToDCA() {
     if (!m) continue;
     const symbol = ISIN_MAP[m[1]];
     if (!symbol) continue;
-    const plan = planBySymbol.get(symbol);
-    if (!plan) continue;
-    const key = `${plan.id}:${tx.date}`;
-    if (existingKey.has(key)) continue;
-    const prev = groups.get(key);
-    // Resta fee estimada por tx: la operación puede venir partida en varias
-    // filas (fraccional + entero), pero TR cobra un único fee por orden.
-    // Suma el debit completo y al final restamos 1 fee por grupo.
-    if (prev) {
-      prev.principalEur += tx.debit;
-      prev.items += 1;
-    } else {
-      groups.set(key, { planId: plan.id, date: tx.date, principalEur: tx.debit, items: 1 });
-    }
-  }
+    // Necesito plan.id para construir la key — el helper lo hace después,
+    // pero aquí basta con (symbol, date) ya que un símbolo mapea a un plan.
+    const key = `${symbol}:${tx.date}`;
+    const isFirstOfGroup = !seenKeys.has(key);
+    if (isFirstOfGroup) seenKeys.add(key);
 
-  let matched = 0;
-  for (const g of groups.values()) {
-    // Un fee por grupo (TR cobra por orden, no por fila).
-    const principal = Math.max(0, g.principalEur - TR_FEE_EUR);
-    await db.insert(schema.dcaExecutions).values({
-      planId: g.planId,
-      date: g.date,
-      amount: Math.round(principal * 100) / 100,
-      price: null,
+    trades.push({
+      date: tx.date,
+      symbol,
+      side: "buy",
+      // Resta fee solo de la primera tx del grupo: el resto irá completo y
+      // suma de toda la cesta menos un fee = principal correcto.
+      amountEur: isFirstOfGroup ? Math.max(0, tx.debit - TR_FEE_EUR) : tx.debit,
+      feeEur: isFirstOfGroup ? TR_FEE_EUR : 0,
       units: 0,
-      feeEur: TR_FEE_EUR,
-      notes: `Auto-TR: ${g.items} tx${g.items > 1 ? "s" : ""}`,
+      priceEur: null,
+      source: "TR PDF",
     });
-    matched++;
   }
 
-  return { matched };
+  return insertDcaExecutionsFromTrades(trades, { notesLabel: "Auto-TR" });
 }
