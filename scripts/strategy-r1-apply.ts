@@ -24,8 +24,8 @@
 import Database from "better-sqlite3";
 import { copyFileSync, mkdirSync } from "fs";
 import { dirname } from "path";
-import { recalcFlatFromSubTargets } from "../src/lib/db/seed-sub-targets.ts";
-import { backfillStrategyDefaults } from "../src/lib/db/backfill-strategy-defaults.ts";
+import { recalcFlatFromSubTargets } from "../src/lib/db/seed-sub-targets";
+import { backfillStrategyDefaults } from "../src/lib/db/backfill-strategy-defaults";
 
 const DB_PATH = "./data/fintrack.db";
 const BACKUP_DIR = "./data/backups";

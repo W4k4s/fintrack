@@ -65,7 +65,7 @@ export default async function SignalDetailPage({
   const nextConditions = [lt(schema.intelSignals.createdAt, row.createdAt)];
   if (from === "unread") {
     const actionableFilter = or(
-      notInArray(schema.intelSignals.scope, NOISE_SCOPES),
+      notInArray(schema.intelSignals.scope, [...NOISE_SCOPES]),
       ne(schema.intelSignals.severity, "low"),
     );
     prevConditions.push(eq(schema.intelSignals.userStatus, "unread"));
@@ -79,8 +79,8 @@ export default async function SignalDetailPage({
     nextConditions.push(eq(schema.intelSignals.userStatus, "unread"));
     prevConditions.push(eq(schema.intelSignals.severity, "low"));
     nextConditions.push(eq(schema.intelSignals.severity, "low"));
-    prevConditions.push(inArray(schema.intelSignals.scope, NOISE_SCOPES));
-    nextConditions.push(inArray(schema.intelSignals.scope, NOISE_SCOPES));
+    prevConditions.push(inArray(schema.intelSignals.scope, [...NOISE_SCOPES]));
+    nextConditions.push(inArray(schema.intelSignals.scope, [...NOISE_SCOPES]));
   } else if (from !== "all") {
     prevConditions.push(eq(schema.intelSignals.userStatus, from));
     nextConditions.push(eq(schema.intelSignals.userStatus, from));
