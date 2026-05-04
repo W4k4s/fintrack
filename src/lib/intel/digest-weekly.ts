@@ -124,7 +124,7 @@ export async function buildWeeklyDigest(now: Date = new Date()): Promise<WeeklyD
   // Allocation actual + snapshot hace 7 días.
   const alloc = await computeAllocation();
   const prev = await findSnapshotNearDays(7);
-  const netWorthEur = alloc.netWorth;
+  const netWorthEur = alloc.netWorthEur;
   const prevNet = prev?.netWorthEur ?? 0;
   const netWorthDeltaEur = prevNet > 0 ? netWorthEur - prevNet : 0;
   const netWorthDeltaPct =

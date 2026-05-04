@@ -2,6 +2,7 @@ import type { Asset, StrategyProfile } from "@/lib/db/schema";
 import { ASSET_CLASSES, classifyAsset, type AssetClass } from "../allocation/classify";
 import type { AllocationSnapshot } from "../allocation/compute";
 import type { PositionPnL, TaxBucket } from "../tax/positions";
+import { emergencyTargetEur } from "@/lib/strategy/health-calc";
 import { irpfOnGain } from "./irpf";
 import type {
   ClassDrift,
@@ -203,7 +204,7 @@ function driftByClass(
  */
 export function buildRebalancePlan(input: PlannerInput): RebalancePlan | null {
   const { allocation, profile, positions, realizedYtd, weekKey } = input;
-  if (allocation.netWorth <= 0) return null;
+  if (allocation.netWorthEur <= 0) return null;
 
   const targets = driftByClass(allocation, profile);
   const triggered: AssetClass[] = ASSET_CLASSES.filter(
@@ -214,10 +215,27 @@ export function buildRebalancePlan(input: PlannerInput): RebalancePlan | null {
   // ── Paso 1-2: gap EUR por clase.
   const gapEur: Record<AssetClass, number> = {} as Record<AssetClass, number>;
   for (const c of ASSET_CLASSES) {
-    gapEur[c] = (targets[c].driftPp / 100) * allocation.netWorth;
+    gapEur[c] = (targets[c].driftPp / 100) * allocation.netWorthEur;
   }
 
-  const cashDeployEurRaw = Math.max(0, gapEur.cash);
+  // Survival-first: el fondo emergencia es prioritario sobre el rebalance.
+  // El cash que excede el target de allocation NO es necesariamente desplegable
+  // si parte de él pertenece al colchón de gastos fijos. Ej: cash 60% vs target
+  // 20% → gap algorítmico 40pp, pero si todo ese 40pp está dentro de los 5
+  // meses de fixed expenses, no se despliega nada.
+  const cashEurActual = allocation.byClass.cash?.valueEur ?? 0;
+  const monthlyFixedExpenses = Number(profile.monthlyFixedExpenses ?? 0);
+  const emergencyMonths = Number(profile.emergencyMonths ?? 0);
+  const emergencyTargetEurValue =
+    Number.isFinite(monthlyFixedExpenses) && Number.isFinite(emergencyMonths)
+      ? emergencyTargetEur({ monthlyFixedExpenses, emergencyMonths })
+      : 0;
+  const cashDeployableEurMax = Math.max(0, cashEurActual - emergencyTargetEurValue);
+  const cashDeployEurAlgo = Math.max(0, gapEur.cash);
+  const cashDeployEurRaw = Math.min(cashDeployEurAlgo, cashDeployableEurMax);
+  const emergencyBufferLimited =
+    cashDeployEurAlgo > MIN_MOVE_EUR &&
+    cashDeployEurRaw < cashDeployEurAlgo - MIN_MOVE_EUR;
   const cashDeficitEurRaw = Math.max(0, -gapEur.cash);
 
   // Clases sobreexpuestas (vender) y infraexpuestas (comprar), EXCLUYENDO cash.
@@ -400,6 +418,20 @@ export function buildRebalancePlan(input: PlannerInput): RebalancePlan | null {
   if (sells.some((s) => s.bucket === "crypto") && totalLossEur > totalGainEur) {
     notes.push("Plan contiene pérdidas netas compensables — posible tax-loss harvest adicional.");
   }
+  if (emergencyBufferLimited) {
+    const shortfallEur = Math.max(0, emergencyTargetEurValue - cashEurActual);
+    if (shortfallEur > 0) {
+      notes.push(
+        `Buffer fondo emergencia: cash ${Math.round(cashEurActual)}€ < target ${Math.round(emergencyTargetEurValue)}€ ` +
+        `(faltan ${Math.round(shortfallEur)}€). Cash deploy bloqueado hasta cubrir colchón.`,
+      );
+    } else {
+      notes.push(
+        `Cash deploy limitado por colchón fondo emergencia (${Math.round(emergencyTargetEurValue)}€). ` +
+        `Drift cash teórico ${Math.round(cashDeployEurAlgo)}€, desplegable real ${Math.round(cashDeployEurRaw)}€.`,
+      );
+    }
+  }
   if (input.realizedYtdTraditionalOverrideEur != null) {
     notes.push(
       `YTD traditional override manual aplicado: ${input.realizedYtdTraditionalOverrideEur.toFixed(0)}€.`,
@@ -447,7 +479,7 @@ export function buildRebalancePlan(input: PlannerInput): RebalancePlan | null {
   }
 
   return {
-    netWorthEur: Math.round(allocation.netWorth),
+    netWorthEur: Math.round(allocation.netWorthEur),
     generatedWeek: weekKey,
     targets,
     moves: {

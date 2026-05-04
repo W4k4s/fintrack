@@ -23,14 +23,14 @@ function baseInput(overrides: Partial<PlannerInput> = {}): PlannerInput {
 
   return {
     allocation: {
-      netWorth: 50000,
+      netWorthEur: 50000,
       byClass: {
-        cash: { value: 25000, pct: 50 },
-        crypto: { value: 5000, pct: 10 },
-        etfs: { value: 12500, pct: 25 },
-        gold: { value: 5000, pct: 10 },
-        bonds: { value: 1500, pct: 3 },
-        stocks: { value: 1000, pct: 2 },
+        cash: { valueEur: 25000, pct: 50 },
+        crypto: { valueEur: 5000, pct: 10 },
+        etfs: { valueEur: 12500, pct: 25 },
+        gold: { valueEur: 5000, pct: 10 },
+        bonds: { valueEur: 1500, pct: 3 },
+        stocks: { valueEur: 1000, pct: 2 },
       },
     },
     profile,
@@ -56,14 +56,14 @@ function pos(
 test("plan null si nada supera 7pp drift", () => {
   const input = baseInput({
     allocation: {
-      netWorth: 50000,
+      netWorthEur: 50000,
       byClass: {
-        cash: { value: 13000, pct: 26 },
-        crypto: { value: 13000, pct: 26 },
-        etfs: { value: 12500, pct: 25 },
-        gold: { value: 5000, pct: 10 },
-        bonds: { value: 5000, pct: 10 },
-        stocks: { value: 1500, pct: 3 },
+        cash: { valueEur: 13000, pct: 26 },
+        crypto: { valueEur: 13000, pct: 26 },
+        etfs: { valueEur: 12500, pct: 25 },
+        gold: { valueEur: 5000, pct: 10 },
+        bonds: { valueEur: 5000, pct: 10 },
+        stocks: { valueEur: 1500, pct: 3 },
       },
     },
     positions: [
@@ -107,14 +107,14 @@ test("crypto sobreexpuesto con posición única → sell limitado al 50% cap", (
   // Única posición BTC 25000€. Cap 50% = 12500€ (coincide con target).
   const input = baseInput({
     allocation: {
-      netWorth: 50000,
+      netWorthEur: 50000,
       byClass: {
-        cash: { value: 12500, pct: 25 },
-        crypto: { value: 25000, pct: 50 },
-        etfs: { value: 5000, pct: 10 },
-        gold: { value: 2500, pct: 5 },
-        bonds: { value: 2500, pct: 5 },
-        stocks: { value: 2500, pct: 5 },
+        cash: { valueEur: 12500, pct: 25 },
+        crypto: { valueEur: 25000, pct: 50 },
+        etfs: { valueEur: 5000, pct: 10 },
+        gold: { valueEur: 2500, pct: 5 },
+        bonds: { valueEur: 2500, pct: 5 },
+        stocks: { valueEur: 2500, pct: 5 },
       },
     },
     positions: [
@@ -139,14 +139,14 @@ test("IRPF marginal: cruce tramo 6k con YTD parcial", () => {
   // Para provocar sell, pongo crypto sobreexpuesto con gain grande.
   const input = baseInput({
     allocation: {
-      netWorth: 100000,
+      netWorthEur: 100000,
       byClass: {
-        cash: { value: 10000, pct: 10 },  // infra 15pp
-        crypto: { value: 50000, pct: 50 }, // sobre 25pp
-        etfs: { value: 25000, pct: 25 },
-        gold: { value: 10000, pct: 10 },
-        bonds: { value: 3000, pct: 3 },
-        stocks: { value: 2000, pct: 2 },
+        cash: { valueEur: 10000, pct: 10 },  // infra 15pp
+        crypto: { valueEur: 50000, pct: 50 }, // sobre 25pp
+        etfs: { valueEur: 25000, pct: 25 },
+        gold: { valueEur: 10000, pct: 10 },
+        bonds: { valueEur: 3000, pct: 3 },
+        stocks: { valueEur: 2000, pct: 2 },
       },
     },
     positions: [
@@ -170,14 +170,14 @@ test("IRPF marginal: cruce tramo 6k con YTD parcial", () => {
 test("pérdidas crypto → compensación intra-bucket, IRPF=0", () => {
   const input = baseInput({
     allocation: {
-      netWorth: 50000,
+      netWorthEur: 50000,
       byClass: {
-        cash: { value: 12500, pct: 25 },
-        crypto: { value: 25000, pct: 50 }, // sobre 25pp
-        etfs: { value: 5000, pct: 10 },
-        gold: { value: 2500, pct: 5 },
-        bonds: { value: 2500, pct: 5 },
-        stocks: { value: 2500, pct: 5 },
+        cash: { valueEur: 12500, pct: 25 },
+        crypto: { valueEur: 25000, pct: 50 }, // sobre 25pp
+        etfs: { valueEur: 5000, pct: 10 },
+        gold: { valueEur: 2500, pct: 5 },
+        bonds: { valueEur: 2500, pct: 5 },
+        stocks: { valueEur: 2500, pct: 5 },
       },
     },
     positions: [
@@ -205,14 +205,14 @@ test("pérdidas crypto → compensación intra-bucket, IRPF=0", () => {
 test("YTD alto → todo al 23%", () => {
   const input = baseInput({
     allocation: {
-      netWorth: 100000,
+      netWorthEur: 100000,
       byClass: {
-        cash: { value: 20000, pct: 20 },
-        crypto: { value: 40000, pct: 40 }, // sobre 15pp
-        etfs: { value: 25000, pct: 25 },
-        gold: { value: 10000, pct: 10 },
-        bonds: { value: 3000, pct: 3 },
-        stocks: { value: 2000, pct: 2 },
+        cash: { valueEur: 20000, pct: 20 },
+        crypto: { valueEur: 40000, pct: 40 }, // sobre 15pp
+        etfs: { valueEur: 25000, pct: 25 },
+        gold: { valueEur: 10000, pct: 10 },
+        bonds: { valueEur: 3000, pct: 3 },
+        stocks: { valueEur: 2000, pct: 2 },
       },
     },
     positions: [pos("BTC", "crypto", 40000, 10000)],
@@ -233,14 +233,14 @@ test("YTD alto → todo al 23%", () => {
 test("clase vacía (stocks sin holdings) → needsStrategyPick", () => {
   const input = baseInput({
     allocation: {
-      netWorth: 50000,
+      netWorthEur: 50000,
       byClass: {
-        cash: { value: 25000, pct: 50 }, // sobre 25pp
-        crypto: { value: 12500, pct: 25 },
-        etfs: { value: 12500, pct: 25 },
-        gold: { value: 0, pct: 0 },
-        bonds: { value: 0, pct: 0 },
-        stocks: { value: 0, pct: 0 },
+        cash: { valueEur: 25000, pct: 50 }, // sobre 25pp
+        crypto: { valueEur: 12500, pct: 25 },
+        etfs: { valueEur: 12500, pct: 25 },
+        gold: { valueEur: 0, pct: 0 },
+        bonds: { valueEur: 0, pct: 0 },
+        stocks: { valueEur: 0, pct: 0 },
       },
     },
     positions: [
@@ -258,14 +258,14 @@ test("clase vacía (stocks sin holdings) → needsStrategyPick", () => {
 test("override YTD traditional manual se aplica", () => {
   const input = baseInput({
     allocation: {
-      netWorth: 50000,
+      netWorthEur: 50000,
       byClass: {
-        cash: { value: 12500, pct: 25 },
-        crypto: { value: 5000, pct: 10 },
-        etfs: { value: 20000, pct: 40 }, // sobre 15pp
-        gold: { value: 5000, pct: 10 },
-        bonds: { value: 5000, pct: 10 },
-        stocks: { value: 2500, pct: 5 },
+        cash: { valueEur: 12500, pct: 25 },
+        crypto: { valueEur: 5000, pct: 10 },
+        etfs: { valueEur: 20000, pct: 40 }, // sobre 15pp
+        gold: { valueEur: 5000, pct: 10 },
+        bonds: { valueEur: 5000, pct: 10 },
+        stocks: { valueEur: 2500, pct: 5 },
       },
     },
     positions: [
@@ -288,14 +288,14 @@ test("override YTD traditional manual se aplica", () => {
 test("warning TR emitido cuando hay sells traditional sin override", () => {
   const input = baseInput({
     allocation: {
-      netWorth: 50000,
+      netWorthEur: 50000,
       byClass: {
-        cash: { value: 12500, pct: 25 },
-        crypto: { value: 5000, pct: 10 },
-        etfs: { value: 20000, pct: 40 }, // sobre 15pp
-        gold: { value: 5000, pct: 10 },
-        bonds: { value: 5000, pct: 10 },
-        stocks: { value: 2500, pct: 5 },
+        cash: { valueEur: 12500, pct: 25 },
+        crypto: { valueEur: 5000, pct: 10 },
+        etfs: { valueEur: 20000, pct: 40 }, // sobre 15pp
+        gold: { valueEur: 5000, pct: 10 },
+        bonds: { valueEur: 5000, pct: 10 },
+        stocks: { valueEur: 2500, pct: 5 },
       },
     },
     positions: [
@@ -316,14 +316,14 @@ test("cash infraexpuesto drena antes de repartir a otras clases", () => {
   // Cash 15% (infra 10pp), etfs 40% (sobre 15pp). Sell etfs debe reponer cash primero.
   const input = baseInput({
     allocation: {
-      netWorth: 50000,
+      netWorthEur: 50000,
       byClass: {
-        cash: { value: 7500, pct: 15 },
-        crypto: { value: 5000, pct: 10 }, // infra 15pp
-        etfs: { value: 20000, pct: 40 }, // sobre 15pp
-        gold: { value: 5000, pct: 10 },
-        bonds: { value: 10000, pct: 20 },
-        stocks: { value: 2500, pct: 5 },
+        cash: { valueEur: 7500, pct: 15 },
+        crypto: { valueEur: 5000, pct: 10 }, // infra 15pp
+        etfs: { valueEur: 20000, pct: 40 }, // sobre 15pp
+        gold: { valueEur: 5000, pct: 10 },
+        bonds: { valueEur: 10000, pct: 20 },
+        stocks: { valueEur: 2500, pct: 5 },
       },
     },
     positions: [
@@ -346,14 +346,14 @@ test("cash infraexpuesto drena antes de repartir a otras clases", () => {
 test("transfersNeeded: buys TR + buys Binance sin sells → 2 entradas", () => {
   const input = baseInput({
     allocation: {
-      netWorth: 50000,
+      netWorthEur: 50000,
       byClass: {
-        cash: { value: 25000, pct: 50 }, // sobre 25pp — deploy cash, sin sells
-        crypto: { value: 5000, pct: 10 }, // infra 15pp
-        etfs: { value: 15000, pct: 30 }, // infra 5pp (no triggerea)
-        gold: { value: 2500, pct: 5 }, // infra 5pp
-        bonds: { value: 1500, pct: 3 }, // infra 7pp
-        stocks: { value: 1000, pct: 2 }, // infra 3pp
+        cash: { valueEur: 25000, pct: 50 }, // sobre 25pp — deploy cash, sin sells
+        crypto: { valueEur: 5000, pct: 10 }, // infra 15pp
+        etfs: { valueEur: 15000, pct: 30 }, // infra 5pp (no triggerea)
+        gold: { valueEur: 2500, pct: 5 }, // infra 5pp
+        bonds: { valueEur: 1500, pct: 3 }, // infra 7pp
+        stocks: { valueEur: 1000, pct: 2 }, // infra 3pp
       },
     },
     positions: [
@@ -380,14 +380,14 @@ test("transfersNeeded: sells cubren buys del mismo venue → sin entrada para es
   // Crypto sobre 25pp: sells BTC@binance cubren buys @binance. Etfs sobre: sells MSCI@TR cubren buys@TR.
   const input = baseInput({
     allocation: {
-      netWorth: 50000,
+      netWorthEur: 50000,
       byClass: {
-        cash: { value: 12500, pct: 25 },
-        crypto: { value: 15000, pct: 30 }, // sobre 5pp — no triggerea
-        etfs: { value: 20000, pct: 40 }, // sobre 15pp → sell etfs
-        gold: { value: 0, pct: 0 }, // infra 10pp → buy
-        bonds: { value: 1500, pct: 3 }, // infra 7pp → buy
-        stocks: { value: 1000, pct: 2 }, // infra 3pp — no triggerea
+        cash: { valueEur: 12500, pct: 25 },
+        crypto: { valueEur: 15000, pct: 30 }, // sobre 5pp — no triggerea
+        etfs: { valueEur: 20000, pct: 40 }, // sobre 15pp → sell etfs
+        gold: { valueEur: 0, pct: 0 }, // infra 10pp → buy
+        bonds: { valueEur: 1500, pct: 3 }, // infra 7pp → buy
+        stocks: { valueEur: 1000, pct: 2 }, // infra 3pp — no triggerea
       },
     },
     positions: [
@@ -422,14 +422,14 @@ test("BTC dual-venue: sell prioriza venue con peor pnlEur (tax-loss)", () => {
   // Cap 50%/posición. Target sell crypto ≈ 12500€ (sobre 25pp sobre 50k).
   const input = baseInput({
     allocation: {
-      netWorth: 50000,
+      netWorthEur: 50000,
       byClass: {
-        cash: { value: 12500, pct: 25 },
-        crypto: { value: 25000, pct: 50 },
-        etfs: { value: 5000, pct: 10 },
-        gold: { value: 2500, pct: 5 },
-        bonds: { value: 2500, pct: 5 },
-        stocks: { value: 2500, pct: 5 },
+        cash: { valueEur: 12500, pct: 25 },
+        crypto: { valueEur: 25000, pct: 50 },
+        etfs: { valueEur: 5000, pct: 10 },
+        gold: { valueEur: 2500, pct: 5 },
+        bonds: { valueEur: 2500, pct: 5 },
+        stocks: { valueEur: 2500, pct: 5 },
       },
     },
     positions: [
@@ -458,14 +458,14 @@ test("BTC dual-venue: sell prioriza venue con peor pnlEur (tax-loss)", () => {
 test("clase vacía usa venue default (crypto→binance, stocks→trade-republic)", () => {
   const input = baseInput({
     allocation: {
-      netWorth: 50000,
+      netWorthEur: 50000,
       byClass: {
-        cash: { value: 25000, pct: 50 }, // sobre 25pp
-        crypto: { value: 0, pct: 0 },
-        etfs: { value: 20000, pct: 40 },
-        gold: { value: 5000, pct: 10 },
-        bonds: { value: 0, pct: 0 },
-        stocks: { value: 0, pct: 0 },
+        cash: { valueEur: 25000, pct: 50 }, // sobre 25pp
+        crypto: { valueEur: 0, pct: 0 },
+        etfs: { valueEur: 20000, pct: 40 },
+        gold: { valueEur: 5000, pct: 10 },
+        bonds: { valueEur: 0, pct: 0 },
+        stocks: { valueEur: 0, pct: 0 },
       },
     },
     positions: [
@@ -487,14 +487,14 @@ test("clase vacía usa venue default (crypto→binance, stocks→trade-republic)
 test("no sell cuando solo hay bank accounts (no asset vendible)", () => {
   const input = baseInput({
     allocation: {
-      netWorth: 50000,
+      netWorthEur: 50000,
       byClass: {
-        cash: { value: 35000, pct: 70 }, // sobre 45pp
-        crypto: { value: 5000, pct: 10 },
-        etfs: { value: 5000, pct: 10 },
-        gold: { value: 2500, pct: 5 },
-        bonds: { value: 1500, pct: 3 },
-        stocks: { value: 1000, pct: 2 },
+        cash: { valueEur: 35000, pct: 70 }, // sobre 45pp
+        crypto: { valueEur: 5000, pct: 10 },
+        etfs: { valueEur: 5000, pct: 10 },
+        gold: { valueEur: 2500, pct: 5 },
+        bonds: { valueEur: 1500, pct: 3 },
+        stocks: { valueEur: 1000, pct: 2 },
       },
     },
     positions: [

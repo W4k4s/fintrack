@@ -294,7 +294,7 @@ function extractPlan(payload: unknown): RebalancePlan | null {
 async function computeStaleness(plan: RebalancePlan) {
   try {
     const alloc = await computeAllocation();
-    if (alloc.netWorth <= 0) return null;
+    if (alloc.netWorthEur <= 0) return null;
     const driftNow: Record<string, number> = {};
     let maxDelta = 0;
     for (const cls of ASSET_CLASSES) {

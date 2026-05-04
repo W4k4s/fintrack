@@ -54,8 +54,9 @@ export const rebalanceDriftDetector: Detector = {
       .limit(1);
     if (!profile) return [];
 
-    const allocation = await computeAllocation();
-    if (allocation.netWorth <= 0) return [];
+    const eurPerUsd = await getEurPerUsd();
+    const allocation = await computeAllocation(eurPerUsd);
+    if (allocation.netWorthEur <= 0) return [];
 
     // Strategy V2 Fase 1 — leemos targets vía sub-targets agregados por parent.
     // Si no hay filas sub (edge case), cae al flat vía helper. Invariante
@@ -94,7 +95,7 @@ export const rebalanceDriftDetector: Detector = {
       const direction: "over" | "under" = drift > 0 ? "over" : "under";
       const label = CLASS_LABEL[cls];
       const sign = drift > 0 ? "+" : "";
-      const gapEur = (Math.abs(drift) / 100) * allocation.netWorth;
+      const gapEur = (Math.abs(drift) / 100) * allocation.netWorthEur;
 
       const title = `${label} ${actual.toFixed(1)}% vs target ${target.toFixed(0)}% (${sign}${drift.toFixed(1)}pp)`;
       const summary =
@@ -116,7 +117,7 @@ export const rebalanceDriftDetector: Detector = {
           targetPct: target,
           driftPp: Math.round(drift * 100) / 100,
           direction,
-          netWorth: Math.round(allocation.netWorth),
+          netWorth: Math.round(allocation.netWorthEur),
           gapEur: Math.round(gapEur),
           thresholds: { med: DRIFT_MED, high: DRIFT_HIGH, critical: DRIFT_CRITICAL },
           profileId: profile.id,
@@ -137,7 +138,6 @@ export const rebalanceDriftDetector: Detector = {
         db.select().from(schema.accounts),
         db.select().from(schema.exchanges),
       ]);
-      const eurPerUsd = await getEurPerUsd();
       const accountById = new Map(accounts.map((a) => [a.id, a]));
       const exchangeById = new Map(exchanges.map((e) => [e.id, e]));
       const exchangeIdByAccountId = new Map(

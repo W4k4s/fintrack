@@ -32,7 +32,7 @@ export async function recordAllocationSnapshot(now: Date): Promise<void> {
   if (!profile) return;
 
   const allocation = await computeAllocation();
-  if (allocation.netWorth <= 0) return;
+  if (allocation.netWorthEur <= 0) return;
 
   const date = now.toISOString().slice(0, 10);
 
@@ -53,7 +53,7 @@ export async function recordAllocationSnapshot(now: Date): Promise<void> {
       .values({
         date,
         profileId: profile.id,
-        netWorthEur: Math.round(allocation.netWorth * 100) / 100,
+        netWorthEur: Math.round(allocation.netWorthEur * 100) / 100,
         allocation: JSON.stringify(byClass),
       })
       .onConflictDoNothing();
