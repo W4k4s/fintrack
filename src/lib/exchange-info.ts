@@ -45,13 +45,12 @@ export const EXCHANGE_LIMITS: Record<string, ExchangeLimits> = {
       "Most users' purchases are via Convert, which won't appear",
     ],
     csvInstructions: [
-      "Go to mexc.com → Orders → Spot Orders → Trade History",
-      "Click 'Export' in the top right",
-      "Select the date range",
-      "Download CSV",
-      "Also check: Assets → Transaction History → Export (for converts)",
+      "Go to mexc.com → Orders → Spot Orders → Trade History → Export (.xlsx)",
+      "Also export, from Wallet → Funding/Transaction History: Deposits, Withdrawals and Others",
+      "Any export language works (English or Spanish headers are both recognized)",
+      "Upload all the .xlsx files here at once — duplicates are skipped automatically",
     ],
-    csvNote: "If you used 'Quick Buy/Convert', export from Transaction History instead of Trade History.",
+    csvNote: "Deposits, withdrawals and airdrops are recorded as tax history only — they do NOT change your balance (holdings sync from the exchange via API). Native .xlsx is supported; no need to convert to CSV.",
   },
   "trade-republic": {
     tradeHistory: "Full history via bank statement PDF",

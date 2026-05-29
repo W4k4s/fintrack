@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
-import { parseCsvTrades } from "@/lib/csv-parsers";
+import {
+  parseCsvRows,
+  parseExchangeTransactions,
+  dedupeAgainstExisting,
+  type CsvTransaction,
+} from "@/lib/csv-parsers";
+import { parseXlsxRows, isXlsxBuffer } from "@/lib/xlsx-rows";
 import { tryRecomputeAvgBuyPrice } from "@/lib/assets/cost-basis";
 import { getEurPerUsd } from "@/lib/currency-rates";
 import {
@@ -10,6 +16,8 @@ import {
   type MatchableTransaction,
 } from "@/lib/intel/rebalance/order-matcher";
 import { notifyAutoMatched } from "@/lib/intel/rebalance/auto-match-notifier";
+
+type TxType = CsvTransaction["type"];
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -34,32 +42,63 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     if (!file) {
-      return NextResponse.json({ error: "No CSV file provided" }, { status: 400 });
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const csvText = await file.text();
-    if (!csvText.trim()) {
-      return NextResponse.json({ error: "CSV file is empty" }, { status: 400 });
+    // Read the file into rows. Detect xlsx by magic bytes (then extension as a
+    // fallback) — the route accepts both .xlsx and .csv exports.
+    const buf = Buffer.from(await file.arrayBuffer());
+    if (buf.length === 0) {
+      return NextResponse.json({ error: "File is empty" }, { status: 400 });
     }
+    const looksXlsx = isXlsxBuffer(buf) || /\.xlsx?$/i.test(file.name);
 
-    // Parse CSV trades
-    const trades = parseCsvTrades(csvText, exchange.slug);
-    if (trades.length === 0) {
+    let rows: string[][];
+    if (looksXlsx) {
+      rows = parseXlsxRows(buf);
+    } else {
+      const text = buf.toString("utf-8");
+      if (!text.trim()) {
+        return NextResponse.json({ error: "File is empty" }, { status: 400 });
+      }
+      rows = parseCsvRows(text);
+    }
+    if (rows.length < 2) {
       return NextResponse.json({
-        error: "No trades found in CSV. Check that the file format matches the expected export from " + exchange.name,
+        error: `No data rows found in ${file.name}. Check that the file is a valid export from ${exchange.name}.`,
       }, { status: 400 });
     }
 
-    // Get existing transactions for dedup
+    // Parse into normalized transactions (fail-loud on unknown layout).
+    let parsed: CsvTransaction[];
+    try {
+      parsed = parseExchangeTransactions(rows, exchange.slug);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    if (parsed.length === 0) {
+      return NextResponse.json({
+        error: "No transactions found. Check that the file format matches the expected export from " + exchange.name,
+      }, { status: 400 });
+    }
+
+    // Multiset dedup against existing rows for this account.
     const existingTxs = await db.select().from(schema.transactions)
       .where(eq(schema.transactions.accountId, account.id));
-    const existingKeys = new Set(
-      existingTxs.map(t => `${t.date}|${t.symbol}|${t.amount}|${t.price}`)
+    const { toInsert, skipped } = dedupeAgainstExisting(
+      parsed,
+      existingTxs.map(t => ({
+        date: t.date,
+        symbol: t.symbol,
+        amount: t.amount,
+        price: t.price,
+        type: t.type,
+      })),
     );
 
-    let inserted = 0;
-    let skipped = 0;
-    const insertedSymbols = new Set<string>();
+    const insertedByType: Record<TxType, number> = { buy: 0, sell: 0, deposit: 0, withdrawal: 0 };
+    const recomputeSymbols = new Set<string>();
     const insertedTrades: Array<{
       symbol: string;
       type: "buy" | "sell";
@@ -68,39 +107,37 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       quoteCurrency: string;
     }> = [];
 
-    for (const trade of trades) {
-      const key = `${trade.date}|${trade.symbol}|${trade.amount}|${trade.price}`;
-      if (existingKeys.has(key)) {
-        skipped++;
-        continue;
-      }
-
+    for (const tx of toInsert) {
       await db.insert(schema.transactions).values({
         accountId: account.id,
-        type: trade.type,
-        symbol: trade.symbol,
-        amount: trade.amount,
-        price: trade.price,
-        total: trade.total,
-        quoteCurrency: trade.quoteCurrency,
-        date: trade.date,
-        notes: `${trade.pair} on ${exchange.name} (fee: ${trade.fee} ${trade.feeCurrency}) [CSV import]`,
+        type: tx.type,
+        symbol: tx.symbol,
+        amount: tx.amount,
+        price: tx.price,
+        total: tx.total,
+        quoteCurrency: tx.quoteCurrency,
+        date: tx.date,
+        notes: tx.notes
+          ? `${tx.notes} on ${exchange.name} [import]`
+          : `${tx.pair} on ${exchange.name} (fee: ${tx.fee} ${tx.feeCurrency}) [import]`,
       });
-      existingKeys.add(key);
-      insertedSymbols.add(trade.symbol);
-      insertedTrades.push({
-        symbol: trade.symbol,
-        type: trade.type,
-        date: trade.date,
-        total: trade.total,
-        quoteCurrency: trade.quoteCurrency,
-      });
-      inserted++;
+      insertedByType[tx.type]++;
+      if (tx.type === "buy" || tx.type === "sell") {
+        recomputeSymbols.add(tx.symbol);
+        insertedTrades.push({
+          symbol: tx.symbol,
+          type: tx.type,
+          date: tx.date,
+          total: tx.total ?? 0,
+          quoteCurrency: tx.quoteCurrency,
+        });
+      }
     }
 
-    for (const sym of insertedSymbols) await tryRecomputeAvgBuyPrice(sym);
+    // Cost basis only reads buy/sell, so only those symbols need a recompute.
+    for (const sym of recomputeSymbols) await tryRecomputeAvgBuyPrice(sym);
 
-    // Fase 8.8 — auto-match orders rebalance desde trades importados por CSV.
+    // Fase 8.8 — auto-match rebalance orders from imported buy/sell trades only.
     let autoMatched = 0;
     let autoAmbiguous = 0;
     if (insertedTrades.length > 0) {
@@ -129,17 +166,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
     }
 
+    const inserted = toInsert.length;
     return NextResponse.json({
       success: true,
       exchange: exchange.name,
-      totalParsed: trades.length,
+      totalParsed: parsed.length,
       inserted,
+      insertedByType,
       skipped,
       autoMatched,
       autoAmbiguous,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("CSV import error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

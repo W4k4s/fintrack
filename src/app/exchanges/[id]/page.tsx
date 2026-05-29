@@ -258,14 +258,29 @@ export default function ExchangeDetailPage() {
     finally { setSyncingTrades(false); }
   };
   const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return;
-    const formData = new FormData(); formData.append("file", file); formData.append("exchangeId", id);
-    try {
-      const res = await fetch(`/api/exchanges/${id}/import-csv`, { method: "POST", body: formData });
-      const d = await res.json();
-      if (d.success) { setTradeResult(`CSV imported: ${d.inserted} trades added, ${d.skipped} duplicates`); await fetchData(); }
-      else setTradeResult(`CSV error: ${d.error}`);
-    } catch { setTradeResult("CSV import failed"); }
+    const files = e.target.files; if (!files?.length) return;
+    let inserted = 0, skipped = 0, autoMatched = 0;
+    const byType: Record<string, number> = {};
+    const errors: string[] = [];
+    for (const file of Array.from(files)) {
+      const formData = new FormData(); formData.append("file", file); formData.append("exchangeId", id);
+      try {
+        const res = await fetch(`/api/exchanges/${id}/import-csv`, { method: "POST", body: formData });
+        const d = await res.json();
+        if (d.success) {
+          inserted += d.inserted; skipped += d.skipped; autoMatched += d.autoMatched || 0;
+          for (const [t, n] of Object.entries(d.insertedByType || {})) byType[t] = (byType[t] || 0) + (n as number);
+        } else {
+          errors.push(`${file.name}: ${d.error}`);
+        }
+      } catch { errors.push(`${file.name}: upload failed`); }
+    }
+    const breakdown = Object.entries(byType).filter(([, n]) => n > 0).map(([t, n]) => `${n} ${t}`).join(", ");
+    let msg = `Imported ${inserted}${breakdown ? ` (${breakdown})` : ""}, ${skipped} duplicates`;
+    if (autoMatched) msg += `, ${autoMatched} auto-matched`;
+    if (errors.length) msg += ` — ${errors.join("; ")}`;
+    setTradeResult(msg);
+    await fetchData();
     e.target.value = "";
   };
   const handleTrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -546,8 +561,8 @@ export default function ExchangeDetailPage() {
             </>
           ) : exchange.type === "auto" ? (
             <label className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg text-sm font-medium transition-colors cursor-pointer">
-              <Upload className="w-4 h-4" /> Import CSV
-              <input type="file" accept=".csv" onChange={handleCsvUpload} className="hidden" />
+              <Upload className="w-4 h-4" /> Import CSV / XLSX
+              <input type="file" accept=".csv,.xlsx,.xls" multiple onChange={handleCsvUpload} className="hidden" />
             </label>
           ) : null}
         </div>
